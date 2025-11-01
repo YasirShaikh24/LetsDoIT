@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">Lets Do IT</string>
+    <string name="nav_home">Home</string>
+    <string name="nav_add_activity">Add Activity</string>
+    <string name="nav_view_activity">View Activity</string>
+    <string name="nav_profile_activity">Profile Activity</string>
 </resources>
