@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "923113051345",
+    "project_id": "let-s-do-it-a7a0c",
+    "storage_bucket": "let-s-do-it-a7a0c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:923113051345:android:e027a29f8f17a29cdda1f0",
+        "android_client_info": {
+          "package_name": "com.example.letsdoit"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "923113051345-q86erp46k7uik86molr8rgo2j282bq9o.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCJqRGlBAmHvEDOT28tkcP6-uMoSf01LBg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "923113051345-q86erp46k7uik86molr8rgo2j282bq9o.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
