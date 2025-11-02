@@ -1,7 +1,7 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Base application theme. -->
-    <style name="Base.Theme.LetsDoIT" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Customize your dark theme here. -->
-        <!-- <item name="colorPrimary">@color/my_dark_primary</item> -->
+    <!-- CRITICAL CHANGE: We explicitly use the Light theme parent here too, overriding the system's Dark Mode preference. -->
+    <style name="Base.Theme.LetsDoIT" parent="Theme.Material3.Light.NoActionBar">
+        <!-- Since we are forcing Light mode, no dark customizations are needed. -->
     </style>
 </resources>
