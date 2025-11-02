@@ -76,6 +76,7 @@ public class ViewActivityFragment extends Fragment {
                     }
                 })
                 .addOnFailureListener(e -> {
+                    // This is where the PERMISSION_DENIED for READ was being caught
                     progressBar.setVisibility(View.GONE);
                     tvEmptyState.setText("Error loading tasks");
                     tvEmptyState.setVisibility(View.VISIBLE);

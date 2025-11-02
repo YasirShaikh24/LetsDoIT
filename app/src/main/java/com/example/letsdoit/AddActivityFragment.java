@@ -210,6 +210,7 @@ public class AddActivityFragment extends Fragment {
                     btnSaveTask.setText("Save Task");
                 })
                 .addOnFailureListener(e -> {
+                    // This is where the PERMISSION_DENIED error is being caught
                     Toast.makeText(getContext(), "Error saving task: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                     btnSaveTask.setEnabled(true);
                     btnSaveTask.setText("Save Task");
