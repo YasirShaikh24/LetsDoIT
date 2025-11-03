@@ -1,3 +1,4 @@
+// src/main/java/com/example/letsdoit/Task.java
 package com.example.letsdoit;
 
 import java.util.ArrayList;
@@ -10,18 +11,21 @@ public class Task {
     private String priority;
     private List<String> fileUrls;
     private String remarks;
+    private String assignedTo; // NEW FIELD
     private long timestamp;
 
     public Task() {
         // Required empty constructor for Firestore
     }
 
-    public Task(String title, String description, String priority, List<String> fileUrls, String remarks) {
+    // UPDATED CONSTRUCTOR
+    public Task(String title, String description, String priority, List<String> fileUrls, String remarks, String assignedTo) {
         this.title = title;
         this.description = description;
         this.priority = priority;
         this.fileUrls = fileUrls != null ? fileUrls : new ArrayList<>();
         this.remarks = remarks;
+        this.assignedTo = assignedTo; // Initialize NEW FIELD
         this.timestamp = System.currentTimeMillis();
     }
 
@@ -71,6 +75,15 @@ public class Task {
 
     public void setRemarks(String remarks) {
         this.remarks = remarks;
+    }
+
+    // NEW GETTER AND SETTER
+    public String getAssignedTo() {
+        return assignedTo;
+    }
+
+    public void setAssignedTo(String assignedTo) {
+        this.assignedTo = assignedTo;
     }
 
     public long getTimestamp() {

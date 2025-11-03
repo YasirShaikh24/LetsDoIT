@@ -9,6 +9,9 @@ import com.google.android.material.bottomnavigation.BottomNavigationView;
 public class MainActivity extends AppCompatActivity {
 
     private String welcomeMessage;
+    private String loggedInUserEmail;
+    private String loggedInUserRole;
+    private String displayName;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -16,16 +19,18 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         // Retrieve user data passed from LoginActivity
-        String displayName = getIntent().getStringExtra(LoginActivity.EXTRA_DISPLAY_NAME);
-        String userRole = getIntent().getStringExtra(LoginActivity.EXTRA_USER_ROLE);
+        displayName = getIntent().getStringExtra(LoginActivity.EXTRA_DISPLAY_NAME);
+        loggedInUserEmail = getIntent().getStringExtra(LoginActivity.EXTRA_USER_EMAIL);
+        loggedInUserRole = getIntent().getStringExtra(LoginActivity.EXTRA_USER_ROLE);
 
         // Generate the personalized welcome message
-        if ("admin".equals(userRole)) {
+        if ("admin".equals(loggedInUserRole)) {
             welcomeMessage = "Welcome Admin";
-        } else if ("user".equals(userRole) && displayName != null) {
+        } else if (displayName != null) {
+            // All other users
             welcomeMessage = "Welcome " + displayName;
         } else {
-            // Default message if launched without specific login info
+            // Default message
             welcomeMessage = "Home / Dashboard";
         }
 
@@ -35,14 +40,13 @@ public class MainActivity extends AppCompatActivity {
             int itemId = item.getItemId();
 
             if (itemId == R.id.navigation_home) {
-                // Pass the personalized message to the HomeFragment
                 selectedFragment = HomeFragment.newInstance(welcomeMessage);
             } else if (itemId == R.id.navigation_add_activity) {
-                selectedFragment = new AddActivityFragment();
+                selectedFragment = AddActivityFragment.newInstance(loggedInUserEmail, loggedInUserRole);
             } else if (itemId == R.id.navigation_view_activity) {
-                selectedFragment = new ViewActivityFragment();
+                selectedFragment = ViewActivityFragment.newInstance(loggedInUserEmail, loggedInUserRole);
             } else if (itemId == R.id.navigation_profile_activity) {
-                selectedFragment = new ProfileActivityFragment();
+                selectedFragment = ProfileActivityFragment.newInstance(loggedInUserEmail, loggedInUserRole, displayName);
             }
 
             if (selectedFragment != null) {

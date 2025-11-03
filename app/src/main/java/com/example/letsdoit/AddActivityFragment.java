@@ -1,3 +1,4 @@
+// src/main/java/com/example/letsdoit/AddActivityFragment.java
 package com.example.letsdoit;
 
 import android.app.Activity;
@@ -5,11 +6,13 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.util.Log; // New Import
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.TextView;
@@ -22,6 +25,7 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.QueryDocumentSnapshot; // New Import
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 
@@ -32,9 +36,10 @@ import java.util.UUID;
 public class AddActivityFragment extends Fragment {
 
     private EditText etTitle, etDescription, etRemarks;
-    private RadioGroup rgPriority;
+    private RadioGroup rgPriority, rgAssignedTo;
     private Button btnAttachFiles, btnSaveTask;
     private TextView tvAttachedFiles;
+    private LinearLayout llAssignUserSection;
 
     private FirebaseFirestore db;
     private FirebaseStorage storage;
@@ -42,12 +47,40 @@ public class AddActivityFragment extends Fragment {
     private ActivityResultLauncher<Intent> filePickerLauncher;
     private ActivityResultLauncher<String[]> permissionLauncher;
 
+    private String loggedInUserEmail;
+    private String loggedInUserRole;
+    private String assignedToEmail;
+
+    private List<User> allUsers = new ArrayList<>(); // List to hold fetched users
+    private static final String TAG = "AddActivityFragment";
+
+    // Factory method to create an instance with user data
+    public static AddActivityFragment newInstance(String email, String role) {
+        AddActivityFragment fragment = new AddActivityFragment();
+        Bundle args = new Bundle();
+        args.putString(LoginActivity.EXTRA_USER_EMAIL, email);
+        args.putString(LoginActivity.EXTRA_USER_ROLE, role);
+        fragment.setArguments(args);
+        return fragment;
+    }
+
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        // Retrieve user data
+        if (getArguments() != null) {
+            loggedInUserEmail = getArguments().getString(LoginActivity.EXTRA_USER_EMAIL);
+            loggedInUserRole = getArguments().getString(LoginActivity.EXTRA_USER_ROLE);
+        }
+
+        // Default assignment is to self (the logged-in user)
+        assignedToEmail = loggedInUserEmail;
+
         db = FirebaseFirestore.getInstance();
         storage = FirebaseStorage.getInstance();
+
+        // [ ... permissionLauncher and filePickerLauncher remain unchanged ... ]
 
         // Permission launcher
         permissionLauncher = registerForActivityResult(
@@ -102,11 +135,85 @@ public class AddActivityFragment extends Fragment {
         btnSaveTask = view.findViewById(R.id.btn_save_task);
         tvAttachedFiles = view.findViewById(R.id.tv_attached_files);
 
+        llAssignUserSection = view.findViewById(R.id.ll_assign_user_section);
+        rgAssignedTo = view.findViewById(R.id.rg_assigned_to);
+
+        // Setup user assignment section for ADMIN only
+        if ("admin".equals(loggedInUserRole)) {
+            llAssignUserSection.setVisibility(View.VISIBLE);
+            loadUsersForAssignment(); // Load users from Firestore
+        } else {
+            llAssignUserSection.setVisibility(View.GONE);
+        }
+
         btnAttachFiles.setOnClickListener(v -> openFilePicker());
         btnSaveTask.setOnClickListener(v -> saveTask());
 
         return view;
     }
+
+    private void loadUsersForAssignment() {
+        db.collection("users")
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    allUsers.clear();
+                    for (QueryDocumentSnapshot document : queryDocumentSnapshots) {
+                        User user = document.toObject(User.class);
+                        allUsers.add(user);
+                    }
+                    setupAssignmentRadioGroup();
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Failed to load users for assignment: " + e.getMessage());
+                    Toast.makeText(getContext(), "Could not load users for assignment.", Toast.LENGTH_SHORT).show();
+                });
+    }
+
+    // UPDATED METHOD: Dynamically populate and handle the assignment RadioGroup
+    private void setupAssignmentRadioGroup() {
+        rgAssignedTo.removeAllViews(); // Clear previous views
+
+        if (allUsers.isEmpty()) {
+            TextView tv = new TextView(getContext());
+            tv.setText("No users found.");
+            rgAssignedTo.addView(tv);
+            return;
+        }
+
+        // Loop through all fetched users
+        for (int i = 0; i < allUsers.size(); i++) {
+            User user = allUsers.get(i);
+            String userEmail = user.getEmail();
+            RadioButton rb = new RadioButton(getContext());
+
+            String buttonText = user.getDisplayName() + " (" + userEmail + ")";
+            if (user.getRole().equals("admin")) {
+                buttonText += " - ADMIN";
+            }
+
+            rb.setText(buttonText);
+            rb.setTag(userEmail);
+            rb.setId(View.generateViewId()); // Unique ID
+
+            // Set the Admin user as the default selected user
+            if (userEmail.equals(loggedInUserEmail)) {
+                rb.setChecked(true);
+                assignedToEmail = userEmail;
+            }
+
+            rgAssignedTo.addView(rb);
+        }
+
+        // Listener to update the assignedToEmail variable
+        rgAssignedTo.setOnCheckedChangeListener((group, checkedId) -> {
+            RadioButton selected = group.findViewById(checkedId);
+            if (selected != null) {
+                assignedToEmail = (String) selected.getTag();
+            }
+        });
+    }
+
+    // [ ... requestStoragePermissions(), openFilePicker(), updateAttachedFilesText() remain unchanged ... ]
 
     private void requestStoragePermissions() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -137,10 +244,16 @@ public class AddActivityFragment extends Fragment {
         }
     }
 
+
     private void saveTask() {
         String title = etTitle.getText().toString().trim();
         String description = etDescription.getText().toString().trim();
         String remarks = etRemarks.getText().toString().trim();
+
+        // If not admin, ensure assignedTo is the logged-in user's email
+        if (!"admin".equals(loggedInUserRole)) {
+            assignedToEmail = loggedInUserEmail;
+        }
 
         if (title.isEmpty()) {
             etTitle.setError("Title is required");
@@ -165,13 +278,13 @@ public class AddActivityFragment extends Fragment {
         btnSaveTask.setText("Saving...");
 
         if (!selectedFileUris.isEmpty()) {
-            uploadFilesAndSaveTask(title, description, priority, remarks);
+            uploadFilesAndSaveTask(title, description, priority, remarks, assignedToEmail);
         } else {
-            saveTaskToFirestore(title, description, priority, new ArrayList<>(), remarks);
+            saveTaskToFirestore(title, description, priority, new ArrayList<>(), remarks, assignedToEmail);
         }
     }
 
-    private void uploadFilesAndSaveTask(String title, String description, String priority, String remarks) {
+    private void uploadFilesAndSaveTask(String title, String description, String priority, String remarks, String assignedTo) {
         List<String> fileUrls = new ArrayList<>();
         int[] uploadCount = {0};
 
@@ -186,7 +299,7 @@ public class AddActivityFragment extends Fragment {
                             uploadCount[0]++;
 
                             if (uploadCount[0] == selectedFileUris.size()) {
-                                saveTaskToFirestore(title, description, priority, fileUrls, remarks);
+                                saveTaskToFirestore(title, description, priority, fileUrls, remarks, assignedTo);
                             }
                         });
                     })
@@ -198,8 +311,8 @@ public class AddActivityFragment extends Fragment {
         }
     }
 
-    private void saveTaskToFirestore(String title, String description, String priority, List<String> fileUrls, String remarks) {
-        Task task = new Task(title, description, priority, fileUrls, remarks);
+    private void saveTaskToFirestore(String title, String description, String priority, List<String> fileUrls, String remarks, String assignedTo) {
+        Task task = new Task(title, description, priority, fileUrls, remarks, assignedTo);
 
         db.collection("tasks")
                 .add(task)
@@ -210,7 +323,6 @@ public class AddActivityFragment extends Fragment {
                     btnSaveTask.setText("Save Task");
                 })
                 .addOnFailureListener(e -> {
-                    // This is where the PERMISSION_DENIED error is being caught
                     Toast.makeText(getContext(), "Error saving task: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                     btnSaveTask.setEnabled(true);
                     btnSaveTask.setText("Save Task");
@@ -224,5 +336,21 @@ public class AddActivityFragment extends Fragment {
         rgPriority.clearCheck();
         selectedFileUris.clear();
         updateAttachedFilesText();
+
+        // Reset assignment
+        if ("admin".equals(loggedInUserRole)) {
+            // Find and check the Admin's radio button as default
+            for(int i = 0; i < rgAssignedTo.getChildCount(); i++){
+                View child = rgAssignedTo.getChildAt(i);
+                if(child instanceof RadioButton){
+                    RadioButton rb = (RadioButton) child;
+                    if(rb.getTag() != null && rb.getTag().equals(loggedInUserEmail)){
+                        rb.setChecked(true);
+                        assignedToEmail = loggedInUserEmail;
+                        break;
+                    }
+                }
+            }
+        }
     }
 }

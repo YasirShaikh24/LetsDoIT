@@ -20,6 +20,7 @@
         android:theme="@style/Theme.LetsDoIT"
         tools:targetApi="31">
 
+        <!-- LoginActivity is now the entry point (Launcher) -->
         <activity
             android:name=".LoginActivity"
             android:exported="true"
@@ -30,6 +31,7 @@
             </intent-filter>
         </activity>
 
+        <!-- MainActivity is no longer the launcher -->
         <activity
             android:name=".MainActivity"
             android:exported="false"
