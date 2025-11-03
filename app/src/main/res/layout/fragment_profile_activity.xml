@@ -7,11 +7,33 @@
     android:gravity="center_horizontal"
     android:background="#F5F5F5">
 
+    <!-- Add Member Button (Top Right) -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp">
+
+        <Button
+            android:id="@+id/btn_add_member"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="end"
+            android:text="+ Add Member"
+            android:textSize="14sp"
+            android:visibility="gone"
+            android:background="@drawable/button_primary_background"
+            android:textColor="#FFFFFF"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp" />
+    </FrameLayout>
+
     <!-- Profile Icon/Avatar -->
     <ImageView
         android:layout_width="120dp"
         android:layout_height="120dp"
-        android:layout_marginTop="32dp"
+        android:layout_marginTop="16dp"
         android:layout_marginBottom="24dp"
         android:src="@drawable/ic_profile_placeholder"
         android:contentDescription="Profile Picture" />

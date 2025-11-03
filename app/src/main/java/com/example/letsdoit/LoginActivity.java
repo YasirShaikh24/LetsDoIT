@@ -10,26 +10,22 @@ import android.widget.Toast;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.google.android.gms.tasks.TaskCompletionSource; // New Import
 import com.google.android.material.textfield.TextInputEditText;
-import com.google.firebase.firestore.DocumentSnapshot; // New Import
-import com.google.firebase.firestore.FirebaseFirestore; // New Import
-import com.google.firebase.firestore.QuerySnapshot; // New Import
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FirebaseFirestore;
 
 public class LoginActivity extends AppCompatActivity {
 
-    private TextInputEditText etEmail, etPassword; // NOTE: Password is not stored/checked in this mock setup.
+    private TextInputEditText etEmail, etPassword;
     private Button btnLogin;
-    private FirebaseFirestore db; // Firestore instance
+    private FirebaseFirestore db;
 
     private static final String TAG = "LoginActivity";
     private static final String ADMIN_EMAIL = "mahimhussain444@gmail.com";
 
-    // Keys for Intent Extras (moved from static fields to class body)
     public static final String EXTRA_DISPLAY_NAME = "extra_display_name";
     public static final String EXTRA_USER_ROLE = "extra_user_role";
     public static final String EXTRA_USER_EMAIL = "extra_user_email";
-
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -54,19 +50,43 @@ public class LoginActivity extends AppCompatActivity {
             return;
         }
 
-        // NOTE: Since this is a mock login without Firebase Authentication,
-        // we skip password validation but enforce non-empty fields.
-
         if (password.isEmpty()) {
             etPassword.setError("Password is required");
             return;
         }
 
-        // Disable button during network call
         btnLogin.setEnabled(false);
         btnLogin.setText("Logging in...");
 
-        checkUserInDatabase(email);
+        // Check if admin first
+        if (email.equals(ADMIN_EMAIL)) {
+            checkAdminInDatabase(email);
+        } else {
+            checkUserInDatabase(email);
+        }
+    }
+
+    private void checkAdminInDatabase(String email) {
+        db.collection("admins")
+                .whereEqualTo("email", email)
+                .get()
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful() && task.getResult() != null && !task.getResult().isEmpty()) {
+                        // Admin exists
+                        DocumentSnapshot doc = task.getResult().getDocuments().get(0);
+                        User admin = doc.toObject(User.class);
+                        if (admin != null) {
+                            onLoginSuccess(admin.getEmail(), admin.getRole(), admin.getDisplayName());
+                        }
+                    } else {
+                        // Admin doesn't exist, register them
+                        registerNewAdmin(email);
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error checking admin existence", e);
+                    onLoginFailure("Database error: " + e.getMessage());
+                });
     }
 
     private void checkUserInDatabase(String email) {
@@ -75,59 +95,59 @@ public class LoginActivity extends AppCompatActivity {
                 .get()
                 .addOnCompleteListener(task -> {
                     if (task.isSuccessful() && task.getResult() != null && !task.getResult().isEmpty()) {
-                        // User exists, retrieve their data
+                        // User exists
                         DocumentSnapshot doc = task.getResult().getDocuments().get(0);
                         User user = doc.toObject(User.class);
                         if (user != null) {
                             onLoginSuccess(user.getEmail(), user.getRole(), user.getDisplayName());
-                        } else {
-                            onLoginFailure("User data format error.");
                         }
                     } else {
-                        // User does not exist, register them
+                        // User doesn't exist, register them
                         registerNewUser(email);
                     }
                 })
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Error checking user existence", e);
-                    onLoginFailure("Database error during login: " + e.getMessage());
+                    onLoginFailure("Database error: " + e.getMessage());
                 });
     }
 
-    // Automatic registration logic
+    private void registerNewAdmin(String email) {
+        User newAdmin = new User(email, "admin", "Admin");
+
+        db.collection("admins")
+                .add(newAdmin)
+                .addOnSuccessListener(documentReference -> {
+                    Log.d(TAG, "Admin registered successfully");
+                    onLoginSuccess(newAdmin.getEmail(), newAdmin.getRole(), newAdmin.getDisplayName());
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error registering admin", e);
+                    onLoginFailure("Admin registration failed: " + e.getMessage());
+                });
+    }
+
     private void registerNewUser(String email) {
-        String role;
-        String displayName;
-
-        if (email.equals(ADMIN_EMAIL)) {
-            role = "admin";
-            displayName = "Admin";
-        } else {
-            // All other new users are regular users
-            role = "user";
-            displayName = email.split("@")[0]; // Use part before @ as display name
-        }
-
-        User newUser = new User(email, role, displayName);
+        String displayName = email.split("@")[0];
+        User newUser = new User(email, "user", displayName);
 
         db.collection("users")
                 .add(newUser)
                 .addOnSuccessListener(documentReference -> {
+                    Log.d(TAG, "User registered successfully");
                     onLoginSuccess(newUser.getEmail(), newUser.getRole(), newUser.getDisplayName());
                 })
                 .addOnFailureListener(e -> {
-                    Log.e(TAG, "Error registering new user", e);
-                    onLoginFailure("Registration failed: " + e.getMessage());
+                    Log.e(TAG, "Error registering user", e);
+                    onLoginFailure("User registration failed: " + e.getMessage());
                 });
     }
-
 
     private void onLoginSuccess(String email, String role, String displayName) {
         Toast.makeText(this, "Login successful!", Toast.LENGTH_SHORT).show();
         btnLogin.setEnabled(true);
         btnLogin.setText("Login");
 
-        // Navigate to MainActivity and pass user data
         Intent intent = new Intent(LoginActivity.this, MainActivity.class);
         intent.putExtra(EXTRA_DISPLAY_NAME, displayName);
         intent.putExtra(EXTRA_USER_ROLE, role);

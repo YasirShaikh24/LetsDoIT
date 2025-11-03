@@ -27,14 +27,18 @@ public class MainActivity extends AppCompatActivity {
         if ("admin".equals(loggedInUserRole)) {
             welcomeMessage = "Welcome Admin";
         } else if (displayName != null) {
-            // All other users
             welcomeMessage = "Welcome " + displayName;
         } else {
-            // Default message
             welcomeMessage = "Home / Dashboard";
         }
 
         BottomNavigationView bottomNav = findViewById(R.id.bottom_navigation);
+
+        // HIDE "Add Activity" navigation item for regular users
+        if (!"admin".equals(loggedInUserRole)) {
+            bottomNav.getMenu().removeItem(R.id.navigation_add_activity);
+        }
+
         bottomNav.setOnItemSelectedListener(item -> {
             Fragment selectedFragment = null;
             int itemId = item.getItemId();
@@ -42,7 +46,10 @@ public class MainActivity extends AppCompatActivity {
             if (itemId == R.id.navigation_home) {
                 selectedFragment = HomeFragment.newInstance(welcomeMessage);
             } else if (itemId == R.id.navigation_add_activity) {
-                selectedFragment = AddActivityFragment.newInstance(loggedInUserEmail, loggedInUserRole);
+                // Only admin can access this
+                if ("admin".equals(loggedInUserRole)) {
+                    selectedFragment = AddActivityFragment.newInstance(loggedInUserEmail, loggedInUserRole);
+                }
             } else if (itemId == R.id.navigation_view_activity) {
                 selectedFragment = ViewActivityFragment.newInstance(loggedInUserEmail, loggedInUserRole);
             } else if (itemId == R.id.navigation_profile_activity) {
@@ -57,7 +64,7 @@ public class MainActivity extends AppCompatActivity {
             return true;
         });
 
-        // Set the Dashboard/Home Fragment as the default selected screen (this triggers the listener above)
+        // Set default fragment
         if (savedInstanceState == null) {
             bottomNav.setSelectedItemId(R.id.navigation_home);
         }

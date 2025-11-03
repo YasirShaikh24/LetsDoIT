@@ -17,13 +17,12 @@ import androidx.fragment.app.Fragment;
 public class ProfileActivityFragment extends Fragment {
 
     private TextView tvUserEmail, tvUserRole, tvDisplayName;
-    private Button btnLogout;
+    private Button btnLogout, btnAddMember;
 
     private String loggedInUserEmail;
     private String loggedInUserRole;
     private String displayName;
 
-    // Factory method to create an instance with user data
     public static ProfileActivityFragment newInstance(String email, String role, String displayName) {
         ProfileActivityFragment fragment = new ProfileActivityFragment();
         Bundle args = new Bundle();
@@ -38,7 +37,6 @@ public class ProfileActivityFragment extends Fragment {
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // Retrieve user data from arguments
         if (getArguments() != null) {
             loggedInUserEmail = getArguments().getString(LoginActivity.EXTRA_USER_EMAIL);
             loggedInUserRole = getArguments().getString(LoginActivity.EXTRA_USER_ROLE);
@@ -51,13 +49,12 @@ public class ProfileActivityFragment extends Fragment {
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_profile_activity, container, false);
 
-        // Initialize views
         tvDisplayName = view.findViewById(R.id.tv_display_name);
         tvUserEmail = view.findViewById(R.id.tv_user_email);
         tvUserRole = view.findViewById(R.id.tv_user_role);
         btnLogout = view.findViewById(R.id.btn_logout);
+        btnAddMember = view.findViewById(R.id.btn_add_member);
 
-        // Display user information
         if (displayName != null && !displayName.isEmpty()) {
             tvDisplayName.setText(displayName);
         } else {
@@ -73,21 +70,31 @@ public class ProfileActivityFragment extends Fragment {
             tvUserRole.setText("Role: " + roleDisplay);
         }
 
-        // Logout button click listener
+        // Show "Add Member" button only for admin
+        if ("admin".equals(loggedInUserRole)) {
+            btnAddMember.setVisibility(View.VISIBLE);
+            btnAddMember.setOnClickListener(v -> openAddMemberActivity());
+        } else {
+            btnAddMember.setVisibility(View.GONE);
+        }
+
         btnLogout.setOnClickListener(v -> logout());
 
         return view;
     }
 
+    private void openAddMemberActivity() {
+        Intent intent = new Intent(getActivity(), AddMemberActivity.class);
+        startActivity(intent);
+    }
+
     private void logout() {
         Toast.makeText(getContext(), "Logged out successfully", Toast.LENGTH_SHORT).show();
 
-        // Navigate back to LoginActivity
         Intent intent = new Intent(getActivity(), LoginActivity.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
         startActivity(intent);
 
-        // Finish the current activity
         if (getActivity() != null) {
             getActivity().finish();
         }

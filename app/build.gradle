@@ -35,6 +35,8 @@ android {
     buildFeatures {
         viewBinding = true
     }
+
+    // REMOVED: packagingOptions no longer needed since JavaMail is removed
 }
 
 dependencies {
@@ -53,4 +55,8 @@ dependencies {
     implementation platform('com.google.firebase:firebase-bom:32.7.0')
     implementation 'com.google.firebase:firebase-firestore'
     implementation 'com.google.firebase:firebase-storage'
+
+    // REMOVED: JavaMail dependencies (replaced with native SMS)
+    // implementation 'com.sun.mail:android-mail:1.6.7'
+    // implementation 'com.sun.mail:android-activation:1.6.7'
 }
