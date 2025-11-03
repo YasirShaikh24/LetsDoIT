@@ -1,3 +1,4 @@
+// src/main/java/com/example/letsdoit/MainActivity.java
 package com.example.letsdoit;
 
 import android.os.Bundle;
@@ -7,10 +8,26 @@ import com.google.android.material.bottomnavigation.BottomNavigationView;
 
 public class MainActivity extends AppCompatActivity {
 
+    private String welcomeMessage;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        // Retrieve user data passed from LoginActivity
+        String displayName = getIntent().getStringExtra(LoginActivity.EXTRA_DISPLAY_NAME);
+        String userRole = getIntent().getStringExtra(LoginActivity.EXTRA_USER_ROLE);
+
+        // Generate the personalized welcome message
+        if ("admin".equals(userRole)) {
+            welcomeMessage = "Welcome Admin";
+        } else if ("user".equals(userRole) && displayName != null) {
+            welcomeMessage = "Welcome " + displayName;
+        } else {
+            // Default message if launched without specific login info
+            welcomeMessage = "Home / Dashboard";
+        }
 
         BottomNavigationView bottomNav = findViewById(R.id.bottom_navigation);
         bottomNav.setOnItemSelectedListener(item -> {
@@ -18,7 +35,8 @@ public class MainActivity extends AppCompatActivity {
             int itemId = item.getItemId();
 
             if (itemId == R.id.navigation_home) {
-                selectedFragment = new HomeFragment();
+                // Pass the personalized message to the HomeFragment
+                selectedFragment = HomeFragment.newInstance(welcomeMessage);
             } else if (itemId == R.id.navigation_add_activity) {
                 selectedFragment = new AddActivityFragment();
             } else if (itemId == R.id.navigation_view_activity) {
@@ -35,7 +53,7 @@ public class MainActivity extends AppCompatActivity {
             return true;
         });
 
-        // Set the Dashboard/Home Fragment as the default selected screen
+        // Set the Dashboard/Home Fragment as the default selected screen (this triggers the listener above)
         if (savedInstanceState == null) {
             bottomNav.setSelectedItemId(R.id.navigation_home);
         }
