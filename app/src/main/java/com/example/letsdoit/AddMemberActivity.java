@@ -2,9 +2,10 @@
 package com.example.letsdoit;
 
 import android.Manifest;
+import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.os.Bundle;
-import android.telephony.SmsManager;
 import android.util.Log;
 import android.widget.Button;
 import android.widget.EditText;
@@ -24,7 +25,8 @@ public class AddMemberActivity extends AppCompatActivity {
 
     private static final String TAG = "AddMemberActivity";
     private static final String APP_LINK = "https://play.google.com/store/apps/details?id=com.example.letsdoit";
-    private static final int SMS_PERMISSION_CODE = 100;
+    // SMS_PERMISSION_CODE and related checks are no longer strictly needed for this approach, but are kept minimal.
+    // However, for launching the intent, no permission is needed.
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -40,35 +42,15 @@ public class AddMemberActivity extends AppCompatActivity {
         btnSendInvite = findViewById(R.id.btn_send_invite);
         btnBack = findViewById(R.id.btn_back);
 
-        // Request SMS permission
-        requestSmsPermission();
+        // No need to request SMS permission anymore.
 
-        btnSendInvite.setOnClickListener(v -> addMemberAndSendSMS());
+        btnSendInvite.setOnClickListener(v -> addMemberAndPrepareSMS());
         btnBack.setOnClickListener(v -> finish());
     }
 
-    private void requestSmsPermission() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS)
-                != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this,
-                    new String[]{Manifest.permission.SEND_SMS},
-                    SMS_PERMISSION_CODE);
-        }
-    }
+    // Removed requestSmsPermission and onRequestPermissionsResult as direct SMS sending is removed.
 
-    @Override
-    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == SMS_PERMISSION_CODE) {
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                Toast.makeText(this, "SMS Permission Granted", Toast.LENGTH_SHORT).show();
-            } else {
-                Toast.makeText(this, "SMS Permission Denied. Cannot send invitations.", Toast.LENGTH_LONG).show();
-            }
-        }
-    }
-
-    private void addMemberAndSendSMS() {
+    private void addMemberAndPrepareSMS() {
         String memberName = etMemberName.getText().toString().trim();
         String mobileNumber = etMobileNumber.getText().toString().trim();
         String assignedEmail = etAssignedEmail.getText().toString().trim();
@@ -88,7 +70,7 @@ public class AddMemberActivity extends AppCompatActivity {
         // Format mobile number - ensure it has country code
         String formattedNumber = mobileNumber;
         if (!mobileNumber.startsWith("+")) {
-            // If no country code, assume India and add +91
+            // If no country code, assume India and add +91 for better reliability in SMS app
             if (mobileNumber.length() == 10) {
                 formattedNumber = "+91" + mobileNumber;
             } else {
@@ -115,19 +97,11 @@ public class AddMemberActivity extends AppCompatActivity {
             return;
         }
 
-        // Check SMS permission
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS)
-                != PackageManager.PERMISSION_GRANTED) {
-            Toast.makeText(this, "Please grant SMS permission first", Toast.LENGTH_LONG).show();
-            requestSmsPermission();
-            return;
-        }
-
         btnSendInvite.setEnabled(false);
-        btnSendInvite.setText("Sending...");
+        btnSendInvite.setText("Adding Member...");
 
         // First, add user to Firestore
-        // CRITICAL FIX: Use formattedNumber instead of mobileNumber
+        // Use formattedNumber as the SMS recipient, although it's not strictly saved.
         addUserToFirestore(memberName, assignedEmail, formattedNumber, assignedPassword);
     }
 
@@ -138,62 +112,46 @@ public class AddMemberActivity extends AppCompatActivity {
                 .add(newUser)
                 .addOnSuccessListener(documentReference -> {
                     Log.d(TAG, "User added to Firestore successfully");
-                    // Send SMS in background thread to avoid UI blocking
-                    // mobileNumber parameter here now correctly holds the formatted number
-                    new Thread(() -> sendSMS(memberName, mobileNumber, assignedEmail, assignedPassword)).start();
+                    // Prepare and open the SMS Intent
+                    prepareAndOpenSmsIntent(memberName, mobileNumber, assignedEmail, assignedPassword);
                 })
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Error adding user to Firestore", e);
                     Toast.makeText(this, "Failed to add user: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                     btnSendInvite.setEnabled(true);
-                    btnSendInvite.setText("Send Invite");
+                    btnSendInvite.setText("Send SMS Invite");
                 });
     }
 
-    private void sendSMS(String memberName, String mobileNumber, String assignedEmail, String assignedPassword) {
+    // NEW METHOD: Prepares the message and opens the native SMS app
+    private void prepareAndOpenSmsIntent(String memberName, String mobileNumber, String assignedEmail, String assignedPassword) {
+        String message = "Do It!\n\n" + // Mimic the style in the image
+                "Login Details:\n" +
+                "Email: " + assignedEmail + "\n" +
+                "Password: " + assignedPassword + "\n\n" +
+                "Download:\n" + APP_LINK + "\n\n" +
+                "Keep credentials secure!";
+
+        // Use Uri.encode to ensure message is correctly formatted for SMS intent
+        Uri uri = Uri.parse("smsto:" + Uri.encode(mobileNumber));
+        Intent intent = new Intent(Intent.ACTION_SENDTO, uri);
+        intent.putExtra("sms_body", message);
+
         try {
-            SmsManager smsManager = SmsManager.getDefault();
-
-            // Log the number we're sending to for debugging
-            Log.d(TAG, "Attempting to send SMS to: " + mobileNumber);
-
-            // Create the message
-            String message = "Welcome " + memberName + " to Let's Do It!\n\n" +
-                    "Login Details:\n" +
-                    "Email: " + assignedEmail + "\n" +
-                    "Password: " + assignedPassword + "\n\n" +
-                    "Download: " + APP_LINK + "\n\n" +
-                    "Keep credentials secure!";
-
-            // SMS has 160 character limit, so split if needed
-            if (message.length() > 160) {
-                // Split into multiple parts (divideMessage returns ArrayList<String>)
-                java.util.ArrayList<String> parts = smsManager.divideMessage(message);
-                Log.d(TAG, "Message split into " + parts.size() + " parts");
-                smsManager.sendMultipartTextMessage(mobileNumber, null, parts, null, null);
-            } else {
-                Log.d(TAG, "Sending single SMS message");
-                smsManager.sendTextMessage(mobileNumber, null, message, null, null);
-            }
-
-            Log.d(TAG, "SMS sent successfully to: " + mobileNumber);
-
-            runOnUiThread(() -> {
-                Toast.makeText(this, "SMS sent to " + mobileNumber, Toast.LENGTH_LONG).show();
-                clearForm();
-                btnSendInvite.setEnabled(true);
-                btnSendInvite.setText("Send Invite");
-            });
-
+            startActivity(intent);
+            Toast.makeText(this, "Invitation ready to send in messaging app!", Toast.LENGTH_LONG).show();
         } catch (Exception e) {
-            Log.e(TAG, "Error sending SMS to " + mobileNumber, e);
-            runOnUiThread(() -> {
-                Toast.makeText(this, "Failed to send SMS: " + e.getMessage(), Toast.LENGTH_LONG).show();
-                btnSendInvite.setEnabled(true);
-                btnSendInvite.setText("Send Invite");
-            });
+            Log.e(TAG, "Error opening SMS intent", e);
+            Toast.makeText(this, "Could not open messaging app. Please send manually.", Toast.LENGTH_LONG).show();
+            // Optionally, copy message to clipboard here, but an app without SMS capability is rare.
+        } finally {
+            clearForm();
+            btnSendInvite.setEnabled(true);
+            btnSendInvite.setText("Send SMS Invite");
         }
     }
+
+    // Removed the old sendSMS method.
 
     private void clearForm() {
         etMemberName.setText("");

@@ -117,7 +117,7 @@
             android:layout_height="wrap_content"
             android:text="Back"
             android:textSize="16sp"
-            android:textColor="#666666"
+            android:textColor="#FFFFFF"
             android:background="@drawable/button_secondary_background"
             android:padding="16dp" />
 
