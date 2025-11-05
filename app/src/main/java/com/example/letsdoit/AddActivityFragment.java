@@ -1,58 +1,56 @@
 // src/main/java/com/example/letsdoit/AddActivityFragment.java
 package com.example.letsdoit;
 
-import android.app.Activity;
-import android.content.Intent;
-import android.net.Uri;
-import android.os.Build;
+import android.app.DatePickerDialog;
+import android.content.DialogInterface;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
-import android.widget.EditText;
+import android.widget.DatePicker;
 import android.widget.LinearLayout;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
-import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.activity.result.ActivityResultLauncher;
-import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.Fragment;
 
+import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
-import com.google.firebase.storage.FirebaseStorage;
-import com.google.firebase.storage.StorageReference;
+// Removed Firebase Storage Imports
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.List;
-import java.util.UUID;
+import java.util.Locale;
 
 public class AddActivityFragment extends Fragment {
 
-    private EditText etTitle, etDescription, etRemarks;
-    private RadioGroup rgPriority, rgAssignedTo;
-    private Button btnAttachFiles, btnSaveTask;
-    private TextView tvAttachedFiles;
+    private TextInputEditText etTitle, etDescription, etRemarks, etStartDate, etEndDate;
+    private TextInputEditText etAssigneeDisplay;
+    private RadioGroup rgPriority;
+    private Button btnSaveTask;
     private LinearLayout llAssignUserSection;
 
     private FirebaseFirestore db;
-    private FirebaseStorage storage;
-    private List<Uri> selectedFileUris = new ArrayList<>();
-    private ActivityResultLauncher<Intent> filePickerLauncher;
-    private ActivityResultLauncher<String[]> permissionLauncher;
+    // Removed Firebase Storage members
 
     private String loggedInUserEmail;
     private String loggedInUserRole;
-    private String assignedToEmail;
 
+    private List<String> selectedAssignees = new ArrayList<>();
+    private List<String> allUserDisplayNames = new ArrayList<>();
     private List<User> allUsers = new ArrayList<>();
+
     private static final String TAG = "AddActivityFragment";
+    private final SimpleDateFormat dateFormat = new SimpleDateFormat("MMM dd, yyyy", Locale.US);
 
     public static AddActivityFragment newInstance(String email, String role) {
         AddActivityFragment fragment = new AddActivityFragment();
@@ -72,47 +70,11 @@ public class AddActivityFragment extends Fragment {
             loggedInUserRole = getArguments().getString(LoginActivity.EXTRA_USER_ROLE);
         }
 
-        assignedToEmail = loggedInUserEmail;
+        if (!"admin".equals(loggedInUserRole)) {
+            selectedAssignees.add(loggedInUserEmail);
+        }
 
         db = FirebaseFirestore.getInstance();
-        storage = FirebaseStorage.getInstance();
-
-        permissionLauncher = registerForActivityResult(
-                new ActivityResultContracts.RequestMultiplePermissions(),
-                result -> {
-                    boolean allGranted = true;
-                    for (Boolean granted : result.values()) {
-                        if (!granted) {
-                            allGranted = false;
-                            break;
-                        }
-                    }
-                    if (!allGranted) {
-                        Toast.makeText(getContext(), "Storage permissions are required to attach files", Toast.LENGTH_LONG).show();
-                    }
-                }
-        );
-
-        filePickerLauncher = registerForActivityResult(
-                new ActivityResultContracts.StartActivityForResult(),
-                result -> {
-                    if (result.getResultCode() == Activity.RESULT_OK && result.getData() != null) {
-                        Intent data = result.getData();
-                        if (data.getClipData() != null) {
-                            int count = data.getClipData().getItemCount();
-                            for (int i = 0; i < count; i++) {
-                                Uri fileUri = data.getClipData().getItemAt(i).getUri();
-                                selectedFileUris.add(fileUri);
-                            }
-                        } else if (data.getData() != null) {
-                            selectedFileUris.add(data.getData());
-                        }
-                        updateAttachedFilesText();
-                    }
-                }
-        );
-
-        requestStoragePermissions();
     }
 
     @Nullable
@@ -124,38 +86,62 @@ public class AddActivityFragment extends Fragment {
         etDescription = view.findViewById(R.id.et_description);
         etRemarks = view.findViewById(R.id.et_remarks);
         rgPriority = view.findViewById(R.id.rg_priority);
-        btnAttachFiles = view.findViewById(R.id.btn_attach_files);
         btnSaveTask = view.findViewById(R.id.btn_save_task);
-        tvAttachedFiles = view.findViewById(R.id.tv_attached_files);
+
+        etStartDate = view.findViewById(R.id.et_start_date);
+        etEndDate = view.findViewById(R.id.et_end_date);
+
+        etStartDate.setOnClickListener(v -> showDatePicker(etStartDate));
+        etEndDate.setOnClickListener(v -> showDatePicker(etEndDate));
 
         llAssignUserSection = view.findViewById(R.id.ll_assign_user_section);
-        rgAssignedTo = view.findViewById(R.id.rg_assigned_to);
+        etAssigneeDisplay = view.findViewById(R.id.et_assigned_to_display);
 
-        // Only ADMIN can see assignment section
         if ("admin".equals(loggedInUserRole)) {
             llAssignUserSection.setVisibility(View.VISIBLE);
             loadUsersForAssignment();
+            etAssigneeDisplay.setOnClickListener(v -> showMultiSelectUserDialog());
         } else {
             llAssignUserSection.setVisibility(View.GONE);
         }
 
-        btnAttachFiles.setOnClickListener(v -> openFilePicker());
         btnSaveTask.setOnClickListener(v -> saveTask());
 
         return view;
     }
 
-    // UPDATED: Load only from 'users' collection (not admins)
+    private void showDatePicker(final TextInputEditText dateEditText) {
+        final Calendar calendar = Calendar.getInstance();
+
+        DatePickerDialog.OnDateSetListener dateSetListener = new DatePickerDialog.OnDateSetListener() {
+            @Override
+            public void onDateSet(DatePicker view, int year, int monthOfYear, int dayOfMonth) {
+                calendar.set(Calendar.YEAR, year);
+                calendar.set(Calendar.MONTH, monthOfYear);
+                calendar.set(Calendar.DAY_OF_MONTH, dayOfMonth);
+                dateEditText.setText(dateFormat.format(calendar.getTime()));
+            }
+        };
+
+        new DatePickerDialog(getContext(), dateSetListener,
+                calendar.get(Calendar.YEAR),
+                calendar.get(Calendar.MONTH),
+                calendar.get(Calendar.DAY_OF_MONTH)).show();
+    }
+
     private void loadUsersForAssignment() {
         db.collection("users")
                 .get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {
                     allUsers.clear();
+                    allUserDisplayNames.clear();
                     for (QueryDocumentSnapshot document : queryDocumentSnapshots) {
                         User user = document.toObject(User.class);
                         allUsers.add(user);
+                        String displayName = user.getDisplayName() + " (" + user.getEmail() + ")";
+                        allUserDisplayNames.add(displayName);
                     }
-                    setupAssignmentRadioGroup();
+                    updateAssigneeDisplay();
                 })
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Failed to load users for assignment: " + e.getMessage());
@@ -163,69 +149,61 @@ public class AddActivityFragment extends Fragment {
                 });
     }
 
-    private void setupAssignmentRadioGroup() {
-        rgAssignedTo.removeAllViews();
-
-        if (allUsers.isEmpty()) {
-            TextView tv = new TextView(getContext());
-            tv.setText("No users found.");
-            rgAssignedTo.addView(tv);
+    private void showMultiSelectUserDialog() {
+        if (allUserDisplayNames.isEmpty()) {
+            Toast.makeText(getContext(), "No users found to assign.", Toast.LENGTH_SHORT).show();
             return;
         }
 
+        final CharSequence[] items = allUserDisplayNames.toArray(new CharSequence[0]);
+        final boolean[] checkedItems = new boolean[allUsers.size()];
+
         for (int i = 0; i < allUsers.size(); i++) {
-            User user = allUsers.get(i);
-            String userEmail = user.getEmail();
-            RadioButton rb = new RadioButton(getContext());
-
-            String buttonText = user.getDisplayName() + " (" + userEmail + ")";
-            rb.setText(buttonText);
-            rb.setTag(userEmail);
-            rb.setId(View.generateViewId());
-
-            // Default: select first user
-            if (i == 0) {
-                rb.setChecked(true);
-                assignedToEmail = userEmail;
+            if (selectedAssignees.contains(allUsers.get(i).getEmail())) {
+                checkedItems[i] = true;
+            } else {
+                checkedItems[i] = false;
             }
-
-            rgAssignedTo.addView(rb);
         }
 
-        rgAssignedTo.setOnCheckedChangeListener((group, checkedId) -> {
-            RadioButton selected = group.findViewById(checkedId);
-            if (selected != null) {
-                assignedToEmail = (String) selected.getTag();
+        AlertDialog.Builder builder = new AlertDialog.Builder(requireContext());
+        builder.setTitle("Select Team Members")
+                .setMultiChoiceItems(items, checkedItems, new DialogInterface.OnMultiChoiceClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which, boolean isChecked) {
+                        checkedItems[which] = isChecked;
+                    }
+                })
+                .setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int id) {
+                        selectedAssignees.clear();
+                        for (int i = 0; i < allUsers.size(); i++) {
+                            if (checkedItems[i]) {
+                                selectedAssignees.add(allUsers.get(i).getEmail());
+                            }
+                        }
+                        updateAssigneeDisplay();
+                    }
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void updateAssigneeDisplay() {
+        if (selectedAssignees.isEmpty()) {
+            etAssigneeDisplay.setText("No users selected");
+        } else {
+            List<String> displayNames = new ArrayList<>();
+            for (String email : selectedAssignees) {
+                for (User user : allUsers) {
+                    if (user.getEmail().equals(email)) {
+                        displayNames.add(user.getDisplayName());
+                        break;
+                    }
+                }
             }
-        });
-    }
-
-    private void requestStoragePermissions() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            permissionLauncher.launch(new String[]{
-                    android.Manifest.permission.READ_MEDIA_IMAGES,
-                    android.Manifest.permission.READ_MEDIA_VIDEO,
-                    android.Manifest.permission.READ_MEDIA_AUDIO
-            });
-        } else {
-            permissionLauncher.launch(new String[]{
-                    android.Manifest.permission.READ_EXTERNAL_STORAGE
-            });
-        }
-    }
-
-    private void openFilePicker() {
-        Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-        intent.setType("*/*");
-        intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
-        filePickerLauncher.launch(Intent.createChooser(intent, "Select Files"));
-    }
-
-    private void updateAttachedFilesText() {
-        if (selectedFileUris.isEmpty()) {
-            tvAttachedFiles.setText("No files attached");
-        } else {
-            tvAttachedFiles.setText(selectedFileUris.size() + " file(s) attached");
+            etAssigneeDisplay.setText(String.join(", ", displayNames));
         }
     }
 
@@ -233,6 +211,8 @@ public class AddActivityFragment extends Fragment {
         String title = etTitle.getText().toString().trim();
         String description = etDescription.getText().toString().trim();
         String remarks = etRemarks.getText().toString().trim();
+        String startDate = etStartDate.getText().toString().trim();
+        String endDate = etEndDate.getText().toString().trim();
 
         if (title.isEmpty()) {
             etTitle.setError("Title is required");
@@ -241,6 +221,11 @@ public class AddActivityFragment extends Fragment {
 
         if (description.isEmpty()) {
             etDescription.setError("Description is required");
+            return;
+        }
+
+        if ("admin".equals(loggedInUserRole) && selectedAssignees.isEmpty()) {
+            Toast.makeText(getContext(), "Please assign the task to at least one user.", Toast.LENGTH_SHORT).show();
             return;
         }
 
@@ -256,42 +241,14 @@ public class AddActivityFragment extends Fragment {
         btnSaveTask.setEnabled(false);
         btnSaveTask.setText("Saving...");
 
-        if (!selectedFileUris.isEmpty()) {
-            uploadFilesAndSaveTask(title, description, priority, remarks, assignedToEmail);
-        } else {
-            saveTaskToFirestore(title, description, priority, new ArrayList<>(), remarks, assignedToEmail);
-        }
+        // Directly call saveTaskToFirestore
+        saveTaskToFirestore(title, description, priority, remarks, selectedAssignees, startDate, endDate);
     }
 
-    private void uploadFilesAndSaveTask(String title, String description, String priority, String remarks, String assignedTo) {
-        List<String> fileUrls = new ArrayList<>();
-        int[] uploadCount = {0};
-
-        for (Uri fileUri : selectedFileUris) {
-            String fileName = UUID.randomUUID().toString();
-            StorageReference fileRef = storage.getReference().child("task_files/" + fileName);
-
-            fileRef.putFile(fileUri)
-                    .addOnSuccessListener(taskSnapshot -> {
-                        fileRef.getDownloadUrl().addOnSuccessListener(downloadUri -> {
-                            fileUrls.add(downloadUri.toString());
-                            uploadCount[0]++;
-
-                            if (uploadCount[0] == selectedFileUris.size()) {
-                                saveTaskToFirestore(title, description, priority, fileUrls, remarks, assignedTo);
-                            }
-                        });
-                    })
-                    .addOnFailureListener(e -> {
-                        Toast.makeText(getContext(), "File upload failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                        btnSaveTask.setEnabled(true);
-                        btnSaveTask.setText("Save Task");
-                    });
-        }
-    }
-
-    private void saveTaskToFirestore(String title, String description, String priority, List<String> fileUrls, String remarks, String assignedTo) {
-        Task task = new Task(title, description, priority, fileUrls, remarks, assignedTo);
+    // Updated method signature (Removed fileUrls list)
+    private void saveTaskToFirestore(String title, String description, String priority, String remarks, List<String> assignedTo, String startDate, String endDate) {
+        // Updated Task constructor signature (removed fileUrls)
+        Task task = new Task(title, description, priority, remarks, assignedTo, startDate, endDate);
 
         db.collection("tasks")
                 .add(task)
@@ -312,14 +269,13 @@ public class AddActivityFragment extends Fragment {
         etTitle.setText("");
         etDescription.setText("");
         etRemarks.setText("");
+        etStartDate.setText("");
+        etEndDate.setText("");
         rgPriority.clearCheck();
-        selectedFileUris.clear();
-        updateAttachedFilesText();
 
-        if ("admin".equals(loggedInUserRole) && rgAssignedTo.getChildCount() > 0) {
-            RadioButton firstRb = (RadioButton) rgAssignedTo.getChildAt(0);
-            firstRb.setChecked(true);
-            assignedToEmail = (String) firstRb.getTag();
+        if ("admin".equals(loggedInUserRole)) {
+            selectedAssignees.clear();
+            updateAssigneeDisplay();
         }
     }
 }

@@ -23,6 +23,9 @@ public class LoginActivity extends AppCompatActivity {
     private static final String TAG = "LoginActivity";
     private static final String ADMIN_EMAIL = "mahimhussain444@gmail.com";
 
+    // Placeholder password for users registered via login screen
+    private static final String DEFAULT_PASSWORD = "password123";
+
     public static final String EXTRA_DISPLAY_NAME = "extra_display_name";
     public static final String EXTRA_USER_ROLE = "extra_user_role";
     public static final String EXTRA_USER_EMAIL = "extra_user_email";
@@ -74,6 +77,7 @@ public class LoginActivity extends AppCompatActivity {
                     if (task.isSuccessful() && task.getResult() != null && !task.getResult().isEmpty()) {
                         // Admin exists
                         DocumentSnapshot doc = task.getResult().getDocuments().get(0);
+                        // CRITICAL: Firestore uses the User.java class here
                         User admin = doc.toObject(User.class);
                         if (admin != null) {
                             onLoginSuccess(admin.getEmail(), admin.getRole(), admin.getDisplayName());
@@ -97,6 +101,7 @@ public class LoginActivity extends AppCompatActivity {
                     if (task.isSuccessful() && task.getResult() != null && !task.getResult().isEmpty()) {
                         // User exists
                         DocumentSnapshot doc = task.getResult().getDocuments().get(0);
+                        // CRITICAL: Firestore uses the User.java class here
                         User user = doc.toObject(User.class);
                         if (user != null) {
                             onLoginSuccess(user.getEmail(), user.getRole(), user.getDisplayName());
@@ -112,8 +117,9 @@ public class LoginActivity extends AppCompatActivity {
                 });
     }
 
+    // UPDATED: Added DEFAULT_PASSWORD to the constructor
     private void registerNewAdmin(String email) {
-        User newAdmin = new User(email, "admin", "Admin");
+        User newAdmin = new User(email, "admin", "Admin", DEFAULT_PASSWORD);
 
         db.collection("admins")
                 .add(newAdmin)
@@ -127,9 +133,10 @@ public class LoginActivity extends AppCompatActivity {
                 });
     }
 
+    // UPDATED: Added DEFAULT_PASSWORD to the constructor
     private void registerNewUser(String email) {
         String displayName = email.split("@")[0];
-        User newUser = new User(email, "user", displayName);
+        User newUser = new User(email, "user", displayName, DEFAULT_PASSWORD);
 
         db.collection("users")
                 .add(newUser)

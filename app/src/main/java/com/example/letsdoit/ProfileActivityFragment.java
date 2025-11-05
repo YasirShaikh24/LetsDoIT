@@ -17,7 +17,7 @@ import androidx.fragment.app.Fragment;
 public class ProfileActivityFragment extends Fragment {
 
     private TextView tvUserEmail, tvUserRole, tvDisplayName;
-    private Button btnLogout, btnAddMember;
+    private Button btnLogout, btnAddMember, btnViewMembers;
 
     private String loggedInUserEmail;
     private String loggedInUserRole;
@@ -54,6 +54,7 @@ public class ProfileActivityFragment extends Fragment {
         tvUserRole = view.findViewById(R.id.tv_user_role);
         btnLogout = view.findViewById(R.id.btn_logout);
         btnAddMember = view.findViewById(R.id.btn_add_member);
+        btnViewMembers = view.findViewById(R.id.btn_view_members);
 
         if (displayName != null && !displayName.isEmpty()) {
             tvDisplayName.setText(displayName);
@@ -70,12 +71,16 @@ public class ProfileActivityFragment extends Fragment {
             tvUserRole.setText("Role: " + roleDisplay);
         }
 
-        // Show "Add Member" button only for admin
+        // Show "Add Member" and "View Members" button only for admin
         if ("admin".equals(loggedInUserRole)) {
             btnAddMember.setVisibility(View.VISIBLE);
             btnAddMember.setOnClickListener(v -> openAddMemberActivity());
+
+            btnViewMembers.setVisibility(View.VISIBLE);
+            btnViewMembers.setOnClickListener(v -> openViewMembersActivity());
         } else {
             btnAddMember.setVisibility(View.GONE);
+            btnViewMembers.setVisibility(View.GONE);
         }
 
         btnLogout.setOnClickListener(v -> logout());
@@ -85,6 +90,11 @@ public class ProfileActivityFragment extends Fragment {
 
     private void openAddMemberActivity() {
         Intent intent = new Intent(getActivity(), AddMemberActivity.class);
+        startActivity(intent);
+    }
+
+    private void openViewMembersActivity() {
+        Intent intent = new Intent(getActivity(), ViewMembersActivity.class);
         startActivity(intent);
     }
 

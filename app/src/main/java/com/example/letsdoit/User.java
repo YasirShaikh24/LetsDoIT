@@ -5,15 +5,18 @@ public class User {
     private String email;
     private String role; // "admin" or "user"
     private String displayName;
+    private String password; // NEW FIELD for password storage
 
     public User() {
         // Required empty constructor for Firestore
     }
 
-    public User(String email, String role, String displayName) {
+    // UPDATED Constructor
+    public User(String email, String role, String displayName, String password) {
         this.email = email;
         this.role = role;
         this.displayName = displayName;
+        this.password = password;
     }
 
     public String getEmail() {
@@ -38,5 +41,14 @@ public class User {
 
     public void setDisplayName(String displayName) {
         this.displayName = displayName;
+    }
+
+    // NEW Getter and Setter for password
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
     }
 }

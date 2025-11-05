@@ -2,6 +2,7 @@
 package com.example.letsdoit;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class Task {
@@ -9,25 +10,49 @@ public class Task {
     private String title;
     private String description;
     private String priority;
-    private List<String> fileUrls;
+    private String status;
+
+    // List fields - fileUrls removed
+    private List<String> assignedTo;
+
+    // String fields
     private String remarks;
-    private String assignedTo; // NEW FIELD
+    private String startDate;
+    private String endDate;
+
+    // Field for backward compatibility (Firestore deserializes old single-string field here)
+    private String assignedToEmail;
+
     private long timestamp;
 
     public Task() {
         // Required empty constructor for Firestore
     }
 
-    // UPDATED CONSTRUCTOR
-    public Task(String title, String description, String priority, List<String> fileUrls, String remarks, String assignedTo) {
+    // Constructor for creating NEW tasks - fileUrls argument removed
+    public Task(String title, String description, String priority, String remarks, List<String> assignedTo, String startDate, String endDate) {
         this.title = title;
         this.description = description;
         this.priority = priority;
-        this.fileUrls = fileUrls != null ? fileUrls : new ArrayList<>();
         this.remarks = remarks;
-        this.assignedTo = assignedTo; // Initialize NEW FIELD
+        this.assignedTo = assignedTo != null ? assignedTo : new ArrayList<>();
+        this.startDate = startDate;
+        this.endDate = endDate;
         this.timestamp = System.currentTimeMillis();
+        this.status = "Pending"; // Initialize new tasks as "Pending"
     }
+
+    // --- NEW GETTER & SETTER for Status ---
+    public String getStatus() {
+        // Default to "Pending" for old tasks without a status field
+        return status != null ? status : "Pending";
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    // --- GETTERS & SETTERS (Existing below) ---
 
     public String getId() {
         return id;
@@ -61,12 +86,13 @@ public class Task {
         this.priority = priority;
     }
 
+    // CRITICAL: Always return non-null list for fileUrls - MODIFIED to return empty list
     public List<String> getFileUrls() {
-        return fileUrls;
+        return new ArrayList<>();
     }
 
     public void setFileUrls(List<String> fileUrls) {
-        this.fileUrls = fileUrls;
+        // Method kept for Firestore backward compatibility but does nothing
     }
 
     public String getRemarks() {
@@ -77,13 +103,41 @@ public class Task {
         this.remarks = remarks;
     }
 
-    // NEW GETTER AND SETTER
-    public String getAssignedTo() {
-        return assignedTo;
+    // **CRITICAL FIX: Robust Getter for assignedTo**
+    public List<String> getAssignedTo() {
+        if (assignedTo != null && !assignedTo.isEmpty()) {
+            // New format (List)
+            return assignedTo;
+        } else if (assignedToEmail != null && !assignedToEmail.isEmpty()) {
+            // Old format (String) - convert and return as a single-element list
+            return Collections.singletonList(assignedToEmail);
+        }
+        return new ArrayList<>(); // Always return empty list if both are null/empty
     }
 
-    public void setAssignedTo(String assignedTo) {
+    public void setAssignedTo(List<String> assignedTo) {
         this.assignedTo = assignedTo;
+    }
+
+    // TEMPORARY SETTER: Used by Firestore to populate old documents
+    public void setAssignedToEmail(String assignedToEmail) {
+        this.assignedToEmail = assignedToEmail;
+    }
+
+    public String getStartDate() {
+        return startDate;
+    }
+
+    public void setStartDate(String startDate) {
+        this.startDate = startDate;
+    }
+
+    public String getEndDate() {
+        return endDate;
+    }
+
+    public void setEndDate(String endDate) {
+        this.endDate = endDate;
     }
 
     public long getTimestamp() {

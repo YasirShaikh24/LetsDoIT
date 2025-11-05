@@ -1,9 +1,7 @@
 // src/main/java/com/example/letsdoit/AddMemberActivity.java
 package com.example.letsdoit;
 
-import android.Manifest;
 import android.content.Intent;
-import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
@@ -12,8 +10,6 @@ import android.widget.EditText;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
 
 import com.google.firebase.firestore.FirebaseFirestore;
 
@@ -25,8 +21,6 @@ public class AddMemberActivity extends AppCompatActivity {
 
     private static final String TAG = "AddMemberActivity";
     private static final String APP_LINK = "https://play.google.com/store/apps/details?id=com.example.letsdoit";
-    // SMS_PERMISSION_CODE and related checks are no longer strictly needed for this approach, but are kept minimal.
-    // However, for launching the intent, no permission is needed.
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -42,13 +36,9 @@ public class AddMemberActivity extends AppCompatActivity {
         btnSendInvite = findViewById(R.id.btn_send_invite);
         btnBack = findViewById(R.id.btn_back);
 
-        // No need to request SMS permission anymore.
-
         btnSendInvite.setOnClickListener(v -> addMemberAndPrepareSMS());
         btnBack.setOnClickListener(v -> finish());
     }
-
-    // Removed requestSmsPermission and onRequestPermissionsResult as direct SMS sending is removed.
 
     private void addMemberAndPrepareSMS() {
         String memberName = etMemberName.getText().toString().trim();
@@ -101,12 +91,12 @@ public class AddMemberActivity extends AppCompatActivity {
         btnSendInvite.setText("Adding Member...");
 
         // First, add user to Firestore
-        // Use formattedNumber as the SMS recipient, although it's not strictly saved.
         addUserToFirestore(memberName, assignedEmail, formattedNumber, assignedPassword);
     }
 
+    // UPDATED: User constructor now takes password
     private void addUserToFirestore(String memberName, String assignedEmail, String mobileNumber, String assignedPassword) {
-        User newUser = new User(assignedEmail, "user", memberName);
+        User newUser = new User(assignedEmail, "user", memberName, assignedPassword);
 
         db.collection("users")
                 .add(newUser)
@@ -123,16 +113,14 @@ public class AddMemberActivity extends AppCompatActivity {
                 });
     }
 
-    // NEW METHOD: Prepares the message and opens the native SMS app
     private void prepareAndOpenSmsIntent(String memberName, String mobileNumber, String assignedEmail, String assignedPassword) {
-        String message = "Do It!\n\n" + // Mimic the style in the image
+        String message = "Do It!\n\n" +
                 "Login Details:\n" +
                 "Email: " + assignedEmail + "\n" +
                 "Password: " + assignedPassword + "\n\n" +
                 "Download:\n" + APP_LINK + "\n\n" +
                 "Keep credentials secure!";
 
-        // Use Uri.encode to ensure message is correctly formatted for SMS intent
         Uri uri = Uri.parse("smsto:" + Uri.encode(mobileNumber));
         Intent intent = new Intent(Intent.ACTION_SENDTO, uri);
         intent.putExtra("sms_body", message);
@@ -143,15 +131,12 @@ public class AddMemberActivity extends AppCompatActivity {
         } catch (Exception e) {
             Log.e(TAG, "Error opening SMS intent", e);
             Toast.makeText(this, "Could not open messaging app. Please send manually.", Toast.LENGTH_LONG).show();
-            // Optionally, copy message to clipboard here, but an app without SMS capability is rare.
         } finally {
             clearForm();
             btnSendInvite.setEnabled(true);
             btnSendInvite.setText("Send SMS Invite");
         }
     }
-
-    // Removed the old sendSMS method.
 
     private void clearForm() {
         etMemberName.setText("");

@@ -32,18 +32,30 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Assign Task To"
+                android:text="Assign Task To (Select Multiple)"
                 android:textSize="16sp"
                 android:textStyle="bold"
                 android:textColor="@color/text_primary"
                 android:layout_marginBottom="12dp"/>
 
-            <RadioGroup
-                android:id="@+id/rg_assigned_to"
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/til_assigned_to_dropdown"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="8dp"/>
+                android:hint="Select Users"
+                style="@style/CustomTextInputLayout"
+                app:endIconDrawable="@drawable/ic_view_task"
+                app:endIconMode="custom">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/et_assigned_to_display"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:focusable="false"
+                    android:clickable="true"
+                    android:cursorVisible="false"
+                    android:inputType="none"/>
+            </com.google.android.material.textfield.TextInputLayout>
 
         </LinearLayout>
         <com.google.android.material.textfield.TextInputLayout
@@ -80,13 +92,31 @@
         <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="24dp"
-            android:hint="Due Date (Optional)"
+            android:layout_marginBottom="16dp"
+            android:hint="Start Date (Optional)"
             style="@style/CustomTextInputLayout"
             app:startIconDrawable="@drawable/ic_calendar">
 
             <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/et_due_date"
+                android:id="@+id/et_start_date"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:focusable="false"
+                android:clickable="true"
+                android:cursorVisible="false"
+                android:inputType="none"/>
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="24dp"
+            android:hint="End Date (Optional)"
+            style="@style/CustomTextInputLayout"
+            app:startIconDrawable="@drawable/ic_calendar">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/et_end_date"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:focusable="false"
@@ -147,33 +177,6 @@
                 android:button="@null"
                 android:textAlignment="center"/>
         </RadioGroup>
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="File Attachments"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:textColor="@color/text_primary"
-            android:layout_marginBottom="8dp"/>
-
-        <Button
-            android:id="@+id/btn_attach_files"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Attach Files"
-            android:layout_marginBottom="8dp"
-            style="@style/CustomOutlinedButton"
-            app:icon="@drawable/ic_attach_file"/>
-
-        <TextView
-            android:id="@+id/tv_attached_files"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="No files attached"
-            android:textSize="14sp"
-            android:textColor="@color/text_secondary"
-            android:layout_marginBottom="24dp"/>
 
         <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent"

@@ -7,17 +7,32 @@
     android:gravity="center_horizontal"
     android:background="#F5F5F5">
 
-    <!-- Add Member Button (Top Right) -->
-    <FrameLayout
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="end"
         android:layout_marginBottom="16dp">
+
+        <Button
+            android:id="@+id/btn_view_members"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="View Members"
+            android:textSize="14sp"
+            android:visibility="gone"
+            android:background="@drawable/button_primary_background"
+            android:textColor="#FFFFFF"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp"
+            android:layout_marginEnd="8dp"/>
 
         <Button
             android:id="@+id/btn_add_member"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_gravity="end"
             android:text="+ Add Member"
             android:textSize="14sp"
             android:visibility="gone"
@@ -27,9 +42,8 @@
             android:paddingEnd="16dp"
             android:paddingTop="8dp"
             android:paddingBottom="8dp" />
-    </FrameLayout>
+    </LinearLayout>
 
-    <!-- Profile Icon/Avatar -->
     <ImageView
         android:layout_width="120dp"
         android:layout_height="120dp"
@@ -38,7 +52,6 @@
         android:src="@drawable/ic_profile_placeholder"
         android:contentDescription="Profile Picture" />
 
-    <!-- Display Name -->
     <TextView
         android:id="@+id/tv_display_name"
         android:layout_width="wrap_content"
@@ -49,7 +62,6 @@
         android:textColor="#333333"
         android:layout_marginBottom="8dp" />
 
-    <!-- User Email -->
     <TextView
         android:id="@+id/tv_user_email"
         android:layout_width="wrap_content"
@@ -59,7 +71,6 @@
         android:textColor="#666666"
         android:layout_marginBottom="4dp" />
 
-    <!-- User Role -->
     <TextView
         android:id="@+id/tv_user_role"
         android:layout_width="wrap_content"
@@ -69,14 +80,12 @@
         android:textColor="#888888"
         android:layout_marginBottom="32dp" />
 
-    <!-- Divider -->
     <View
         android:layout_width="match_parent"
         android:layout_height="1dp"
         android:background="#DDDDDD"
         android:layout_marginBottom="24dp" />
 
-    <!-- Profile Information Card -->
     <androidx.cardview.widget.CardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -110,7 +119,6 @@
 
     </androidx.cardview.widget.CardView>
 
-    <!-- Logout Button -->
     <Button
         android:id="@+id/btn_logout"
         android:layout_width="match_parent"

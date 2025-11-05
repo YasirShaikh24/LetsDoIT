@@ -6,9 +6,6 @@
     <uses-permission
         android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />
-    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
-    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
-    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
     <uses-permission android:name="android.permission.SEND_SMS" />
 
     <application
@@ -24,7 +21,6 @@
         <activity
             android:name=".AddMemberActivity"
             android:exported="false" />
-        <!-- LoginActivity is now the entry point (Launcher) -->
         <activity
             android:name=".LoginActivity"
             android:exported="true"
@@ -34,11 +30,23 @@
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-        </activity> <!-- MainActivity is no longer the launcher -->
+        </activity>
         <activity
             android:name=".MainActivity"
             android:exported="false"
             android:screenOrientation="portrait" />
+        <activity
+            android:name=".EditTaskActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:label="Edit Task" />
+
+        <activity
+            android:name=".ViewMembersActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:label="View Members" />
+
     </application>
 
 </manifest>

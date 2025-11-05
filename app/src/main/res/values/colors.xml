@@ -1,26 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Primary Colors -->
     <color name="primary_purple">#5B4CFF</color>
     <color name="primary_blue">#00D4FF</color>
     <color name="primary_gradient_start">#00D4FF</color>
     <color name="primary_gradient_center">#7B68EE</color>
     <color name="primary_gradient_end">#6B5CE7</color>
 
-    <!-- Text Colors -->
     <color name="text_primary">#333333</color>
     <color name="text_secondary">#666666</color>
     <color name="text_hint">#999999</color>
 
-    <!-- Background Colors -->
     <color name="white">#FFFFFF</color>
     <color name="background_input">#F5F5F5</color>
 
-    <!-- Material Design Colors -->
     <color name="purple_200">#BBDEFB</color>
     <color name="purple_500">#5B4CFF</color>
     <color name="purple_700">#4A3DD1</color>
     <color name="teal_200">#00D4FF</color>
     <color name="teal_700">#00A3CC</color>
     <color name="black">#000000</color>
-</resources>
+
+    <color name="status_pending">#FFC107</color> <color name="status_in_progress">#2196F3</color> <color name="status_completed">#4CAF50</color> </resources>
