@@ -21,77 +21,81 @@
         android:layout_below="@id/tv_title"
         android:scrollbars="none"
         android:paddingHorizontal="16dp"
-        android:layout_marginBottom="16dp"
-        android:visibility="gone"> <RadioGroup
-        android:id="@+id/rg_status_filter"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal">
+        android:layout_marginBottom="16dp">
 
-        <RadioButton
-            android:id="@+id/rb_filter_all"
+        <RadioGroup
+            android:id="@+id/rg_status_filter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="All"
-            android:paddingHorizontal="16dp"
-            android:paddingVertical="8dp"
-            android:layout_marginEnd="8dp"
-            android:background="@drawable/radio_button_selector"
-            android:button="@null"
-            android:textAlignment="center"
-            android:checked="true"
-            android:textColor="@color/radio_button_text_selector"/>
+            android:orientation="horizontal">
 
-        <RadioButton
-            android:id="@+id/rb_filter_pending"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Pending"
-            android:paddingHorizontal="16dp"
-            android:paddingVertical="8dp"
-            android:layout_marginEnd="8dp"
-            android:background="@drawable/radio_button_selector"
-            android:button="@null"
-            android:textAlignment="center"
-            android:textColor="@color/radio_button_text_selector"/>
+            <RadioButton
+                android:id="@+id/rb_filter_all"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="All"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="8dp"
+                android:layout_marginEnd="8dp"
+                android:background="@drawable/radio_button_selector"
+                android:button="@null"
+                android:textAlignment="center"
+                android:checked="true"
+                android:textColor="@color/radio_button_text_selector"/>
 
-        <RadioButton
-            android:id="@+id/rb_filter_in_progress"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="In Progress"
-            android:paddingHorizontal="16dp"
-            android:paddingVertical="8dp"
-            android:layout_marginEnd="8dp"
-            android:background="@drawable/radio_button_selector"
-            android:button="@null"
-            android:textAlignment="center"
-            android:textColor="@color/radio_button_text_selector"/>
+            <RadioButton
+                android:id="@+id/rb_filter_pending"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Pending"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="8dp"
+                android:layout_marginEnd="8dp"
+                android:background="@drawable/radio_button_selector"
+                android:button="@null"
+                android:textAlignment="center"
+                android:textColor="@color/radio_button_text_selector"/>
 
-        <RadioButton
-            android:id="@+id/rb_filter_completed"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Completed"
-            android:paddingHorizontal="16dp"
-            android:paddingVertical="8dp"
-            android:background="@drawable/radio_button_selector"
-            android:button="@null"
-            android:textAlignment="center"
-            android:textColor="@color/radio_button_text_selector"/>
-    </RadioGroup>
+            <RadioButton
+                android:id="@+id/rb_filter_in_progress"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="In Progress"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="8dp"
+                android:layout_marginEnd="8dp"
+                android:background="@drawable/radio_button_selector"
+                android:button="@null"
+                android:textAlignment="center"
+                android:textColor="@color/radio_button_text_selector"/>
+
+            <RadioButton
+                android:id="@+id/rb_filter_completed"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Completed"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="8dp"
+                android:background="@drawable/radio_button_selector"
+                android:button="@null"
+                android:textAlignment="center"
+                android:textColor="@color/radio_button_text_selector"/>
+        </RadioGroup>
     </HorizontalScrollView>
+
     <FrameLayout
         android:id="@+id/content_container"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_below="@id/hsv_task_filters"> <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/recycler_view_tasks"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:padding="8dp"
-        android:clipToPadding="false"
-        android:visibility="gone"/>
+        android:layout_below="@id/hsv_task_filters">
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/recycler_view_tasks"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:padding="8dp"
+            android:clipToPadding="false"
+            android:visibility="gone"/>
 
         <ProgressBar
             android:id="@+id/progress_bar"

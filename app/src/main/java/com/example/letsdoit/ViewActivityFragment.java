@@ -9,6 +9,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ProgressBar;
+import android.widget.RadioGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -35,12 +36,15 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
     private RecyclerView recyclerView;
     private TaskAdapter taskAdapter;
     private List<Task> taskList;
+    private List<Task> filteredTaskList; // NEW: For filtered results
     private FirebaseFirestore db;
     private ProgressBar progressBar;
     private TextView tvEmptyState;
+    private RadioGroup rgStatusFilter; // NEW: Filter radio group
 
     private String loggedInUserEmail;
     private String loggedInUserRole;
+    private String currentFilter = "all"; // NEW: Track current filter
 
     private static final String TAG = "ViewActivityFragment";
 
@@ -68,17 +72,71 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
         recyclerView = view.findViewById(R.id.recycler_view_tasks);
         progressBar = view.findViewById(R.id.progress_bar);
         tvEmptyState = view.findViewById(R.id.tv_empty_state);
+        rgStatusFilter = view.findViewById(R.id.rg_status_filter); // NEW
 
         db = FirebaseFirestore.getInstance();
 
         taskList = new ArrayList<>();
-        taskAdapter = new TaskAdapter(taskList, getContext(), this, loggedInUserRole);
+        filteredTaskList = new ArrayList<>();
+        taskAdapter = new TaskAdapter(filteredTaskList, getContext(), this, loggedInUserRole);
         recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
         recyclerView.setAdapter(taskAdapter);
+
+        // NEW: Setup filter listeners
+        setupFilterListeners();
 
         loadTasks();
 
         return view;
+    }
+
+    // NEW: Setup filter radio button listeners
+    private void setupFilterListeners() {
+        rgStatusFilter.setOnCheckedChangeListener((group, checkedId) -> {
+            if (checkedId == R.id.rb_filter_all) {
+                currentFilter = "all";
+            } else if (checkedId == R.id.rb_filter_pending) {
+                currentFilter = "pending";
+            } else if (checkedId == R.id.rb_filter_in_progress) {
+                currentFilter = "in progress";
+            } else if (checkedId == R.id.rb_filter_completed) {
+                currentFilter = "completed";
+            }
+            applyFilter();
+        });
+    }
+
+    // NEW: Apply the selected filter
+    private void applyFilter() {
+        filteredTaskList.clear();
+
+        if (currentFilter.equals("all")) {
+            filteredTaskList.addAll(taskList);
+        } else {
+            for (Task task : taskList) {
+                String taskStatus = task.getStatus() != null ? task.getStatus().toLowerCase() : "pending";
+                if (taskStatus.equals(currentFilter)) {
+                    filteredTaskList.add(task);
+                }
+            }
+        }
+
+        taskAdapter.notifyDataSetChanged();
+
+        // Update empty state
+        if (filteredTaskList.isEmpty()) {
+            String filterName = currentFilter.substring(0, 1).toUpperCase() + currentFilter.substring(1);
+            if (currentFilter.equals("all")) {
+                tvEmptyState.setText("No tasks found.");
+            } else {
+                tvEmptyState.setText("No " + filterName + " tasks found.");
+            }
+            tvEmptyState.setVisibility(View.VISIBLE);
+            recyclerView.setVisibility(View.GONE);
+        } else {
+            tvEmptyState.setVisibility(View.GONE);
+            recyclerView.setVisibility(View.VISIBLE);
+        }
     }
 
     private void loadTasks() {
@@ -110,17 +168,8 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
                         }
                     }
 
-                    taskAdapter.notifyDataSetChanged();
+                    applyFilter(); // NEW: Apply filter after loading
                     progressBar.setVisibility(View.GONE);
-
-                    if (taskList.isEmpty()) {
-                        tvEmptyState.setText("No tasks in the system.");
-                        tvEmptyState.setVisibility(View.VISIBLE);
-                        recyclerView.setVisibility(View.GONE);
-                    } else {
-                        tvEmptyState.setVisibility(View.GONE);
-                        recyclerView.setVisibility(View.VISIBLE);
-                    }
                 })
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Error loading tasks for admin", e);
@@ -158,17 +207,8 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
                         }
                     });
 
-                    taskAdapter.notifyDataSetChanged();
+                    applyFilter(); // NEW: Apply filter after loading
                     progressBar.setVisibility(View.GONE);
-
-                    if (taskList.isEmpty()) {
-                        tvEmptyState.setText("No tasks assigned to you.");
-                        tvEmptyState.setVisibility(View.VISIBLE);
-                        recyclerView.setVisibility(View.GONE);
-                    } else {
-                        tvEmptyState.setVisibility(View.GONE);
-                        recyclerView.setVisibility(View.VISIBLE);
-                    }
                 })
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Error loading tasks for user", e);
@@ -240,8 +280,20 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
         db.collection("tasks").document(task.getId())
                 .update(update)
                 .addOnSuccessListener(aVoid -> {
+                    // Update the task in both lists
                     task.setStatus(newStatus);
-                    taskAdapter.notifyItemChanged(position);
+
+                    // Find and update in taskList
+                    for (Task t : taskList) {
+                        if (t.getId().equals(task.getId())) {
+                            t.setStatus(newStatus);
+                            break;
+                        }
+                    }
+
+                    // Reapply filter to update the view
+                    applyFilter();
+
                     Toast.makeText(getContext(), "Status updated to: " + newStatus, Toast.LENGTH_SHORT).show();
                 })
                 .addOnFailureListener(e -> {
@@ -268,12 +320,19 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
         db.collection("tasks").document(task.getId())
                 .delete()
                 .addOnSuccessListener(aVoid -> {
-                    taskList.remove(position);
+                    // Remove from both lists
+                    taskList.remove(task);
+                    filteredTaskList.remove(position);
                     taskAdapter.notifyItemRemoved(position);
                     Toast.makeText(getContext(), "Task deleted successfully!", Toast.LENGTH_SHORT).show();
 
-                    if (taskList.isEmpty()) {
-                        tvEmptyState.setText("No tasks in the system.");
+                    if (filteredTaskList.isEmpty()) {
+                        String filterName = currentFilter.substring(0, 1).toUpperCase() + currentFilter.substring(1);
+                        if (currentFilter.equals("all")) {
+                            tvEmptyState.setText("No tasks in the system.");
+                        } else {
+                            tvEmptyState.setText("No " + filterName + " tasks found.");
+                        }
                         tvEmptyState.setVisibility(View.VISIBLE);
                         recyclerView.setVisibility(View.GONE);
                     }
