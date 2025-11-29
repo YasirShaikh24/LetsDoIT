@@ -75,7 +75,7 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
         GradientDrawable priorityDrawable = (GradientDrawable) holder.tvPriority.getBackground().mutate();
         priorityDrawable.setColor(priorityColor);
 
-        // 2. Status Logic (Enhanced UI/UX with Emojis)
+        // 2. Status Display
         String status = task.getStatus().toLowerCase();
         int statusColorResId;
         String statusDisplay;
@@ -103,35 +103,27 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
         GradientDrawable statusDrawable = (GradientDrawable) holder.tvStatus.getBackground().mutate();
         statusDrawable.setColor(ContextCompat.getColor(context, statusColorResId));
 
-        if ("user".equals(loggedInUserRole)) {
-            holder.tvStatus.setOnClickListener(v -> {
-                if (listener != null) {
-                    listener.onTaskStatusClick(task, position);
-                }
-            });
-            holder.tvStatus.setAlpha(1.0f);
-        } else {
-            holder.tvStatus.setOnClickListener(null);
-            holder.tvStatus.setAlpha(1.0f);
-        }
+        // Remove status click listener (now entire card is clickable)
+        holder.tvStatus.setOnClickListener(null);
+        holder.tvStatus.setAlpha(1.0f);
 
-        // NEW: 3. AI Count Display (if task requires AI count and has been completed)
+        // NEW: AI Count Display
         if (task.isRequireAiCount()) {
             holder.tvAiCount.setVisibility(View.VISIBLE);
 
             String aiCountValue = task.getAiCountValue();
             if (aiCountValue != null && !aiCountValue.isEmpty()) {
                 holder.tvAiCount.setText("🔢 AI Count: " + aiCountValue);
-                holder.tvAiCount.setTextColor(Color.parseColor("#4CAF50")); // Green for completed
+                holder.tvAiCount.setTextColor(Color.parseColor("#4CAF50"));
             } else {
                 holder.tvAiCount.setText("🔢 AI Count: Required (Not submitted yet)");
-                holder.tvAiCount.setTextColor(Color.parseColor("#FF9800")); // Orange for pending
+                holder.tvAiCount.setTextColor(Color.parseColor("#FF9800"));
             }
         } else {
             holder.tvAiCount.setVisibility(View.GONE);
         }
 
-        // 4. Admin Actions (Edit/Delete)
+        // 3. Admin Actions (Edit/Delete)
         if ("admin".equals(loggedInUserRole)) {
             holder.llAdminActions.setVisibility(View.VISIBLE);
 
@@ -150,11 +142,11 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
             holder.llAdminActions.setVisibility(View.GONE);
         }
 
-        // 5. Task Creation Timestamp
+        // 4. Task Creation Timestamp
         SimpleDateFormat sdf = new SimpleDateFormat("MMM dd, yyyy", Locale.getDefault());
         holder.tvTimestamp.setText("Created: " + sdf.format(new Date(task.getTimestamp())));
 
-        // 6. File Attachments (Returns 0 files since feature is removed)
+        // 5. File Attachments
         if (!task.getFileUrls().isEmpty()) {
             holder.tvFiles.setVisibility(View.VISIBLE);
             holder.tvFiles.setText(task.getFileUrls().size() + " file(s)");
@@ -162,7 +154,7 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
             holder.tvFiles.setVisibility(View.GONE);
         }
 
-        // 7. Remarks
+        // 6. Remarks
         String remarks = task.getRemarks();
         if (remarks != null && !remarks.isEmpty()) {
             holder.tvRemarks.setVisibility(View.VISIBLE);
@@ -171,7 +163,7 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
             holder.tvRemarks.setVisibility(View.GONE);
         }
 
-        // 8. Start Date and End Date
+        // 7. Start Date and End Date
         String startDate = task.getStartDate();
         String endDate = task.getEndDate();
 
@@ -187,6 +179,21 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
         } else {
             holder.tvDateRange.setVisibility(View.GONE);
         }
+
+        // NEW: Make entire card clickable for users
+        if ("user".equals(loggedInUserRole)) {
+            holder.cardView.setOnClickListener(v -> {
+                if (listener != null) {
+                    listener.onTaskStatusClick(task, position);
+                }
+            });
+            holder.cardView.setClickable(true);
+            holder.cardView.setFocusable(true);
+        } else {
+            holder.cardView.setOnClickListener(null);
+            holder.cardView.setClickable(false);
+            holder.cardView.setFocusable(false);
+        }
     }
 
     @Override
@@ -196,7 +203,7 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
 
     static class TaskViewHolder extends RecyclerView.ViewHolder {
         TextView tvTitle, tvDescription, tvPriority, tvStatus, tvTimestamp, tvFiles, tvRemarks, tvDateRange;
-        TextView tvAiCount; // NEW
+        TextView tvAiCount;
         ImageButton btnEditTask, btnDeleteTask;
         LinearLayout llAdminActions;
         CardView cardView;
@@ -212,7 +219,7 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
             tvFiles = itemView.findViewById(R.id.tv_task_files);
             tvRemarks = itemView.findViewById(R.id.tv_task_remarks);
             tvDateRange = itemView.findViewById(R.id.tv_task_date_range);
-            tvAiCount = itemView.findViewById(R.id.tv_task_ai_count); // NEW
+            tvAiCount = itemView.findViewById(R.id.tv_task_ai_count);
 
             llAdminActions = itemView.findViewById(R.id.ll_admin_actions);
             btnEditTask = itemView.findViewById(R.id.btn_edit_task);

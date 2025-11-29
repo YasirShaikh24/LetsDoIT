@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@color/white"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="24dp">
+
+        <!-- Task Title -->
+        <TextView
+            android:id="@+id/tv_dialog_title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Task Title"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:textColor="@color/text_primary"
+            android:layout_marginBottom="12dp"/>
+
+        <!-- Task Description -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Description:"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:textColor="@color/text_secondary"
+            android:layout_marginBottom="4dp"/>
+
+        <TextView
+            android:id="@+id/tv_dialog_description"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Task description goes here"
+            android:textSize="14sp"
+            android:textColor="@color/text_primary"
+            android:background="@color/background_input"
+            android:padding="12dp"
+            android:layout_marginBottom="16dp"/>
+
+        <!-- Dates -->
+        <TextView
+            android:id="@+id/tv_dialog_dates"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Dates: Start - End"
+            android:textSize="13sp"
+            android:textColor="@color/text_secondary"
+            android:layout_marginBottom="8dp"
+            android:visibility="gone"/>
+
+        <!-- Remarks -->
+        <TextView
+            android:id="@+id/tv_dialog_remarks"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Remarks: Additional notes"
+            android:textSize="13sp"
+            android:textColor="@color/text_secondary"
+            android:layout_marginBottom="16dp"
+            android:visibility="gone"/>
+
+        <!-- Divider -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#DDDDDD"
+            android:layout_marginBottom="16dp"/>
+
+        <!-- AI Count Input Section -->
+        <LinearLayout
+            android:id="@+id/ll_ai_count_section"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone"
+            android:layout_marginBottom="20dp">
+
+            <TextView
+                android:id="@+id/tv_ai_count_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Enter AI Count (Required for Completion)"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:textColor="@color/text_primary"
+                android:layout_marginBottom="8dp"/>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/til_ai_count"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="AI Count (Alphanumeric)"
+                style="@style/CustomTextInputLayout">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/et_ai_count"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="text"
+                    android:maxLength="50"/>
+            </com.google.android.material.textfield.TextInputLayout>
+
+        </LinearLayout>
+
+        <!-- Status Selection -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Update Task Status"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="@color/text_primary"
+            android:layout_marginBottom="12dp"/>
+
+        <RadioGroup
+            android:id="@+id/rg_dialog_status"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginBottom="24dp">
+
+            <RadioButton
+                android:id="@+id/rb_dialog_pending"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="⏱️ Pending"
+                android:textSize="16sp"
+                android:padding="12dp"
+                android:layout_marginBottom="8dp"
+                android:background="@drawable/radio_button_selector"
+                android:button="@null"
+                android:textColor="@color/radio_button_text_selector"
+                android:drawablePadding="8dp"/>
+
+            <RadioButton
+                android:id="@+id/rb_dialog_in_progress"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="🔧 In Progress"
+                android:textSize="16sp"
+                android:padding="12dp"
+                android:layout_marginBottom="8dp"
+                android:background="@drawable/radio_button_selector"
+                android:button="@null"
+                android:textColor="@color/radio_button_text_selector"
+                android:drawablePadding="8dp"/>
+
+            <RadioButton
+                android:id="@+id/rb_dialog_completed"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="✅ Completed"
+                android:textSize="16sp"
+                android:padding="12dp"
+                android:background="@drawable/radio_button_selector"
+                android:button="@null"
+                android:textColor="@color/radio_button_text_selector"
+                android:drawablePadding="8dp"/>
+        </RadioGroup>
+
+        <!-- Action Buttons -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="end">
+
+            <Button
+                android:id="@+id/btn_cancel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Cancel"
+                android:textSize="14sp"
+                android:background="@drawable/button_secondary_background"
+                android:textColor="@color/text_primary"
+                android:paddingStart="24dp"
+                android:paddingEnd="24dp"
+                android:layout_marginEnd="12dp"/>
+
+            <Button
+                android:id="@+id/btn_submit"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Submit"
+                android:textSize="14sp"
+                android:background="@drawable/button_primary_background"
+                android:textColor="@color/white"
+                android:paddingStart="32dp"
+                android:paddingEnd="32dp"/>
+        </LinearLayout>
+
+    </LinearLayout>
+
+</ScrollView>

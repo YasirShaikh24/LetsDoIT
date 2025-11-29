@@ -1,14 +1,17 @@
 // src/main/java/com/example/letsdoit/ViewActivityFragment.java
 package com.example.letsdoit;
 
+import android.app.Dialog;
 import android.content.DialogInterface;
-import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.Window;
+import android.widget.Button;
 import android.widget.ProgressBar;
+import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -20,6 +23,7 @@ import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
@@ -36,15 +40,15 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
     private RecyclerView recyclerView;
     private TaskAdapter taskAdapter;
     private List<Task> taskList;
-    private List<Task> filteredTaskList; // NEW: For filtered results
+    private List<Task> filteredTaskList;
     private FirebaseFirestore db;
     private ProgressBar progressBar;
     private TextView tvEmptyState;
-    private RadioGroup rgStatusFilter; // NEW: Filter radio group
+    private RadioGroup rgStatusFilter;
 
     private String loggedInUserEmail;
     private String loggedInUserRole;
-    private String currentFilter = "all"; // NEW: Track current filter
+    private String currentFilter = "all";
 
     private static final String TAG = "ViewActivityFragment";
 
@@ -72,7 +76,7 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
         recyclerView = view.findViewById(R.id.recycler_view_tasks);
         progressBar = view.findViewById(R.id.progress_bar);
         tvEmptyState = view.findViewById(R.id.tv_empty_state);
-        rgStatusFilter = view.findViewById(R.id.rg_status_filter); // NEW
+        rgStatusFilter = view.findViewById(R.id.rg_status_filter);
 
         db = FirebaseFirestore.getInstance();
 
@@ -82,15 +86,12 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
         recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
         recyclerView.setAdapter(taskAdapter);
 
-        // NEW: Setup filter listeners
         setupFilterListeners();
-
         loadTasks();
 
         return view;
     }
 
-    // NEW: Setup filter radio button listeners
     private void setupFilterListeners() {
         rgStatusFilter.setOnCheckedChangeListener((group, checkedId) -> {
             if (checkedId == R.id.rb_filter_all) {
@@ -106,7 +107,6 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
         });
     }
 
-    // NEW: Apply the selected filter
     private void applyFilter() {
         filteredTaskList.clear();
 
@@ -123,7 +123,6 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
 
         taskAdapter.notifyDataSetChanged();
 
-        // Update empty state
         if (filteredTaskList.isEmpty()) {
             String filterName = currentFilter.substring(0, 1).toUpperCase() + currentFilter.substring(1);
             if (currentFilter.equals("all")) {
@@ -168,7 +167,7 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
                         }
                     }
 
-                    applyFilter(); // NEW: Apply filter after loading
+                    applyFilter();
                     progressBar.setVisibility(View.GONE);
                 })
                 .addOnFailureListener(e -> {
@@ -207,7 +206,7 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
                         }
                     });
 
-                    applyFilter(); // NEW: Apply filter after loading
+                    applyFilter();
                     progressBar.setVisibility(View.GONE);
                 })
                 .addOnFailureListener(e -> {
@@ -221,13 +220,17 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
 
     @Override
     public void onTaskStatusClick(Task task, int position) {
-        showStatusUpdateDialog(task, position);
+        // Show custom dialog for users
+        if ("user".equals(loggedInUserRole)) {
+            showTaskDetailDialog(task, position);
+        }
     }
 
     @Override
     public void onTaskEditClick(Task task, int position) {
-        if (task.getId() != null) {
-            Intent intent = new Intent(getActivity(), EditTaskActivity.class);
+        // Admin edit functionality - open EditTaskActivity
+        if ("admin".equals(loggedInUserRole) && task.getId() != null) {
+            android.content.Intent intent = new android.content.Intent(getActivity(), EditTaskActivity.class);
             intent.putExtra(EXTRA_TASK_ID, task.getId());
             startActivity(intent);
         } else {
@@ -240,35 +243,123 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
         showDeleteConfirmationDialog(task, position);
     }
 
+    // Custom dialog for task details with AI Count editing
+    private void showTaskDetailDialog(Task task, int position) {
+        Dialog dialog = new Dialog(requireContext());
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        dialog.setContentView(R.layout.dialog_task_detail);
+        dialog.getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        dialog.setCancelable(true);
 
-    private void showStatusUpdateDialog(Task task, int position) {
-        final String[] statusOptions = {"Pending", "In Progress", "Completed"};
+        // Find views
+        TextView tvDialogTitle = dialog.findViewById(R.id.tv_dialog_title);
+        TextView tvDialogDescription = dialog.findViewById(R.id.tv_dialog_description);
+        TextView tvDialogDates = dialog.findViewById(R.id.tv_dialog_dates);
+        TextView tvDialogRemarks = dialog.findViewById(R.id.tv_dialog_remarks);
+        android.widget.LinearLayout llAiCountSection = dialog.findViewById(R.id.ll_ai_count_section);
+        TextView tvAiCountLabel = dialog.findViewById(R.id.tv_ai_count_label);
+        TextInputEditText etAiCount = dialog.findViewById(R.id.et_ai_count);
+        RadioGroup rgDialogStatus = dialog.findViewById(R.id.rg_dialog_status);
+        RadioButton rbPending = dialog.findViewById(R.id.rb_dialog_pending);
+        RadioButton rbInProgress = dialog.findViewById(R.id.rb_dialog_in_progress);
+        RadioButton rbCompleted = dialog.findViewById(R.id.rb_dialog_completed);
+        Button btnSubmit = dialog.findViewById(R.id.btn_submit);
+        Button btnCancel = dialog.findViewById(R.id.btn_cancel);
 
-        int checkedItem = 0;
-        String currentStatus = task.getStatus();
+        // Populate task details
+        tvDialogTitle.setText(task.getTitle());
+        tvDialogDescription.setText(task.getDescription());
 
-        for (int i = 0; i < statusOptions.length; i++) {
-            if (statusOptions[i].equalsIgnoreCase(currentStatus)) {
-                checkedItem = i;
-                break;
-            }
+        // Dates
+        String startDate = task.getStartDate();
+        String endDate = task.getEndDate();
+        if ((startDate != null && !startDate.isEmpty()) || (endDate != null && !endDate.isEmpty())) {
+            String dateText = "Dates: ";
+            dateText += (startDate != null && !startDate.isEmpty()) ? startDate : "?";
+            dateText += " - ";
+            dateText += (endDate != null && !endDate.isEmpty()) ? endDate : "?";
+            tvDialogDates.setText(dateText);
+            tvDialogDates.setVisibility(View.VISIBLE);
+        } else {
+            tvDialogDates.setVisibility(View.GONE);
         }
 
-        AlertDialog.Builder builder = new AlertDialog.Builder(requireContext());
-        builder.setTitle("Update Task Status")
-                .setSingleChoiceItems(statusOptions, checkedItem, new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        String newStatus = statusOptions[which];
-                        updateTaskStatusInFirestore(task, newStatus, position);
-                        dialog.dismiss();
+        // Remarks
+        String remarks = task.getRemarks();
+        if (remarks != null && !remarks.isEmpty()) {
+            tvDialogRemarks.setText("Remarks: " + remarks);
+            tvDialogRemarks.setVisibility(View.VISIBLE);
+        } else {
+            tvDialogRemarks.setVisibility(View.GONE);
+        }
+
+        // AI Count section - ALWAYS show if task requires AI Count
+        if (task.isRequireAiCount()) {
+            llAiCountSection.setVisibility(View.VISIBLE);
+
+            // Pre-fill if already exists (for editing)
+            String existingAiCount = task.getAiCountValue();
+            if (existingAiCount != null && !existingAiCount.isEmpty()) {
+                etAiCount.setText(existingAiCount);
+                tvAiCountLabel.setText("AI Count (You can edit)");
+            } else {
+                etAiCount.setText("");
+                tvAiCountLabel.setText("Enter AI Count (Required for Completion)");
+            }
+        } else {
+            llAiCountSection.setVisibility(View.GONE);
+        }
+
+        // Set current status
+        String currentStatus = task.getStatus().toLowerCase();
+        if (currentStatus.equals("pending")) {
+            rbPending.setChecked(true);
+        } else if (currentStatus.equals("in progress")) {
+            rbInProgress.setChecked(true);
+        } else if (currentStatus.equals("completed")) {
+            rbCompleted.setChecked(true);
+        }
+
+        // Submit button
+        btnSubmit.setOnClickListener(v -> {
+            int selectedStatusId = rgDialogStatus.getCheckedRadioButtonId();
+            if (selectedStatusId == -1) {
+                Toast.makeText(getContext(), "Please select a status", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            RadioButton selectedRadioButton = dialog.findViewById(selectedStatusId);
+            String newStatus = selectedRadioButton.getText().toString();
+
+            // Get AI Count input (if field is visible)
+            String aiCountInput = "";
+            if (task.isRequireAiCount()) {
+                aiCountInput = etAiCount.getText().toString().trim();
+
+                // Validate AI Count if status is "Completed"
+                if (newStatus.equalsIgnoreCase("✅ Completed")) {
+                    if (aiCountInput.isEmpty()) {
+                        etAiCount.setError("AI Count is required for completion");
+                        Toast.makeText(getContext(), "Please enter AI Count to mark as completed", Toast.LENGTH_SHORT).show();
+                        return;
                     }
-                })
-                .setNegativeButton("Cancel", null)
-                .show();
+                }
+            }
+
+            // Clean status text (remove emojis)
+            String cleanStatus = newStatus.replace("⏱️", "").replace("🔧", "").replace("✅", "").trim();
+
+            // Update task with new status and AI Count
+            updateTaskInFirestore(task, cleanStatus, aiCountInput, position, dialog);
+        });
+
+        // Cancel button
+        btnCancel.setOnClickListener(v -> dialog.dismiss());
+
+        dialog.show();
     }
 
-    private void updateTaskStatusInFirestore(Task task, String newStatus, int position) {
+    private void updateTaskInFirestore(Task task, String newStatus, String aiCountValue, int position, Dialog dialog) {
         if (task.getId() == null) {
             Toast.makeText(getContext(), "Error: Task ID not found.", Toast.LENGTH_SHORT).show();
             return;
@@ -277,16 +368,29 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
         Map<String, Object> update = new HashMap<>();
         update.put("status", newStatus);
 
+        // Always update AI Count if the field was visible and has value
+        if (task.isRequireAiCount()) {
+            if (aiCountValue != null && !aiCountValue.isEmpty()) {
+                update.put("aiCountValue", aiCountValue);
+            }
+        }
+
         db.collection("tasks").document(task.getId())
                 .update(update)
                 .addOnSuccessListener(aVoid -> {
-                    // Update the task in both lists
+                    // Update local task object
                     task.setStatus(newStatus);
+                    if (aiCountValue != null && !aiCountValue.isEmpty()) {
+                        task.setAiCountValue(aiCountValue);
+                    }
 
                     // Find and update in taskList
                     for (Task t : taskList) {
                         if (t.getId().equals(task.getId())) {
                             t.setStatus(newStatus);
+                            if (aiCountValue != null && !aiCountValue.isEmpty()) {
+                                t.setAiCountValue(aiCountValue);
+                            }
                             break;
                         }
                     }
@@ -294,11 +398,16 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
                     // Reapply filter to update the view
                     applyFilter();
 
-                    Toast.makeText(getContext(), "Status updated to: " + newStatus, Toast.LENGTH_SHORT).show();
+                    String message = "Task updated successfully!";
+                    if (task.isRequireAiCount() && aiCountValue != null && !aiCountValue.isEmpty()) {
+                        message += " AI Count: " + aiCountValue;
+                    }
+                    Toast.makeText(getContext(), message, Toast.LENGTH_SHORT).show();
+                    dialog.dismiss();
                 })
                 .addOnFailureListener(e -> {
-                    Log.e(TAG, "Error updating status for task " + task.getId(), e);
-                    Toast.makeText(getContext(), "Failed to update status: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    Log.e(TAG, "Error updating task " + task.getId(), e);
+                    Toast.makeText(getContext(), "Failed to update task: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                 });
     }
 
@@ -320,7 +429,6 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
         db.collection("tasks").document(task.getId())
                 .delete()
                 .addOnSuccessListener(aVoid -> {
-                    // Remove from both lists
                     taskList.remove(task);
                     filteredTaskList.remove(position);
                     taskAdapter.notifyItemRemoved(position);
@@ -342,7 +450,6 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
                     Toast.makeText(getContext(), "Failed to delete task: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                 });
     }
-
 
     @Override
     public void onResume() {
