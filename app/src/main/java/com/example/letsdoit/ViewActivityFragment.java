@@ -4,13 +4,10 @@ package com.example.letsdoit;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
-import android.text.InputType;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.EditText;
-import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -184,12 +181,7 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
 
     @Override
     public void onTaskStatusClick(Task task, int position) {
-        // NEW: Check if AI Count is required for this task when completing
-        if (task.isRequireAiCount() && !"completed".equalsIgnoreCase(task.getStatus())) {
-            showAiCountInputDialog(task, position);
-        } else {
-            showStatusUpdateDialog(task, position);
-        }
+        showStatusUpdateDialog(task, position);
     }
 
     @Override
@@ -208,47 +200,6 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
         showDeleteConfirmationDialog(task, position);
     }
 
-    // NEW: Show AI Count input dialog when user selects "Completed"
-    private void showAiCountInputDialog(Task task, int position) {
-        AlertDialog.Builder builder = new AlertDialog.Builder(requireContext());
-        builder.setTitle("Complete Task - Enter AI Count");
-        builder.setMessage("This task requires an AI count number (alphanumeric).");
-
-        final EditText input = new EditText(requireContext());
-        input.setInputType(InputType.TYPE_CLASS_TEXT);
-        input.setHint("e.g., ABC123, XYZ789");
-
-        // Pre-fill if already entered
-        if (task.getAiCountValue() != null && !task.getAiCountValue().isEmpty()) {
-            input.setText(task.getAiCountValue());
-        }
-
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.MATCH_PARENT);
-        lp.setMargins(50, 0, 50, 0);
-        input.setLayoutParams(lp);
-
-        builder.setView(input);
-
-        builder.setPositiveButton("Complete Task", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                String aiCountValue = input.getText().toString().trim();
-
-                if (aiCountValue.isEmpty()) {
-                    Toast.makeText(getContext(), "AI Count cannot be empty!", Toast.LENGTH_SHORT).show();
-                    return;
-                }
-
-                // Update task to completed with AI count value
-                updateTaskStatusWithAiCount(task, "Completed", aiCountValue, position);
-            }
-        });
-
-        builder.setNegativeButton("Cancel", null);
-        builder.show();
-    }
 
     private void showStatusUpdateDialog(Task task, int position) {
         final String[] statusOptions = {"Pending", "In Progress", "Completed"};
@@ -269,43 +220,12 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
                         String newStatus = statusOptions[which];
-
-                        // NEW: If task requires AI Count and user selects "Completed"
-                        if (task.isRequireAiCount() && "Completed".equalsIgnoreCase(newStatus)) {
-                            dialog.dismiss();
-                            showAiCountInputDialog(task, position);
-                        } else {
-                            updateTaskStatusInFirestore(task, newStatus, position);
-                            dialog.dismiss();
-                        }
+                        updateTaskStatusInFirestore(task, newStatus, position);
+                        dialog.dismiss();
                     }
                 })
                 .setNegativeButton("Cancel", null)
                 .show();
-    }
-
-    private void updateTaskStatusWithAiCount(Task task, String newStatus, String aiCountValue, int position) {
-        if (task.getId() == null) {
-            Toast.makeText(getContext(), "Error: Task ID not found.", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        Map<String, Object> update = new HashMap<>();
-        update.put("status", newStatus);
-        update.put("aiCountValue", aiCountValue); // NEW: Store AI count
-
-        db.collection("tasks").document(task.getId())
-                .update(update)
-                .addOnSuccessListener(aVoid -> {
-                    task.setStatus(newStatus);
-                    task.setAiCountValue(aiCountValue);
-                    taskAdapter.notifyItemChanged(position);
-                    Toast.makeText(getContext(), "Task completed with AI Count: " + aiCountValue, Toast.LENGTH_SHORT).show();
-                })
-                .addOnFailureListener(e -> {
-                    Log.e(TAG, "Error updating task with AI count " + task.getId(), e);
-                    Toast.makeText(getContext(), "Failed to update task: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                });
     }
 
     private void updateTaskStatusInFirestore(Task task, String newStatus, int position) {
@@ -363,6 +283,7 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
                     Toast.makeText(getContext(), "Failed to delete task: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                 });
     }
+
 
     @Override
     public void onResume() {
