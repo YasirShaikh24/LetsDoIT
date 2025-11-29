@@ -13,6 +13,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
 
 public class LoginActivity extends AppCompatActivity {
 
@@ -22,9 +23,7 @@ public class LoginActivity extends AppCompatActivity {
 
     private static final String TAG = "LoginActivity";
     private static final String ADMIN_EMAIL = "mahimhussain444@gmail.com";
-
-    // Placeholder password for users registered via login screen
-    private static final String DEFAULT_PASSWORD = "password123";
+    private static final String ADMIN_PASSWORD = "Mahim11"; // Admin password
 
     public static final String EXTRA_DISPLAY_NAME = "extra_display_name";
     public static final String EXTRA_USER_ROLE = "extra_user_role";
@@ -63,63 +62,71 @@ public class LoginActivity extends AppCompatActivity {
 
         // Check if admin first
         if (email.equals(ADMIN_EMAIL)) {
-            checkAdminInDatabase(email);
+            verifyAdminLogin(email, password);
         } else {
-            checkUserInDatabase(email);
+            verifyUserLogin(email, password);
         }
     }
 
-    private void checkAdminInDatabase(String email) {
+    private void verifyAdminLogin(String email, String password) {
+        // First check hardcoded admin credentials
+        if (password.equals(ADMIN_PASSWORD)) {
+            // Check if admin exists in database
+            db.collection("admins")
+                    .whereEqualTo("email", email)
+                    .get()
+                    .addOnCompleteListener(task -> {
+                        if (task.isSuccessful() && task.getResult() != null && !task.getResult().isEmpty()) {
+                            // Admin exists in database
+                            DocumentSnapshot doc = task.getResult().getDocuments().get(0);
+                            User admin = doc.toObject(User.class);
+                            if (admin != null) {
+                                String dbPassword = admin.getPassword();
+
+                                // If password field exists in database, verify it
+                                if (dbPassword != null && !dbPassword.isEmpty()) {
+                                    if (dbPassword.equals(password)) {
+                                        onLoginSuccess(admin.getEmail(), admin.getRole(), admin.getDisplayName());
+                                    } else {
+                                        onLoginFailure("Invalid admin credentials");
+                                    }
+                                } else {
+                                    // Password field missing in database, update it
+                                    Log.d(TAG, "Password field missing, updating admin document");
+                                    updateAdminPassword(doc.getReference().getId(), password, admin);
+                                }
+                            }
+                        } else {
+                            // Admin doesn't exist in database, create admin account
+                            registerAdminInDatabase(email, password);
+                        }
+                    })
+                    .addOnFailureListener(e -> {
+                        Log.e(TAG, "Error checking admin existence", e);
+                        onLoginFailure("Database error: " + e.getMessage());
+                    });
+        } else {
+            onLoginFailure("Invalid admin credentials");
+        }
+    }
+
+    private void updateAdminPassword(String documentId, String password, User admin) {
         db.collection("admins")
-                .whereEqualTo("email", email)
-                .get()
-                .addOnCompleteListener(task -> {
-                    if (task.isSuccessful() && task.getResult() != null && !task.getResult().isEmpty()) {
-                        // Admin exists
-                        DocumentSnapshot doc = task.getResult().getDocuments().get(0);
-                        // CRITICAL: Firestore uses the User.java class here
-                        User admin = doc.toObject(User.class);
-                        if (admin != null) {
-                            onLoginSuccess(admin.getEmail(), admin.getRole(), admin.getDisplayName());
-                        }
-                    } else {
-                        // Admin doesn't exist, register them
-                        registerNewAdmin(email);
-                    }
+                .document(documentId)
+                .update("password", password)
+                .addOnSuccessListener(aVoid -> {
+                    Log.d(TAG, "Admin password updated successfully");
+                    onLoginSuccess(admin.getEmail(), admin.getRole(), admin.getDisplayName());
                 })
                 .addOnFailureListener(e -> {
-                    Log.e(TAG, "Error checking admin existence", e);
-                    onLoginFailure("Database error: " + e.getMessage());
+                    Log.e(TAG, "Error updating admin password", e);
+                    // Still allow login since hardcoded password matched
+                    onLoginSuccess(admin.getEmail(), admin.getRole(), admin.getDisplayName());
                 });
     }
 
-    private void checkUserInDatabase(String email) {
-        db.collection("users")
-                .whereEqualTo("email", email)
-                .get()
-                .addOnCompleteListener(task -> {
-                    if (task.isSuccessful() && task.getResult() != null && !task.getResult().isEmpty()) {
-                        // User exists
-                        DocumentSnapshot doc = task.getResult().getDocuments().get(0);
-                        // CRITICAL: Firestore uses the User.java class here
-                        User user = doc.toObject(User.class);
-                        if (user != null) {
-                            onLoginSuccess(user.getEmail(), user.getRole(), user.getDisplayName());
-                        }
-                    } else {
-                        // User doesn't exist, register them
-                        registerNewUser(email);
-                    }
-                })
-                .addOnFailureListener(e -> {
-                    Log.e(TAG, "Error checking user existence", e);
-                    onLoginFailure("Database error: " + e.getMessage());
-                });
-    }
-
-    // UPDATED: Added DEFAULT_PASSWORD to the constructor
-    private void registerNewAdmin(String email) {
-        User newAdmin = new User(email, "admin", "Admin", DEFAULT_PASSWORD);
+    private void registerAdminInDatabase(String email, String password) {
+        User newAdmin = new User(email, "admin", "Admin", password);
 
         db.collection("admins")
                 .add(newAdmin)
@@ -133,20 +140,38 @@ public class LoginActivity extends AppCompatActivity {
                 });
     }
 
-    // UPDATED: Added DEFAULT_PASSWORD to the constructor
-    private void registerNewUser(String email) {
-        String displayName = email.split("@")[0];
-        User newUser = new User(email, "user", displayName, DEFAULT_PASSWORD);
-
+    private void verifyUserLogin(String email, String password) {
+        // Query users collection for exact email match
         db.collection("users")
-                .add(newUser)
-                .addOnSuccessListener(documentReference -> {
-                    Log.d(TAG, "User registered successfully");
-                    onLoginSuccess(newUser.getEmail(), newUser.getRole(), newUser.getDisplayName());
+                .whereEqualTo("email", email)
+                .get()
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful() && task.getResult() != null && !task.getResult().isEmpty()) {
+                        // User found with this email
+                        DocumentSnapshot doc = task.getResult().getDocuments().get(0);
+                        User user = doc.toObject(User.class);
+
+                        if (user != null) {
+                            // Verify password matches exactly
+                            String storedPassword = user.getPassword();
+                            if (storedPassword != null && storedPassword.equals(password)) {
+                                // Credentials match - allow login
+                                onLoginSuccess(user.getEmail(), user.getRole(), user.getDisplayName());
+                            } else {
+                                // Password doesn't match
+                                onLoginFailure("Invalid email or password");
+                            }
+                        } else {
+                            onLoginFailure("User data error");
+                        }
+                    } else {
+                        // No user found with this email
+                        onLoginFailure("Invalid email or password. Contact admin to get access.");
+                    }
                 })
                 .addOnFailureListener(e -> {
-                    Log.e(TAG, "Error registering user", e);
-                    onLoginFailure("User registration failed: " + e.getMessage());
+                    Log.e(TAG, "Error checking user credentials", e);
+                    onLoginFailure("Login failed: " + e.getMessage());
                 });
     }
 
