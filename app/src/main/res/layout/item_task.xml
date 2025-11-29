@@ -65,6 +65,21 @@
             android:textColor="@color/text_primary"
             android:layout_marginBottom="8dp"/>
 
+        <!-- NEW: AI Count Display -->
+        <TextView
+            android:id="@+id/tv_task_ai_count"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="🔢 AI Count: ABC123"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:fontFamily="sans-serif-medium"
+            android:textColor="@color/primary_purple"
+            android:background="@color/background_input"
+            android:padding="8dp"
+            android:layout_marginBottom="8dp"
+            android:visibility="gone"/>
+
         <TextView
             android:id="@+id/tv_task_date_range"
             android:layout_width="match_parent"
@@ -75,6 +90,7 @@
             android:textColor="@android:color/darker_gray"
             android:layout_marginBottom="8dp"
             android:visibility="gone"/>
+
         <TextView
             android:id="@+id/tv_task_remarks"
             android:layout_width="match_parent"

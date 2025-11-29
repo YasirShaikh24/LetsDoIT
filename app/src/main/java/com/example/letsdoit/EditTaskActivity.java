@@ -7,6 +7,7 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.DatePicker;
 import android.widget.LinearLayout;
 import android.widget.RadioButton;
@@ -19,7 +20,6 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
-// Removed Firebase Storage Imports
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -34,11 +34,11 @@ public class EditTaskActivity extends AppCompatActivity {
     private TextInputEditText etTitle, etDescription, etRemarks, etStartDate, etEndDate;
     private TextInputEditText etAssigneeDisplay;
     private RadioGroup rgPriority;
+    private CheckBox cbRequireAiCount; // NEW
     private Button btnSaveTask;
     private LinearLayout llAssignUserSection;
 
     private FirebaseFirestore db;
-    // Removed all file attachment members
 
     private String taskId;
 
@@ -72,6 +72,7 @@ public class EditTaskActivity extends AppCompatActivity {
         etDescription = findViewById(R.id.et_description);
         etRemarks = findViewById(R.id.et_remarks);
         rgPriority = findViewById(R.id.rg_priority);
+        cbRequireAiCount = findViewById(R.id.cb_require_ai_count); // NEW
         btnSaveTask = findViewById(R.id.btn_save_task);
         etStartDate = findViewById(R.id.et_start_date);
         etEndDate = findViewById(R.id.et_end_date);
@@ -112,6 +113,9 @@ public class EditTaskActivity extends AppCompatActivity {
         etRemarks.setText(task.getRemarks());
         etStartDate.setText(task.getStartDate());
         etEndDate.setText(task.getEndDate());
+
+        // NEW: Set AI Count checkbox
+        cbRequireAiCount.setChecked(task.isRequireAiCount());
 
         String priority = task.getPriority() != null ? task.getPriority().toLowerCase() : "low";
         if (priority.equals("low")) {
@@ -245,23 +249,26 @@ public class EditTaskActivity extends AppCompatActivity {
         RadioButton selectedPriorityButton = findViewById(selectedPriorityId);
         String priority = selectedPriorityButton.getText().toString().toLowerCase();
 
+        // NEW: Get AI Count checkbox state
+        boolean requireAiCount = cbRequireAiCount.isChecked();
+
         btnSaveTask.setEnabled(false);
         btnSaveTask.setText("Updating...");
 
-        saveTaskUpdateToFirestore(title, description, priority, remarks, selectedAssignees, startDate, endDate);
+        saveTaskUpdateToFirestore(title, description, priority, remarks, selectedAssignees, startDate, endDate, requireAiCount);
     }
 
-    // Updated method signature (Removed fileUrls list)
-    private void saveTaskUpdateToFirestore(String title, String description, String priority, String remarks, List<String> assignedTo, String startDate, String endDate) {
+    private void saveTaskUpdateToFirestore(String title, String description, String priority, String remarks, List<String> assignedTo, String startDate, String endDate, boolean requireAiCount) {
         Map<String, Object> taskUpdates = new HashMap<>();
         taskUpdates.put("title", title);
         taskUpdates.put("description", description);
         taskUpdates.put("priority", priority);
-        taskUpdates.put("fileUrls", new ArrayList<String>()); // Explicitly clear fileUrls
+        taskUpdates.put("fileUrls", new ArrayList<String>());
         taskUpdates.put("remarks", remarks);
         taskUpdates.put("assignedTo", assignedTo);
         taskUpdates.put("startDate", startDate);
         taskUpdates.put("endDate", endDate);
+        taskUpdates.put("requireAiCount", requireAiCount); // NEW
 
         db.collection("tasks").document(taskId)
                 .update(taskUpdates)

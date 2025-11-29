@@ -9,6 +9,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.DatePicker;
 import android.widget.LinearLayout;
 import android.widget.RadioButton;
@@ -23,7 +24,6 @@ import androidx.fragment.app.Fragment;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
-// Removed Firebase Storage Imports
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -36,11 +36,11 @@ public class AddActivityFragment extends Fragment {
     private TextInputEditText etTitle, etDescription, etRemarks, etStartDate, etEndDate;
     private TextInputEditText etAssigneeDisplay;
     private RadioGroup rgPriority;
+    private CheckBox cbRequireAiCount; // NEW: Checkbox for AI Count toggle
     private Button btnSaveTask;
     private LinearLayout llAssignUserSection;
 
     private FirebaseFirestore db;
-    // Removed Firebase Storage members
 
     private String loggedInUserEmail;
     private String loggedInUserRole;
@@ -86,6 +86,7 @@ public class AddActivityFragment extends Fragment {
         etDescription = view.findViewById(R.id.et_description);
         etRemarks = view.findViewById(R.id.et_remarks);
         rgPriority = view.findViewById(R.id.rg_priority);
+        cbRequireAiCount = view.findViewById(R.id.cb_require_ai_count); // NEW
         btnSaveTask = view.findViewById(R.id.btn_save_task);
 
         etStartDate = view.findViewById(R.id.et_start_date);
@@ -238,17 +239,17 @@ public class AddActivityFragment extends Fragment {
         RadioButton selectedPriorityButton = getView().findViewById(selectedPriorityId);
         String priority = selectedPriorityButton.getText().toString().toLowerCase();
 
+        // NEW: Get AI Count checkbox state
+        boolean requireAiCount = cbRequireAiCount.isChecked();
+
         btnSaveTask.setEnabled(false);
         btnSaveTask.setText("Saving...");
 
-        // Directly call saveTaskToFirestore
-        saveTaskToFirestore(title, description, priority, remarks, selectedAssignees, startDate, endDate);
+        saveTaskToFirestore(title, description, priority, remarks, selectedAssignees, startDate, endDate, requireAiCount);
     }
 
-    // Updated method signature (Removed fileUrls list)
-    private void saveTaskToFirestore(String title, String description, String priority, String remarks, List<String> assignedTo, String startDate, String endDate) {
-        // Updated Task constructor signature (removed fileUrls)
-        Task task = new Task(title, description, priority, remarks, assignedTo, startDate, endDate);
+    private void saveTaskToFirestore(String title, String description, String priority, String remarks, List<String> assignedTo, String startDate, String endDate, boolean requireAiCount) {
+        Task task = new Task(title, description, priority, remarks, assignedTo, startDate, endDate, requireAiCount);
 
         db.collection("tasks")
                 .add(task)
@@ -272,6 +273,7 @@ public class AddActivityFragment extends Fragment {
         etStartDate.setText("");
         etEndDate.setText("");
         rgPriority.clearCheck();
+        cbRequireAiCount.setChecked(false); // NEW: Reset checkbox
 
         if ("admin".equals(loggedInUserRole)) {
             selectedAssignees.clear();

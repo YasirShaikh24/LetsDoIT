@@ -20,6 +20,10 @@ public class Task {
     private String startDate;
     private String endDate;
 
+    // NEW: AI Count fields
+    private boolean requireAiCount; // Radio button state (on/off)
+    private String aiCountValue; // The alphanumeric AI count entered by user
+
     // Field for backward compatibility (Firestore deserializes old single-string field here)
     private String assignedToEmail;
 
@@ -27,10 +31,12 @@ public class Task {
 
     public Task() {
         // Required empty constructor for Firestore
+        this.requireAiCount = false; // Default to OFF
+        this.aiCountValue = "";
     }
 
-    // Constructor for creating NEW tasks - fileUrls argument removed
-    public Task(String title, String description, String priority, String remarks, List<String> assignedTo, String startDate, String endDate) {
+    // Constructor for creating NEW tasks - fileUrls argument removed, added requireAiCount
+    public Task(String title, String description, String priority, String remarks, List<String> assignedTo, String startDate, String endDate, boolean requireAiCount) {
         this.title = title;
         this.description = description;
         this.priority = priority;
@@ -38,21 +44,13 @@ public class Task {
         this.assignedTo = assignedTo != null ? assignedTo : new ArrayList<>();
         this.startDate = startDate;
         this.endDate = endDate;
+        this.requireAiCount = requireAiCount;
+        this.aiCountValue = "";
         this.timestamp = System.currentTimeMillis();
         this.status = "Pending"; // Initialize new tasks as "Pending"
     }
 
-    // --- NEW GETTER & SETTER for Status ---
-    public String getStatus() {
-        // Default to "Pending" for old tasks without a status field
-        return status != null ? status : "Pending";
-    }
-
-    public void setStatus(String status) {
-        this.status = status;
-    }
-
-    // --- GETTERS & SETTERS (Existing below) ---
+    // --- GETTERS & SETTERS ---
 
     public String getId() {
         return id;
@@ -86,7 +84,14 @@ public class Task {
         this.priority = priority;
     }
 
-    // CRITICAL: Always return non-null list for fileUrls - MODIFIED to return empty list
+    public String getStatus() {
+        return status != null ? status : "Pending";
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
     public List<String> getFileUrls() {
         return new ArrayList<>();
     }
@@ -103,23 +108,19 @@ public class Task {
         this.remarks = remarks;
     }
 
-    // **CRITICAL FIX: Robust Getter for assignedTo**
     public List<String> getAssignedTo() {
         if (assignedTo != null && !assignedTo.isEmpty()) {
-            // New format (List)
             return assignedTo;
         } else if (assignedToEmail != null && !assignedToEmail.isEmpty()) {
-            // Old format (String) - convert and return as a single-element list
             return Collections.singletonList(assignedToEmail);
         }
-        return new ArrayList<>(); // Always return empty list if both are null/empty
+        return new ArrayList<>();
     }
 
     public void setAssignedTo(List<String> assignedTo) {
         this.assignedTo = assignedTo;
     }
 
-    // TEMPORARY SETTER: Used by Firestore to populate old documents
     public void setAssignedToEmail(String assignedToEmail) {
         this.assignedToEmail = assignedToEmail;
     }
@@ -146,5 +147,22 @@ public class Task {
 
     public void setTimestamp(long timestamp) {
         this.timestamp = timestamp;
+    }
+
+    // NEW: AI Count Getters & Setters
+    public boolean isRequireAiCount() {
+        return requireAiCount;
+    }
+
+    public void setRequireAiCount(boolean requireAiCount) {
+        this.requireAiCount = requireAiCount;
+    }
+
+    public String getAiCountValue() {
+        return aiCountValue != null ? aiCountValue : "";
+    }
+
+    public void setAiCountValue(String aiCountValue) {
+        this.aiCountValue = aiCountValue;
     }
 }

@@ -19,7 +19,7 @@
         android:id="@+id/tv_member_email"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_weight="0.45"
+        android:layout_weight="0.4"
         android:text="user@example.com"
         android:textSize="14sp"
         android:textColor="@color/text_primary"
@@ -29,9 +29,20 @@
         android:id="@+id/tv_member_password"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_weight="0.4"
+        android:layout_weight="0.35"
         android:text="password123"
         android:textSize="14sp"
         android:textColor="@color/text_secondary"
         android:textAlignment="viewStart"/>
+
+    <CheckBox
+        android:id="@+id/cb_member_select"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="0.1"
+        android:layout_gravity="center_vertical"
+        android:minWidth="0dp"
+        android:minHeight="0dp"
+        android:padding="0dp"
+        android:visibility="gone"/>
 </LinearLayout>

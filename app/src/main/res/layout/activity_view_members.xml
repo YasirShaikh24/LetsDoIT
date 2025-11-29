@@ -7,16 +7,47 @@
     android:padding="16dp"
     android:background="@color/white">
 
-    <TextView
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Team Members"
-        android:textSize="24sp"
-        android:textStyle="bold"
-        android:textColor="@color/text_primary"
-        android:layout_marginBottom="16dp"/>
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="16dp">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Team Members"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:textColor="@color/text_primary"/>
+
+        <Button
+            android:id="@+id/btn_delete_mode"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="DELETE"
+            android:background="@drawable/button_background"
+            android:textColor="@color/white"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp"/>
+    </LinearLayout>
+
+    <Button
+        android:id="@+id/btn_confirm_delete"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="DELETE SELECTED MEMBERS"
+        android:visibility="gone"
+        android:layout_marginBottom="16dp"
+        android:background="@drawable/button_background"
+        android:textColor="@color/white" />
 
     <LinearLayout
+        android:id="@+id/ll_table_header"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
@@ -36,7 +67,7 @@
         <TextView
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_weight="0.45"
+            android:layout_weight="0.4"
             android:text="Email"
             android:textSize="14sp"
             android:textStyle="bold"
@@ -46,12 +77,24 @@
         <TextView
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_weight="0.4"
+            android:layout_weight="0.35"
             android:text="Password"
             android:textSize="14sp"
             android:textStyle="bold"
             android:textColor="@color/text_primary"
             android:textAlignment="viewStart"/>
+
+        <TextView
+            android:id="@+id/tv_select_header"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.1"
+            android:text="Sel"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:textColor="@color/text_primary"
+            android:textAlignment="center"
+            android:visibility="gone"/>
     </LinearLayout>
 
     <FrameLayout

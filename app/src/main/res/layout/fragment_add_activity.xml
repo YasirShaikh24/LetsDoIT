@@ -58,6 +58,7 @@
             </com.google.android.material.textfield.TextInputLayout>
 
         </LinearLayout>
+
         <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -124,6 +125,34 @@
                 android:cursorVisible="false"
                 android:inputType="none"/>
         </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- NEW: AI Count Requirement Checkbox -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/radio_button_selector"
+            android:padding="16dp"
+            android:layout_marginBottom="24dp">
+
+            <CheckBox
+                android:id="@+id/cb_require_ai_count"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Require AI Count on Completion"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="@color/text_primary"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="When enabled, user must enter an alphanumeric AI count number when marking this task as completed."
+                android:textSize="12sp"
+                android:textColor="@color/text_secondary"
+                android:layout_marginTop="4dp"
+                android:layout_marginStart="32dp"/>
+        </LinearLayout>
 
         <TextView
             android:layout_width="wrap_content"

@@ -2,6 +2,7 @@
 package com.example.letsdoit;
 
 public class User {
+    private String documentId; // NEW FIELD
     private String email;
     private String role; // "admin" or "user"
     private String displayName;
@@ -17,6 +18,15 @@ public class User {
         this.role = role;
         this.displayName = displayName;
         this.password = password;
+    }
+
+    // NEW Getter and Setter for documentId
+    public String getDocumentId() {
+        return documentId;
+    }
+
+    public void setDocumentId(String documentId) {
+        this.documentId = documentId;
     }
 
     public String getEmail() {

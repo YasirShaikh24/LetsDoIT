@@ -75,7 +75,6 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
         GradientDrawable priorityDrawable = (GradientDrawable) holder.tvPriority.getBackground().mutate();
         priorityDrawable.setColor(priorityColor);
 
-
         // 2. Status Logic (Enhanced UI/UX with Emojis)
         String status = task.getStatus().toLowerCase();
         int statusColorResId;
@@ -84,15 +83,15 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
         switch (status) {
             case "pending":
                 statusColorResId = R.color.status_pending;
-                statusDisplay = "\uD83D\uDD50 PENDING"; // Clock emoji
+                statusDisplay = "\uD83D\uDD50 PENDING";
                 break;
             case "in progress":
                 statusColorResId = R.color.status_in_progress;
-                statusDisplay = "\uD83D\uDEE0 IN PROGRESS"; // Tool/Gear emoji
+                statusDisplay = "\uD83D\uDEE0 IN PROGRESS";
                 break;
             case "completed":
                 statusColorResId = R.color.status_completed;
-                statusDisplay = "✅ COMPLETED"; // Checkmark emoji
+                statusDisplay = "✅ COMPLETED";
                 break;
             default:
                 statusColorResId = android.R.color.darker_gray;
@@ -116,8 +115,23 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
             holder.tvStatus.setAlpha(1.0f);
         }
 
+        // NEW: 3. AI Count Display (if task requires AI count and has been completed)
+        if (task.isRequireAiCount()) {
+            holder.tvAiCount.setVisibility(View.VISIBLE);
 
-        // 3. Admin Actions (Edit/Delete)
+            String aiCountValue = task.getAiCountValue();
+            if (aiCountValue != null && !aiCountValue.isEmpty()) {
+                holder.tvAiCount.setText("🔢 AI Count: " + aiCountValue);
+                holder.tvAiCount.setTextColor(Color.parseColor("#4CAF50")); // Green for completed
+            } else {
+                holder.tvAiCount.setText("🔢 AI Count: Required (Not submitted yet)");
+                holder.tvAiCount.setTextColor(Color.parseColor("#FF9800")); // Orange for pending
+            }
+        } else {
+            holder.tvAiCount.setVisibility(View.GONE);
+        }
+
+        // 4. Admin Actions (Edit/Delete)
         if ("admin".equals(loggedInUserRole)) {
             holder.llAdminActions.setVisibility(View.VISIBLE);
 
@@ -136,11 +150,11 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
             holder.llAdminActions.setVisibility(View.GONE);
         }
 
-        // 4. Task Creation Timestamp
+        // 5. Task Creation Timestamp
         SimpleDateFormat sdf = new SimpleDateFormat("MMM dd, yyyy", Locale.getDefault());
         holder.tvTimestamp.setText("Created: " + sdf.format(new Date(task.getTimestamp())));
 
-        // 5. File Attachments (Returns 0 files since feature is removed)
+        // 6. File Attachments (Returns 0 files since feature is removed)
         if (!task.getFileUrls().isEmpty()) {
             holder.tvFiles.setVisibility(View.VISIBLE);
             holder.tvFiles.setText(task.getFileUrls().size() + " file(s)");
@@ -148,7 +162,7 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
             holder.tvFiles.setVisibility(View.GONE);
         }
 
-        // 6. Remarks
+        // 7. Remarks
         String remarks = task.getRemarks();
         if (remarks != null && !remarks.isEmpty()) {
             holder.tvRemarks.setVisibility(View.VISIBLE);
@@ -157,7 +171,7 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
             holder.tvRemarks.setVisibility(View.GONE);
         }
 
-        // 7. Start Date and End Date
+        // 8. Start Date and End Date
         String startDate = task.getStartDate();
         String endDate = task.getEndDate();
 
@@ -182,6 +196,7 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
 
     static class TaskViewHolder extends RecyclerView.ViewHolder {
         TextView tvTitle, tvDescription, tvPriority, tvStatus, tvTimestamp, tvFiles, tvRemarks, tvDateRange;
+        TextView tvAiCount; // NEW
         ImageButton btnEditTask, btnDeleteTask;
         LinearLayout llAdminActions;
         CardView cardView;
@@ -197,6 +212,7 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
             tvFiles = itemView.findViewById(R.id.tv_task_files);
             tvRemarks = itemView.findViewById(R.id.tv_task_remarks);
             tvDateRange = itemView.findViewById(R.id.tv_task_date_range);
+            tvAiCount = itemView.findViewById(R.id.tv_task_ai_count); // NEW
 
             llAdminActions = itemView.findViewById(R.id.ll_admin_actions);
             btnEditTask = itemView.findViewById(R.id.btn_edit_task);
