@@ -34,9 +34,14 @@ public class EditTaskActivity extends AppCompatActivity {
     private TextInputEditText etTitle, etDescription, etRemarks, etStartDate, etEndDate;
     private TextInputEditText etAssigneeDisplay;
     private RadioGroup rgPriority;
-    private CheckBox cbRequireAiCount; // NEW
+    // MODIFIED: From CheckBox to RadioGroup
+    private RadioGroup rgRequireAiCount;
+    // NEW: RadioGroup for Task Type
+    private RadioGroup rgTaskType;
     private Button btnSaveTask;
     private LinearLayout llAssignUserSection;
+    // NEW: LinearLayout for Date Range
+    private LinearLayout llDateRangeSection;
 
     private FirebaseFirestore db;
 
@@ -72,10 +77,26 @@ public class EditTaskActivity extends AppCompatActivity {
         etDescription = findViewById(R.id.et_description);
         etRemarks = findViewById(R.id.et_remarks);
         rgPriority = findViewById(R.id.rg_priority);
-        cbRequireAiCount = findViewById(R.id.cb_require_ai_count); // NEW
+        // MODIFIED: From CheckBox to RadioGroup
+        rgRequireAiCount = findViewById(R.id.rg_require_ai_count);
         btnSaveTask = findViewById(R.id.btn_save_task);
+
+        // NEW: Task Type and Date Range Section
+        rgTaskType = findViewById(R.id.rg_task_type);
+        llDateRangeSection = findViewById(R.id.ll_date_range_section);
         etStartDate = findViewById(R.id.et_start_date);
         etEndDate = findViewById(R.id.et_end_date);
+
+        // Task Type Listener to toggle date range visibility
+        rgTaskType.setOnCheckedChangeListener((group, checkedId) -> {
+            if (checkedId == R.id.rb_additional) {
+                llDateRangeSection.setVisibility(View.VISIBLE);
+            } else {
+                llDateRangeSection.setVisibility(View.GONE);
+                // Note: We don't clear dates here during editing, as they might be needed later.
+            }
+        });
+
         llAssignUserSection = findViewById(R.id.ll_assign_user_section);
         etAssigneeDisplay = findViewById(R.id.et_assigned_to_display);
 
@@ -111,11 +132,28 @@ public class EditTaskActivity extends AppCompatActivity {
         etTitle.setText(task.getTitle());
         etDescription.setText(task.getDescription());
         etRemarks.setText(task.getRemarks());
-        etStartDate.setText(task.getStartDate());
-        etEndDate.setText(task.getEndDate());
 
-        // NEW: Set AI Count checkbox
-        cbRequireAiCount.setChecked(task.isRequireAiCount());
+        // NEW: Set Task Type and toggle date visibility
+        String taskType = task.getTaskType() != null ? task.getTaskType() : "Permanent";
+        if (taskType.equalsIgnoreCase("Additional")) {
+            ((RadioButton) findViewById(R.id.rb_additional)).setChecked(true);
+            llDateRangeSection.setVisibility(View.VISIBLE);
+            etStartDate.setText(task.getStartDate());
+            etEndDate.setText(task.getEndDate());
+        } else {
+            ((RadioButton) findViewById(R.id.rb_permanent)).setChecked(true);
+            llDateRangeSection.setVisibility(View.GONE);
+            // Even if hidden, populate fields in case user switches type
+            etStartDate.setText(task.getStartDate());
+            etEndDate.setText(task.getEndDate());
+        }
+
+        // MODIFIED: Set AI Count radio button
+        if (task.isRequireAiCount()) {
+            ((RadioButton) findViewById(R.id.rb_ai_count_yes)).setChecked(true);
+        } else {
+            ((RadioButton) findViewById(R.id.rb_ai_count_no)).setChecked(true);
+        }
 
         String priority = task.getPriority() != null ? task.getPriority().toLowerCase() : "low";
         if (priority.equals("low")) {
@@ -222,18 +260,32 @@ public class EditTaskActivity extends AppCompatActivity {
         String title = etTitle.getText().toString().trim();
         String description = etDescription.getText().toString().trim();
         String remarks = etRemarks.getText().toString().trim();
-        String startDate = etStartDate.getText().toString().trim();
-        String endDate = etEndDate.getText().toString().trim();
+
+        // NEW: Get Task Type
+        int selectedTaskTypeId = rgTaskType.getCheckedRadioButtonId();
+        if (selectedTaskTypeId == -1) {
+            Toast.makeText(this, "Please select a task duration type.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        RadioButton selectedTaskTypeButton = findViewById(selectedTaskTypeId);
+        String taskType = selectedTaskTypeButton.getText().toString();
+
+        String startDate = "";
+        String endDate = "";
+
+        // Only use dates if Task Type is "Additional"
+        if (taskType.equalsIgnoreCase("Additional")) {
+            startDate = etStartDate.getText().toString().trim();
+            endDate = etEndDate.getText().toString().trim();
+        }
+
 
         if (title.isEmpty()) {
             etTitle.setError("Title is required");
             return;
         }
 
-        if (description.isEmpty()) {
-            etDescription.setError("Description is required");
-            return;
-        }
+        // DESCRIPTION IS NOW OPTIONAL - Validation removed.
 
         if (selectedAssignees.isEmpty()) {
             Toast.makeText(this, "Please assign the task to at least one user.", Toast.LENGTH_SHORT).show();
@@ -249,16 +301,18 @@ public class EditTaskActivity extends AppCompatActivity {
         RadioButton selectedPriorityButton = findViewById(selectedPriorityId);
         String priority = selectedPriorityButton.getText().toString().toLowerCase();
 
-        // NEW: Get AI Count checkbox state
-        boolean requireAiCount = cbRequireAiCount.isChecked();
+        // MODIFIED: Get AI Count radio button state
+        int selectedAiCountId = rgRequireAiCount.getCheckedRadioButtonId();
+        boolean requireAiCount = (selectedAiCountId == R.id.rb_ai_count_yes);
 
         btnSaveTask.setEnabled(false);
         btnSaveTask.setText("Updating...");
 
-        saveTaskUpdateToFirestore(title, description, priority, remarks, selectedAssignees, startDate, endDate, requireAiCount);
+        // UPDATED: Added taskType argument
+        saveTaskUpdateToFirestore(title, description, priority, remarks, selectedAssignees, startDate, endDate, requireAiCount, taskType);
     }
 
-    private void saveTaskUpdateToFirestore(String title, String description, String priority, String remarks, List<String> assignedTo, String startDate, String endDate, boolean requireAiCount) {
+    private void saveTaskUpdateToFirestore(String title, String description, String priority, String remarks, List<String> assignedTo, String startDate, String endDate, boolean requireAiCount, String taskType) {
         Map<String, Object> taskUpdates = new HashMap<>();
         taskUpdates.put("title", title);
         taskUpdates.put("description", description);
@@ -268,7 +322,8 @@ public class EditTaskActivity extends AppCompatActivity {
         taskUpdates.put("assignedTo", assignedTo);
         taskUpdates.put("startDate", startDate);
         taskUpdates.put("endDate", endDate);
-        taskUpdates.put("requireAiCount", requireAiCount); // NEW
+        taskUpdates.put("requireAiCount", requireAiCount);
+        taskUpdates.put("taskType", taskType); // NEW
 
         db.collection("tasks").document(taskId)
                 .update(taskUpdates)

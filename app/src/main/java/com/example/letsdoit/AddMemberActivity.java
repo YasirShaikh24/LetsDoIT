@@ -20,7 +20,7 @@ public class AddMemberActivity extends AppCompatActivity {
     private FirebaseFirestore db;
 
     private static final String TAG = "AddMemberActivity";
-    private static final String APP_LINK = "https://play.google.com/store/apps/details?id=com.example.letsdoit";
+    // Removed: private static final String APP_LINK = "https://play.google.com/store/apps/details?id=com.example.letsdoit";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -114,12 +114,12 @@ public class AddMemberActivity extends AppCompatActivity {
     }
 
     private void prepareAndOpenSmsIntent(String memberName, String mobileNumber, String assignedEmail, String assignedPassword) {
-        String message = "Do It!\n\n" +
+        String message = "Lets Do IT.\n" + // Changed initial message
+                "By Mohsin Mir\n\n" +
                 "Login Details:\n" +
                 "Email: " + assignedEmail + "\n" +
                 "Password: " + assignedPassword + "\n\n" +
-                "Download:\n" + APP_LINK + "\n\n" +
-                "Keep credentials secure!";
+                "Keep your credentials secure!"; // Removed download link and updated security message
 
         Uri uri = Uri.parse("smsto:" + Uri.encode(mobileNumber));
         Intent intent = new Intent(Intent.ACTION_SENDTO, uri);

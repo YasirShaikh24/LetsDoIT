@@ -90,41 +90,90 @@
                 android:gravity="top"/>
         </com.google.android.material.textfield.TextInputLayout>
 
-        <com.google.android.material.textfield.TextInputLayout
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Task Duration Type"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="@color/text_primary"
+            android:layout_marginBottom="12dp"/>
+
+        <RadioGroup
+            android:id="@+id/rg_task_type"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            android:hint="Start Date (Optional)"
-            style="@style/CustomTextInputLayout"
-            app:startIconDrawable="@drawable/ic_calendar">
+            android:orientation="horizontal"
+            android:layout_marginBottom="24dp">
 
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/et_start_date"
-                android:layout_width="match_parent"
+            <RadioButton
+                android:id="@+id/rb_permanent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:focusable="false"
-                android:clickable="true"
-                android:cursorVisible="false"
-                android:inputType="none"/>
-        </com.google.android.material.textfield.TextInputLayout>
+                android:layout_weight="1"
+                android:text="Permanent"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp"
+                android:layout_marginEnd="8dp"
+                android:background="@drawable/radio_button_selector"
+                android:button="@null"
+                android:textAlignment="center"
+                android:checked="true"/>
 
-        <com.google.android.material.textfield.TextInputLayout
+            <RadioButton
+                android:id="@+id/rb_additional"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Additional"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp"
+                android:background="@drawable/radio_button_selector"
+                android:button="@null"
+                android:textAlignment="center"/>
+        </RadioGroup>
+
+        <LinearLayout
+            android:id="@+id/ll_date_range_section"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="24dp"
-            android:hint="End Date (Optional)"
-            style="@style/CustomTextInputLayout"
-            app:startIconDrawable="@drawable/ic_calendar">
-
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/et_end_date"
+            android:orientation="vertical"
+            android:visibility="gone">
+            <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:focusable="false"
-                android:clickable="true"
-                android:cursorVisible="false"
-                android:inputType="none"/>
-        </com.google.android.material.textfield.TextInputLayout>
+                android:layout_marginBottom="16dp"
+                android:hint="Start Date (Optional)"
+                style="@style/CustomTextInputLayout"
+                app:startIconDrawable="@drawable/ic_calendar">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/et_start_date"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:focusable="false"
+                    android:clickable="true"
+                    android:cursorVisible="false"
+                    android:inputType="none"/>
+            </com.google.android.material.textfield.TextInputLayout>
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="24dp"
+                android:hint="End Date (Optional)"
+                style="@style/CustomTextInputLayout"
+                app:startIconDrawable="@drawable/ic_calendar">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/et_end_date"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:focusable="false"
+                    android:clickable="true"
+                    android:cursorVisible="false"
+                    android:inputType="none"/>
+            </com.google.android.material.textfield.TextInputLayout>
+        </LinearLayout>
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -134,22 +183,53 @@
             android:padding="16dp"
             android:layout_marginBottom="24dp">
 
-            <CheckBox
-                android:id="@+id/cb_require_ai_count"
+            <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Require AI Count on Completion"
+                android:text="AI Count Correction"
                 android:textSize="16sp"
                 android:textStyle="bold"
-                android:textColor="@color/text_primary"/>
+                android:textColor="@color/text_primary"
+                android:layout_marginBottom="8dp"/>
+
+            <RadioGroup
+                android:id="@+id/rg_require_ai_count"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <RadioButton
+                    android:id="@+id/rb_ai_count_no"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="No"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp"
+                    android:layout_marginEnd="8dp"
+                    android:background="@drawable/radio_button_selector"
+                    android:button="@null"
+                    android:textAlignment="center"
+                    android:checked="true"/> <RadioButton
+                android:id="@+id/rb_ai_count_yes"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Yes"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp"
+                android:background="@drawable/radio_button_selector"
+                android:button="@null"
+                android:textAlignment="center"/>
+            </RadioGroup>
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="When enabled, user must enter an alphanumeric AI count number when marking this task as completed."
+                android:text="Select 'Yes' to require the user to enter an alphanumeric AI count number when marking this task as completed."
                 android:textSize="12sp"
                 android:textColor="@color/text_secondary"
-                android:layout_marginTop="4dp"
+                android:layout_marginTop="8dp"
                 android:layout_marginStart="32dp"/>
         </LinearLayout>
 

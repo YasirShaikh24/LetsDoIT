@@ -2,8 +2,7 @@
 package com.example.letsdoit;
 
 import android.app.Dialog;
-import android.content.Context;
-import android.content.SharedPreferences;
+import android.content.DialogInterface;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -11,7 +10,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.widget.Button;
-import android.widget.ImageButton;
 import android.widget.ProgressBar;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
@@ -30,14 +28,11 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 
 public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskActionListener {
@@ -48,20 +43,15 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
     private List<Task> filteredTaskList;
     private FirebaseFirestore db;
     private ProgressBar progressBar;
-    private TextView tvEmptyState, tvDateIndicator;
+    private TextView tvEmptyState;
     private RadioGroup rgStatusFilter;
-    private ImageButton btnCalendar;
 
     private String loggedInUserEmail;
     private String loggedInUserRole;
     private String currentFilter = "all";
 
-    // Date filtering - null means "Today"
-    private Long selectedDateMillis = null;
-    private SimpleDateFormat dateFormat = new SimpleDateFormat("MMM dd, yyyy", Locale.US);
-    private SimpleDateFormat dateOnlyFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
-
     private static final String TAG = "ViewActivityFragment";
+
     public static final String EXTRA_TASK_ID = "extra_task_id";
 
     public static ViewActivityFragment newInstance(String email, String role) {
@@ -87,8 +77,6 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
         progressBar = view.findViewById(R.id.progress_bar);
         tvEmptyState = view.findViewById(R.id.tv_empty_state);
         rgStatusFilter = view.findViewById(R.id.rg_status_filter);
-        btnCalendar = view.findViewById(R.id.btn_calendar);
-        tvDateIndicator = view.findViewById(R.id.tv_date_indicator);
 
         db = FirebaseFirestore.getInstance();
 
@@ -99,84 +87,9 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
         recyclerView.setAdapter(taskAdapter);
 
         setupFilterListeners();
-        setupCalendarButton();
-        setupDateIndicatorClick();
-        updateDateIndicator();
         loadTasks();
 
         return view;
-    }
-
-    private void setupDateIndicatorClick() {
-        // Click on date indicator to reset to today
-        tvDateIndicator.setOnClickListener(v -> {
-            selectedDateMillis = null;
-            updateDateIndicator();
-            applyFilter();
-            Toast.makeText(getContext(), "Reset to Today", Toast.LENGTH_SHORT).show();
-        });
-    }
-
-    private void setupCalendarButton() {
-        btnCalendar.setOnClickListener(v -> showCalendarDialog());
-    }
-
-    private void showCalendarDialog() {
-        // If selectedDateMillis is null (Today), pass today's date to calendar
-        Long dateToShow = selectedDateMillis;
-        if (dateToShow == null) {
-            Calendar today = Calendar.getInstance();
-            today.set(Calendar.HOUR_OF_DAY, 0);
-            today.set(Calendar.MINUTE, 0);
-            today.set(Calendar.SECOND, 0);
-            today.set(Calendar.MILLISECOND, 0);
-            dateToShow = today.getTimeInMillis();
-        }
-
-        CalendarDialogFragment calendarDialog = CalendarDialogFragment.newInstance(dateToShow);
-        calendarDialog.setOnDateSelectedListener(new CalendarDialogFragment.OnDateSelectedListener() {
-            @Override
-            public void onDateSelected(long dateInMillis, String formattedDate) {
-                // Check if selected date is today
-                Calendar selected = Calendar.getInstance();
-                selected.setTimeInMillis(dateInMillis);
-                selected.set(Calendar.HOUR_OF_DAY, 0);
-                selected.set(Calendar.MINUTE, 0);
-                selected.set(Calendar.SECOND, 0);
-                selected.set(Calendar.MILLISECOND, 0);
-
-                Calendar today = Calendar.getInstance();
-                today.set(Calendar.HOUR_OF_DAY, 0);
-                today.set(Calendar.MINUTE, 0);
-                today.set(Calendar.SECOND, 0);
-                today.set(Calendar.MILLISECOND, 0);
-
-                if (selected.getTimeInMillis() == today.getTimeInMillis()) {
-                    // Selected today - set to null
-                    selectedDateMillis = null;
-                    Toast.makeText(getContext(), "Showing tasks for Today", Toast.LENGTH_SHORT).show();
-                } else {
-                    // Selected past date
-                    selectedDateMillis = dateInMillis;
-                    Toast.makeText(getContext(), "Showing tasks for: " + formattedDate, Toast.LENGTH_SHORT).show();
-                }
-
-                updateDateIndicator();
-                applyFilter();
-            }
-        });
-        calendarDialog.show(getParentFragmentManager(), "calendar_dialog");
-    }
-
-    private void updateDateIndicator() {
-        if (selectedDateMillis == null) {
-            tvDateIndicator.setText("📅 Today");
-            tvDateIndicator.setTextColor(getResources().getColor(R.color.primary_purple));
-        } else {
-            String dateStr = dateFormat.format(selectedDateMillis);
-            tvDateIndicator.setText("📅 " + dateStr);
-            tvDateIndicator.setTextColor(getResources().getColor(R.color.text_secondary));
-        }
     }
 
     private void setupFilterListeners() {
@@ -197,17 +110,14 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
     private void applyFilter() {
         filteredTaskList.clear();
 
-        for (Task task : taskList) {
-            // Get the task status for the selected date
-            String taskStatusForDate = getTaskStatusForDate(task, selectedDateMillis);
-
-            boolean matchesStatus = currentFilter.equals("all") ||
-                    (taskStatusForDate != null && taskStatusForDate.toLowerCase().equals(currentFilter));
-
-            boolean matchesDate = isTaskVisibleForSelectedDate(task);
-
-            if (matchesStatus && matchesDate) {
-                filteredTaskList.add(task);
+        if (currentFilter.equals("all")) {
+            filteredTaskList.addAll(taskList);
+        } else {
+            for (Task task : taskList) {
+                String taskStatus = task.getStatus() != null ? task.getStatus().toLowerCase() : "pending";
+                if (taskStatus.equals(currentFilter)) {
+                    filteredTaskList.add(task);
+                }
             }
         }
 
@@ -215,123 +125,16 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
 
         if (filteredTaskList.isEmpty()) {
             String filterName = currentFilter.substring(0, 1).toUpperCase() + currentFilter.substring(1);
-            String dateInfo = selectedDateMillis == null ? "today" : dateFormat.format(selectedDateMillis);
-
             if (currentFilter.equals("all")) {
-                tvEmptyState.setText("No tasks found for " + dateInfo);
+                tvEmptyState.setText("No tasks found.");
             } else {
-                tvEmptyState.setText("No " + filterName + " tasks found for " + dateInfo);
+                tvEmptyState.setText("No " + filterName + " tasks found.");
             }
             tvEmptyState.setVisibility(View.VISIBLE);
             recyclerView.setVisibility(View.GONE);
         } else {
             tvEmptyState.setVisibility(View.GONE);
             recyclerView.setVisibility(View.VISIBLE);
-        }
-    }
-
-    /**
-     * Get the task status as it was on the selected date
-     */
-    private String getTaskStatusForDate(Task task, Long dateMillis) {
-        if (dateMillis == null) {
-            // For today, return current status
-            return task.getStatus();
-        }
-
-        // For past dates, we return the current status
-        // The real-time logic is: if a task was completed today,
-        // it should still show as "Pending" or "In Progress" for past dates
-        // However, since we don't store historical status changes,
-        // we'll show current status for now
-        // To implement true historical status, you'd need to store status change timestamps
-
-        return task.getStatus();
-    }
-
-    /**
-     * Check if task should be visible for the selected date
-     */
-    private boolean isTaskVisibleForSelectedDate(Task task) {
-        Calendar selectedCal = Calendar.getInstance();
-
-        if (selectedDateMillis == null) {
-            // Today - show all active tasks
-            selectedCal.set(Calendar.HOUR_OF_DAY, 0);
-            selectedCal.set(Calendar.MINUTE, 0);
-            selectedCal.set(Calendar.SECOND, 0);
-            selectedCal.set(Calendar.MILLISECOND, 0);
-        } else {
-            // Past date
-            selectedCal.setTimeInMillis(selectedDateMillis);
-            selectedCal.set(Calendar.HOUR_OF_DAY, 0);
-            selectedCal.set(Calendar.MINUTE, 0);
-            selectedCal.set(Calendar.SECOND, 0);
-            selectedCal.set(Calendar.MILLISECOND, 0);
-        }
-
-        try {
-            // Task must be created on or before the selected date
-            Calendar taskCreatedCal = Calendar.getInstance();
-            taskCreatedCal.setTimeInMillis(task.getTimestamp());
-            taskCreatedCal.set(Calendar.HOUR_OF_DAY, 0);
-            taskCreatedCal.set(Calendar.MINUTE, 0);
-            taskCreatedCal.set(Calendar.SECOND, 0);
-            taskCreatedCal.set(Calendar.MILLISECOND, 0);
-
-            if (taskCreatedCal.after(selectedCal)) {
-                return false; // Task created after selected date
-            }
-
-            // Check date range
-            String startDate = task.getStartDate();
-            String endDate = task.getEndDate();
-
-            // If no date range specified, show task if created before/on selected date
-            if ((startDate == null || startDate.isEmpty()) && (endDate == null || endDate.isEmpty())) {
-                return true;
-            }
-
-            // Check if selected date falls within task date range
-            if (startDate != null && !startDate.isEmpty()) {
-                try {
-                    Calendar startCal = Calendar.getInstance();
-                    startCal.setTime(dateFormat.parse(startDate));
-                    startCal.set(Calendar.HOUR_OF_DAY, 0);
-                    startCal.set(Calendar.MINUTE, 0);
-                    startCal.set(Calendar.SECOND, 0);
-                    startCal.set(Calendar.MILLISECOND, 0);
-
-                    if (selectedCal.before(startCal)) {
-                        return false; // Selected date before start date
-                    }
-                } catch (Exception e) {
-                    Log.e(TAG, "Error parsing start date: " + e.getMessage());
-                }
-            }
-
-            if (endDate != null && !endDate.isEmpty()) {
-                try {
-                    Calendar endCal = Calendar.getInstance();
-                    endCal.setTime(dateFormat.parse(endDate));
-                    endCal.set(Calendar.HOUR_OF_DAY, 23);
-                    endCal.set(Calendar.MINUTE, 59);
-                    endCal.set(Calendar.SECOND, 59);
-                    endCal.set(Calendar.MILLISECOND, 999);
-
-                    if (selectedCal.after(endCal)) {
-                        return false; // Selected date after end date
-                    }
-                } catch (Exception e) {
-                    Log.e(TAG, "Error parsing end date: " + e.getMessage());
-                }
-            }
-
-            return true;
-
-        } catch (Exception e) {
-            Log.e(TAG, "Error in date filtering: " + e.getMessage());
-            return true;
         }
     }
 
@@ -417,43 +220,21 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
 
     @Override
     public void onTaskStatusClick(Task task, int position) {
+        // Show custom dialog for users
         if ("user".equals(loggedInUserRole)) {
-            // Check if viewing past date
-            if (selectedDateMillis != null) {
-                Calendar today = Calendar.getInstance();
-                today.set(Calendar.HOUR_OF_DAY, 0);
-                today.set(Calendar.MINUTE, 0);
-                today.set(Calendar.SECOND, 0);
-                today.set(Calendar.MILLISECOND, 0);
-
-                Calendar selected = Calendar.getInstance();
-                selected.setTimeInMillis(selectedDateMillis);
-                selected.set(Calendar.HOUR_OF_DAY, 0);
-                selected.set(Calendar.MINUTE, 0);
-                selected.set(Calendar.SECOND, 0);
-                selected.set(Calendar.MILLISECOND, 0);
-
-                if (selected.before(today)) {
-                    // Past date - Show read-only
-                    showReadOnlyTaskDialog(task);
-                    return;
-                }
-            }
-            // Today - Allow editing
             showTaskDetailDialog(task, position);
         }
     }
 
     @Override
     public void onTaskEditClick(Task task, int position) {
-        if ("admin".equals(loggedInUserRole)) {
-            if (task.getId() != null) {
-                android.content.Intent intent = new android.content.Intent(getActivity(), EditTaskActivity.class);
-                intent.putExtra(EXTRA_TASK_ID, task.getId());
-                startActivity(intent);
-            } else {
-                Toast.makeText(getContext(), "Error: Cannot edit task without an ID.", Toast.LENGTH_SHORT).show();
-            }
+        // Admin edit functionality - open EditTaskActivity
+        if ("admin".equals(loggedInUserRole) && task.getId() != null) {
+            android.content.Intent intent = new android.content.Intent(getActivity(), EditTaskActivity.class);
+            intent.putExtra(EXTRA_TASK_ID, task.getId());
+            startActivity(intent);
+        } else {
+            Toast.makeText(getContext(), "Error: Cannot edit task without an ID.", Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -462,64 +243,7 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
         showDeleteConfirmationDialog(task, position);
     }
 
-    private void showReadOnlyTaskDialog(Task task) {
-        Dialog dialog = new Dialog(requireContext());
-        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
-        dialog.setContentView(R.layout.dialog_task_readonly);
-        dialog.getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        dialog.setCancelable(true);
-
-        TextView tvDialogTitle = dialog.findViewById(R.id.tv_dialog_title);
-        TextView tvDialogDescription = dialog.findViewById(R.id.tv_dialog_description);
-        TextView tvDialogDates = dialog.findViewById(R.id.tv_dialog_dates);
-        TextView tvDialogRemarks = dialog.findViewById(R.id.tv_dialog_remarks);
-        TextView tvDialogStatus = dialog.findViewById(R.id.tv_dialog_status);
-        TextView tvDialogAiCount = dialog.findViewById(R.id.tv_dialog_ai_count);
-        Button btnClose = dialog.findViewById(R.id.btn_close);
-
-        tvDialogTitle.setText(task.getTitle());
-        tvDialogDescription.setText(task.getDescription());
-
-        String startDate = task.getStartDate();
-        String endDate = task.getEndDate();
-        if ((startDate != null && !startDate.isEmpty()) || (endDate != null && !endDate.isEmpty())) {
-            String dateText = "Dates: ";
-            dateText += (startDate != null && !startDate.isEmpty()) ? startDate : "?";
-            dateText += " - ";
-            dateText += (endDate != null && !endDate.isEmpty()) ? endDate : "?";
-            tvDialogDates.setText(dateText);
-            tvDialogDates.setVisibility(View.VISIBLE);
-        } else {
-            tvDialogDates.setVisibility(View.GONE);
-        }
-
-        String remarks = task.getRemarks();
-        if (remarks != null && !remarks.isEmpty()) {
-            tvDialogRemarks.setText("Remarks: " + remarks);
-            tvDialogRemarks.setVisibility(View.VISIBLE);
-        } else {
-            tvDialogRemarks.setVisibility(View.GONE);
-        }
-
-        String status = task.getStatus();
-        tvDialogStatus.setText("Status: " + (status != null ? status.toUpperCase() : "PENDING"));
-
-        if (task.isRequireAiCount()) {
-            String aiCountValue = task.getAiCountValue();
-            if (aiCountValue != null && !aiCountValue.isEmpty()) {
-                tvDialogAiCount.setText("AI Count: " + aiCountValue);
-            } else {
-                tvDialogAiCount.setText("AI Count: Not submitted");
-            }
-            tvDialogAiCount.setVisibility(View.VISIBLE);
-        } else {
-            tvDialogAiCount.setVisibility(View.GONE);
-        }
-
-        btnClose.setOnClickListener(v -> dialog.dismiss());
-        dialog.show();
-    }
-
+    // Custom dialog for task details with AI Count editing
     private void showTaskDetailDialog(Task task, int position) {
         Dialog dialog = new Dialog(requireContext());
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
@@ -527,6 +251,7 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
         dialog.getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         dialog.setCancelable(true);
 
+        // Find views
         TextView tvDialogTitle = dialog.findViewById(R.id.tv_dialog_title);
         TextView tvDialogDescription = dialog.findViewById(R.id.tv_dialog_description);
         TextView tvDialogDates = dialog.findViewById(R.id.tv_dialog_dates);
@@ -541,9 +266,11 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
         Button btnSubmit = dialog.findViewById(R.id.btn_submit);
         Button btnCancel = dialog.findViewById(R.id.btn_cancel);
 
+        // Populate task details
         tvDialogTitle.setText(task.getTitle());
         tvDialogDescription.setText(task.getDescription());
 
+        // Dates
         String startDate = task.getStartDate();
         String endDate = task.getEndDate();
         if ((startDate != null && !startDate.isEmpty()) || (endDate != null && !endDate.isEmpty())) {
@@ -557,6 +284,7 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
             tvDialogDates.setVisibility(View.GONE);
         }
 
+        // Remarks
         String remarks = task.getRemarks();
         if (remarks != null && !remarks.isEmpty()) {
             tvDialogRemarks.setText("Remarks: " + remarks);
@@ -565,8 +293,11 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
             tvDialogRemarks.setVisibility(View.GONE);
         }
 
+        // AI Count section - ALWAYS show if task requires AI Count
         if (task.isRequireAiCount()) {
             llAiCountSection.setVisibility(View.VISIBLE);
+
+            // Pre-fill if already exists (for editing)
             String existingAiCount = task.getAiCountValue();
             if (existingAiCount != null && !existingAiCount.isEmpty()) {
                 etAiCount.setText(existingAiCount);
@@ -579,6 +310,7 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
             llAiCountSection.setVisibility(View.GONE);
         }
 
+        // Set current status
         String currentStatus = task.getStatus().toLowerCase();
         if (currentStatus.equals("pending")) {
             rbPending.setChecked(true);
@@ -588,6 +320,7 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
             rbCompleted.setChecked(true);
         }
 
+        // Submit button
         btnSubmit.setOnClickListener(v -> {
             int selectedStatusId = rgDialogStatus.getCheckedRadioButtonId();
             if (selectedStatusId == -1) {
@@ -598,9 +331,12 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
             RadioButton selectedRadioButton = dialog.findViewById(selectedStatusId);
             String newStatus = selectedRadioButton.getText().toString();
 
+            // Get AI Count input (if field is visible)
             String aiCountInput = "";
             if (task.isRequireAiCount()) {
                 aiCountInput = etAiCount.getText().toString().trim();
+
+                // Validate AI Count if status is "Completed"
                 if (newStatus.equalsIgnoreCase("✅ Completed")) {
                     if (aiCountInput.isEmpty()) {
                         etAiCount.setError("AI Count is required for completion");
@@ -610,11 +346,16 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
                 }
             }
 
+            // Clean status text (remove emojis)
             String cleanStatus = newStatus.replace("⏱️", "").replace("🔧", "").replace("✅", "").trim();
+
+            // Update task with new status and AI Count
             updateTaskInFirestore(task, cleanStatus, aiCountInput, position, dialog);
         });
 
+        // Cancel button
         btnCancel.setOnClickListener(v -> dialog.dismiss());
+
         dialog.show();
     }
 
@@ -627,32 +368,34 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
         Map<String, Object> update = new HashMap<>();
         update.put("status", newStatus);
 
+        // Always update AI Count if the field was visible and has value
         if (task.isRequireAiCount()) {
             if (aiCountValue != null && !aiCountValue.isEmpty()) {
                 update.put("aiCountValue", aiCountValue);
-            } else if (newStatus.equalsIgnoreCase("completed")) {
-                update.put("aiCountValue", "");
             }
         }
 
         db.collection("tasks").document(task.getId())
                 .update(update)
                 .addOnSuccessListener(aVoid -> {
+                    // Update local task object
                     task.setStatus(newStatus);
-                    if (task.isRequireAiCount() && aiCountValue != null) {
+                    if (aiCountValue != null && !aiCountValue.isEmpty()) {
                         task.setAiCountValue(aiCountValue);
                     }
 
+                    // Find and update in taskList
                     for (Task t : taskList) {
                         if (t.getId().equals(task.getId())) {
                             t.setStatus(newStatus);
-                            if (task.isRequireAiCount() && aiCountValue != null) {
+                            if (aiCountValue != null && !aiCountValue.isEmpty()) {
                                 t.setAiCountValue(aiCountValue);
                             }
                             break;
                         }
                     }
 
+                    // Reapply filter to update the view
                     applyFilter();
 
                     String message = "Task updated successfully!";
@@ -693,11 +436,10 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
 
                     if (filteredTaskList.isEmpty()) {
                         String filterName = currentFilter.substring(0, 1).toUpperCase() + currentFilter.substring(1);
-                        String dateInfo = selectedDateMillis == null ? "today" : dateFormat.format(selectedDateMillis);
                         if (currentFilter.equals("all")) {
-                            tvEmptyState.setText("No tasks for " + dateInfo);
+                            tvEmptyState.setText("No tasks in the system.");
                         } else {
-                            tvEmptyState.setText("No " + filterName + " tasks for " + dateInfo);
+                            tvEmptyState.setText("No " + filterName + " tasks found.");
                         }
                         tvEmptyState.setVisibility(View.VISIBLE);
                         recyclerView.setVisibility(View.GONE);
