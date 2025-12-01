@@ -4,15 +4,12 @@ package com.example.letsdoit;
 import android.app.Dialog;
 import android.content.DialogInterface;
 import android.os.Bundle;
-import android.text.Editable;
-import android.text.TextWatcher;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.widget.Button;
-import android.widget.ImageButton;
 import android.widget.ProgressBar;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
@@ -27,7 +24,6 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.textfield.TextInputEditText;
-import com.google.android.material.textfield.TextInputLayout;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
@@ -38,7 +34,6 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Locale;
 
 public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskActionListener {
 
@@ -51,16 +46,9 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
     private TextView tvEmptyState;
     private RadioGroup rgStatusFilter;
 
-    // NEW Search UI Elements
-    private ImageButton btnSearchToggle;
-    private TextInputLayout tilSearch;
-    private TextInputEditText etSearchQuery;
-    private boolean isSearchVisible = false; // To track search bar visibility
-
     private String loggedInUserEmail;
     private String loggedInUserRole;
     private String currentFilter = "all";
-    private String currentSearchQuery = ""; // NEW
 
     private static final String TAG = "ViewActivityFragment";
 
@@ -90,11 +78,6 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
         tvEmptyState = view.findViewById(R.id.tv_empty_state);
         rgStatusFilter = view.findViewById(R.id.rg_status_filter);
 
-        // NEW: Initialize Search UI Elements
-        btnSearchToggle = view.findViewById(R.id.btn_search_toggle);
-        tilSearch = view.findViewById(R.id.til_search);
-        etSearchQuery = view.findViewById(R.id.et_search_query);
-
         db = FirebaseFirestore.getInstance();
 
         taskList = new ArrayList<>();
@@ -104,38 +87,9 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
         recyclerView.setAdapter(taskAdapter);
 
         setupFilterListeners();
-        setupSearchListeners(); // NEW
         loadTasks();
 
         return view;
-    }
-
-    private void setupSearchListeners() {
-        btnSearchToggle.setOnClickListener(v -> {
-            isSearchVisible = !isSearchVisible;
-            if (isSearchVisible) {
-                tilSearch.setVisibility(View.VISIBLE);
-                // Optionally request focus for immediate typing
-                etSearchQuery.requestFocus();
-            } else {
-                tilSearch.setVisibility(View.GONE);
-                etSearchQuery.setText(""); // Clear search on hide
-            }
-        });
-
-        etSearchQuery.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-                currentSearchQuery = s.toString().toLowerCase(Locale.getDefault()).trim();
-                applyFilter();
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {}
-        });
     }
 
     private void setupFilterListeners() {
@@ -155,33 +109,27 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
 
     private void applyFilter() {
         filteredTaskList.clear();
-        String currentStatusFilter = currentFilter.equals("all") ? null : currentFilter;
 
-        for (Task task : taskList) {
-            String taskStatus = task.getStatus() != null ? task.getStatus().toLowerCase() : "pending";
-            String taskTitle = task.getTitle() != null ? task.getTitle().toLowerCase(Locale.getDefault()) : "";
-
-            boolean statusMatches = (currentStatusFilter == null || taskStatus.equals(currentStatusFilter));
-            // NEW: Search filters by task title, ignoring case and leading/trailing whitespace
-            boolean searchMatches = currentSearchQuery.isEmpty() || taskTitle.contains(currentSearchQuery);
-
-            if (statusMatches && searchMatches) {
-                filteredTaskList.add(task);
+        if (currentFilter.equals("all")) {
+            filteredTaskList.addAll(taskList);
+        } else {
+            for (Task task : taskList) {
+                String taskStatus = task.getStatus() != null ? task.getStatus().toLowerCase() : "pending";
+                if (taskStatus.equals(currentFilter)) {
+                    filteredTaskList.add(task);
+                }
             }
         }
 
         taskAdapter.notifyDataSetChanged();
 
         if (filteredTaskList.isEmpty()) {
-            String emptyMessage = "No tasks found.";
-            if (!currentSearchQuery.isEmpty()) {
-                emptyMessage = "No tasks matching '" + currentSearchQuery + "' found.";
-            } else if (!currentFilter.equals("all")) {
-                String filterName = currentFilter.substring(0, 1).toUpperCase() + currentFilter.substring(1);
-                emptyMessage = "No " + filterName + " tasks found.";
+            String filterName = currentFilter.substring(0, 1).toUpperCase() + currentFilter.substring(1);
+            if (currentFilter.equals("all")) {
+                tvEmptyState.setText("No tasks found.");
+            } else {
+                tvEmptyState.setText("No " + filterName + " tasks found.");
             }
-
-            tvEmptyState.setText(emptyMessage);
             tvEmptyState.setVisibility(View.VISIBLE);
             recyclerView.setVisibility(View.GONE);
         } else {
@@ -482,15 +430,8 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
                 .delete()
                 .addOnSuccessListener(aVoid -> {
                     taskList.remove(task);
-                    // A safe removal from filtered list before calling notifyItemRemoved
-                    if (position < filteredTaskList.size() && filteredTaskList.get(position).getId().equals(task.getId())) {
-                        filteredTaskList.remove(position);
-                        taskAdapter.notifyItemRemoved(position);
-                    } else {
-                        // If index is compromised, just re-run filter on the new list
-                        applyFilter();
-                    }
-
+                    filteredTaskList.remove(position);
+                    taskAdapter.notifyItemRemoved(position);
                     Toast.makeText(getContext(), "Task deleted successfully!", Toast.LENGTH_SHORT).show();
 
                     if (filteredTaskList.isEmpty()) {
