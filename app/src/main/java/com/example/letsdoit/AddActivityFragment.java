@@ -36,9 +36,14 @@ public class AddActivityFragment extends Fragment {
     private TextInputEditText etTitle, etDescription, etRemarks, etStartDate, etEndDate;
     private TextInputEditText etAssigneeDisplay;
     private RadioGroup rgPriority;
-    private CheckBox cbRequireAiCount; // NEW: Checkbox for AI Count toggle
+    // MODIFIED: Replaced CheckBox with RadioGroup
+    private RadioGroup rgRequireAiCount;
+    // NEW: RadioGroup for Task Type
+    private RadioGroup rgTaskType;
     private Button btnSaveTask;
     private LinearLayout llAssignUserSection;
+    // NEW: LinearLayout for Date Range
+    private LinearLayout llDateRangeSection;
 
     private FirebaseFirestore db;
 
@@ -86,11 +91,30 @@ public class AddActivityFragment extends Fragment {
         etDescription = view.findViewById(R.id.et_description);
         etRemarks = view.findViewById(R.id.et_remarks);
         rgPriority = view.findViewById(R.id.rg_priority);
-        cbRequireAiCount = view.findViewById(R.id.cb_require_ai_count); // NEW
+        // MODIFIED: Using RadioGroup
+        rgRequireAiCount = view.findViewById(R.id.rg_require_ai_count);
         btnSaveTask = view.findViewById(R.id.btn_save_task);
 
+        // NEW: Task Type and Date Range Section
+        rgTaskType = view.findViewById(R.id.rg_task_type);
+        llDateRangeSection = view.findViewById(R.id.ll_date_range_section);
         etStartDate = view.findViewById(R.id.et_start_date);
         etEndDate = view.findViewById(R.id.et_end_date);
+
+        // Task Type Listener to toggle date range visibility
+        rgTaskType.setOnCheckedChangeListener((group, checkedId) -> {
+            if (checkedId == R.id.rb_additional) {
+                llDateRangeSection.setVisibility(View.VISIBLE);
+            } else {
+                llDateRangeSection.setVisibility(View.GONE);
+                // Clear dates when switching to permanent
+                etStartDate.setText("");
+                etEndDate.setText("");
+            }
+        });
+
+        // Initialize date visibility based on default checked item (Permanent)
+        llDateRangeSection.setVisibility(View.GONE);
 
         etStartDate.setOnClickListener(v -> showDatePicker(etStartDate));
         etEndDate.setOnClickListener(v -> showDatePicker(etEndDate));
@@ -212,18 +236,32 @@ public class AddActivityFragment extends Fragment {
         String title = etTitle.getText().toString().trim();
         String description = etDescription.getText().toString().trim();
         String remarks = etRemarks.getText().toString().trim();
-        String startDate = etStartDate.getText().toString().trim();
-        String endDate = etEndDate.getText().toString().trim();
+
+        // NEW: Get Task Type
+        int selectedTaskTypeId = rgTaskType.getCheckedRadioButtonId();
+        if (selectedTaskTypeId == -1) {
+            Toast.makeText(getContext(), "Please select a task duration type.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        RadioButton selectedTaskTypeButton = getView().findViewById(selectedTaskTypeId);
+        String taskType = selectedTaskTypeButton.getText().toString(); // "Permanent" or "Additional"
+
+        String startDate = "";
+        String endDate = "";
+
+        // Only get dates if Task Type is "Additional" (dates are cleared on switch to Permanent)
+        if (taskType.equalsIgnoreCase("Additional")) {
+            startDate = etStartDate.getText().toString().trim();
+            endDate = etEndDate.getText().toString().trim();
+        }
+
 
         if (title.isEmpty()) {
             etTitle.setError("Title is required");
             return;
         }
 
-        if (description.isEmpty()) {
-            etDescription.setError("Description is required");
-            return;
-        }
+        // DESCRIPTION IS NOW OPTIONAL - Validation removed.
 
         if ("admin".equals(loggedInUserRole) && selectedAssignees.isEmpty()) {
             Toast.makeText(getContext(), "Please assign the task to at least one user.", Toast.LENGTH_SHORT).show();
@@ -236,20 +274,24 @@ public class AddActivityFragment extends Fragment {
             return;
         }
 
-        RadioButton selectedPriorityButton = getView().findViewById(selectedPriorityId);
-        String priority = selectedPriorityButton.getText().toString().toLowerCase();
+        RadioButton priorityButton = getView().findViewById(selectedPriorityId);
+        String priority = priorityButton.getText().toString().toLowerCase();
 
-        // NEW: Get AI Count checkbox state
-        boolean requireAiCount = cbRequireAiCount.isChecked();
+        // MODIFIED: Get AI Count radio button state
+        int selectedAiCountId = rgRequireAiCount.getCheckedRadioButtonId();
+        // requireAiCount is true only if 'Yes' radio button is checked (R.id.rb_ai_count_yes)
+        boolean requireAiCount = (selectedAiCountId == R.id.rb_ai_count_yes);
 
         btnSaveTask.setEnabled(false);
         btnSaveTask.setText("Saving...");
 
-        saveTaskToFirestore(title, description, priority, remarks, selectedAssignees, startDate, endDate, requireAiCount);
+        // UPDATED: Added taskType argument
+        saveTaskToFirestore(title, description, priority, remarks, selectedAssignees, startDate, endDate, requireAiCount, taskType);
     }
 
-    private void saveTaskToFirestore(String title, String description, String priority, String remarks, List<String> assignedTo, String startDate, String endDate, boolean requireAiCount) {
-        Task task = new Task(title, description, priority, remarks, assignedTo, startDate, endDate, requireAiCount);
+    private void saveTaskToFirestore(String title, String description, String priority, String remarks, List<String> assignedTo, String startDate, String endDate, boolean requireAiCount, String taskType) {
+        // UPDATED: Added taskType argument
+        Task task = new Task(title, description, priority, remarks, assignedTo, startDate, endDate, requireAiCount, taskType);
 
         db.collection("tasks")
                 .add(task)
@@ -273,7 +315,13 @@ public class AddActivityFragment extends Fragment {
         etStartDate.setText("");
         etEndDate.setText("");
         rgPriority.clearCheck();
-        cbRequireAiCount.setChecked(false); // NEW: Reset checkbox
+
+        // NEW: Reset Task Type to Permanent and hide dates
+        rgTaskType.check(R.id.rb_permanent);
+        llDateRangeSection.setVisibility(View.GONE);
+
+        // MODIFIED: Reset AI Count to No
+        rgRequireAiCount.check(R.id.rb_ai_count_no);
 
         if ("admin".equals(loggedInUserRole)) {
             selectedAssignees.clear();

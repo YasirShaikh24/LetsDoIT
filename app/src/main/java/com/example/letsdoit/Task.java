@@ -19,6 +19,7 @@ public class Task {
     private String remarks;
     private String startDate;
     private String endDate;
+    private String taskType; // NEW FIELD for Permanent/Additional
 
     // NEW: AI Count fields
     private boolean requireAiCount; // Radio button state (on/off)
@@ -33,10 +34,11 @@ public class Task {
         // Required empty constructor for Firestore
         this.requireAiCount = false; // Default to OFF
         this.aiCountValue = "";
+        this.taskType = "Permanent"; // Default for backward compatibility
     }
 
-    // Constructor for creating NEW tasks - fileUrls argument removed, added requireAiCount
-    public Task(String title, String description, String priority, String remarks, List<String> assignedTo, String startDate, String endDate, boolean requireAiCount) {
+    // Constructor for creating NEW tasks - added taskType
+    public Task(String title, String description, String priority, String remarks, List<String> assignedTo, String startDate, String endDate, boolean requireAiCount, String taskType) {
         this.title = title;
         this.description = description;
         this.priority = priority;
@@ -48,6 +50,7 @@ public class Task {
         this.aiCountValue = "";
         this.timestamp = System.currentTimeMillis();
         this.status = "Pending"; // Initialize new tasks as "Pending"
+        this.taskType = taskType; // Set the task type
     }
 
     // --- GETTERS & SETTERS ---
@@ -164,5 +167,14 @@ public class Task {
 
     public void setAiCountValue(String aiCountValue) {
         this.aiCountValue = aiCountValue;
+    }
+
+    // NEW: Task Type Getters & Setters
+    public String getTaskType() {
+        return taskType != null ? taskType : "Permanent";
+    }
+
+    public void setTaskType(String taskType) {
+        this.taskType = taskType;
     }
 }

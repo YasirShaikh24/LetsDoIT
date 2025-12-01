@@ -293,10 +293,10 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
             tvDialogRemarks.setVisibility(View.GONE);
         }
 
-        // AI Count section - ALWAYS show if task requires AI Count
-        if (task.isRequireAiCount()) {
-            llAiCountSection.setVisibility(View.VISIBLE);
+        // AI Count section setup
+        final boolean isAiCountRequired = task.isRequireAiCount();
 
+        if (isAiCountRequired) {
             // Pre-fill if already exists (for editing)
             String existingAiCount = task.getAiCountValue();
             if (existingAiCount != null && !existingAiCount.isEmpty()) {
@@ -306,6 +306,25 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
                 etAiCount.setText("");
                 tvAiCountLabel.setText("Enter AI Count (Required for Completion)");
             }
+
+            // Runnable to control visibility of AI Count section
+            final Runnable updateAiCountVisibility = () -> {
+                int checkedId = rgDialogStatus.getCheckedRadioButtonId();
+                // Show AI Count input ONLY if 'Completed' is selected
+                if (checkedId == R.id.rb_dialog_completed) {
+                    llAiCountSection.setVisibility(View.VISIBLE);
+                } else {
+                    llAiCountSection.setVisibility(View.GONE);
+                }
+            };
+
+            // Set listener for status change
+            rgDialogStatus.setOnCheckedChangeListener((group, checkedId) -> updateAiCountVisibility.run());
+
+            // IMPORTANT: Execute the visibility check once after setting the initial status
+            // This correctly sets the initial visibility based on the task's current status
+            updateAiCountVisibility.run();
+
         } else {
             llAiCountSection.setVisibility(View.GONE);
         }
@@ -329,25 +348,31 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
             }
 
             RadioButton selectedRadioButton = dialog.findViewById(selectedStatusId);
-            String newStatus = selectedRadioButton.getText().toString();
+            String newStatusText = selectedRadioButton.getText().toString();
+            // Clean status text (remove emojis)
+            String cleanStatus = newStatusText.replace("⏱️", "").replace("🔧", "").replace("✅", "").trim();
 
-            // Get AI Count input (if field is visible)
-            String aiCountInput = "";
-            if (task.isRequireAiCount()) {
-                aiCountInput = etAiCount.getText().toString().trim();
+            // Handle AI Count logic
+            String aiCountInput = task.getAiCountValue(); // Start with the existing value
+            boolean isCompleted = cleanStatus.equalsIgnoreCase("Completed");
 
-                // Validate AI Count if status is "Completed"
-                if (newStatus.equalsIgnoreCase("✅ Completed")) {
+            if (isAiCountRequired) {
+                if (isCompleted) {
+                    aiCountInput = etAiCount.getText().toString().trim();
+
+                    // Validate AI Count if status is "Completed"
                     if (aiCountInput.isEmpty()) {
                         etAiCount.setError("AI Count is required for completion");
                         Toast.makeText(getContext(), "Please enter AI Count to mark as completed", Toast.LENGTH_SHORT).show();
                         return;
                     }
+                } else {
+                    // If switching to Pending/In Progress, aiCountInput remains the existing task value (retained)
                 }
+            } else {
+                // If not required, it remains the initial task.getAiCountValue() (which is "")
+                aiCountInput = task.getAiCountValue();
             }
-
-            // Clean status text (remove emojis)
-            String cleanStatus = newStatus.replace("⏱️", "").replace("🔧", "").replace("✅", "").trim();
 
             // Update task with new status and AI Count
             updateTaskInFirestore(task, cleanStatus, aiCountInput, position, dialog);
@@ -368,9 +393,9 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
         Map<String, Object> update = new HashMap<>();
         update.put("status", newStatus);
 
-        // Always update AI Count if the field was visible and has value
+        // Always update AI Count if the task requires it. We pass the stored/new value.
         if (task.isRequireAiCount()) {
-            if (aiCountValue != null && !aiCountValue.isEmpty()) {
+            if (aiCountValue != null) {
                 update.put("aiCountValue", aiCountValue);
             }
         }
@@ -380,7 +405,7 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
                 .addOnSuccessListener(aVoid -> {
                     // Update local task object
                     task.setStatus(newStatus);
-                    if (aiCountValue != null && !aiCountValue.isEmpty()) {
+                    if (task.isRequireAiCount() && aiCountValue != null) {
                         task.setAiCountValue(aiCountValue);
                     }
 
@@ -388,7 +413,7 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
                     for (Task t : taskList) {
                         if (t.getId().equals(task.getId())) {
                             t.setStatus(newStatus);
-                            if (aiCountValue != null && !aiCountValue.isEmpty()) {
+                            if (task.isRequireAiCount() && aiCountValue != null) {
                                 t.setAiCountValue(aiCountValue);
                             }
                             break;
