@@ -25,6 +25,9 @@ public class Task {
     private boolean requireAiCount; // Radio button state (on/off)
     private String aiCountValue; // The alphanumeric AI count entered by user
 
+    // NEW: Field for historical status tracking (completion only)
+    private long completedDateMillis;
+
     // Field for backward compatibility (Firestore deserializes old single-string field here)
     private String assignedToEmail;
 
@@ -35,6 +38,7 @@ public class Task {
         this.requireAiCount = false; // Default to OFF
         this.aiCountValue = "";
         this.taskType = "Permanent"; // Default for backward compatibility
+        this.completedDateMillis = 0; // Initialize
     }
 
     // Constructor for creating NEW tasks - added taskType
@@ -51,6 +55,7 @@ public class Task {
         this.timestamp = System.currentTimeMillis();
         this.status = "Pending"; // Initialize new tasks as "Pending"
         this.taskType = taskType; // Set the task type
+        this.completedDateMillis = 0; // Initialize
     }
 
     // --- GETTERS & SETTERS ---
@@ -176,5 +181,14 @@ public class Task {
 
     public void setTaskType(String taskType) {
         this.taskType = taskType;
+    }
+
+    // NEW: Completed Date Getters & Setters
+    public long getCompletedDateMillis() {
+        return completedDateMillis;
+    }
+
+    public void setCompletedDateMillis(long completedDateMillis) {
+        this.completedDateMillis = completedDateMillis;
     }
 }
