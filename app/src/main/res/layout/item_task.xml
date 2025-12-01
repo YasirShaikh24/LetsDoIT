@@ -65,7 +65,6 @@
             android:textColor="@color/text_primary"
             android:layout_marginBottom="8dp"/>
 
-        <!-- NEW: AI Count Display -->
         <TextView
             android:id="@+id/tv_task_ai_count"
             android:layout_width="match_parent"

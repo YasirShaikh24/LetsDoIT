@@ -4,21 +4,54 @@
     android:layout_height="match_parent"
     android:background="@color/white">
 
-    <TextView
-        android:id="@+id/tv_title"
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:id="@+id/ll_header"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="All Tasks"
-        android:textSize="24sp"
-        android:textStyle="bold"
-        android:textColor="@color/text_primary"
-        android:layout_margin="16dp"/>
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:padding="16dp">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/tv_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="All Tasks"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                android:textColor="@color/text_primary"/>
+
+            <TextView
+                android:id="@+id/tv_date_indicator"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="📅 Today"
+                android:textSize="14sp"
+                android:textColor="@color/primary_purple"
+                android:layout_marginTop="4dp"/>
+        </LinearLayout>
+
+        <ImageButton
+            android:id="@+id/btn_calendar"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="@drawable/rounded_icon_background"
+            android:src="@drawable/ic_calendar"
+            android:tint="@color/primary_purple"
+            android:contentDescription="Select Date"/>
+    </LinearLayout>
 
     <HorizontalScrollView
         android:id="@+id/hsv_task_filters"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_below="@id/tv_title"
+        android:layout_below="@id/ll_header"
         android:scrollbars="none"
         android:paddingHorizontal="16dp"
         android:layout_marginBottom="16dp">
