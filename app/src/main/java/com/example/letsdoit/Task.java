@@ -22,26 +22,25 @@ public class Task {
     private String taskType; // NEW FIELD for Permanent/Additional
 
     // NEW: AI Count fields
-    private boolean requireAiCount; // Radio button state (on/off)
-    private String aiCountValue; // The alphanumeric AI count entered by user
+    private boolean requireAiCount;
+    private String aiCountValue;
 
     // NEW: Field for historical status tracking (completion only)
     private long completedDateMillis;
 
-    // Field for backward compatibility (Firestore deserializes old single-string field here)
+    // Field for backward compatibility
     private String assignedToEmail;
 
     private long timestamp;
 
     public Task() {
         // Required empty constructor for Firestore
-        this.requireAiCount = false; // Default to OFF
+        this.requireAiCount = false;
         this.aiCountValue = "";
-        this.taskType = "Permanent"; // Default for backward compatibility
-        this.completedDateMillis = 0; // Initialize
+        this.taskType = "Permanent";
+        this.completedDateMillis = 0;
     }
 
-    // Constructor for creating NEW tasks - added taskType
     public Task(String title, String description, String priority, String remarks, List<String> assignedTo, String startDate, String endDate, boolean requireAiCount, String taskType) {
         this.title = title;
         this.description = description;
@@ -53,9 +52,9 @@ public class Task {
         this.requireAiCount = requireAiCount;
         this.aiCountValue = "";
         this.timestamp = System.currentTimeMillis();
-        this.status = "Pending"; // Initialize new tasks as "Pending"
-        this.taskType = taskType; // Set the task type
-        this.completedDateMillis = 0; // Initialize
+        this.status = "Pending";
+        this.taskType = taskType;
+        this.completedDateMillis = 0;
     }
 
     // --- GETTERS & SETTERS ---
@@ -104,10 +103,6 @@ public class Task {
         return new ArrayList<>();
     }
 
-    public void setFileUrls(List<String> fileUrls) {
-        // Method kept for Firestore backward compatibility but does nothing
-    }
-
     public String getRemarks() {
         return remarks;
     }
@@ -127,10 +122,6 @@ public class Task {
 
     public void setAssignedTo(List<String> assignedTo) {
         this.assignedTo = assignedTo;
-    }
-
-    public void setAssignedToEmail(String assignedToEmail) {
-        this.assignedToEmail = assignedToEmail;
     }
 
     public String getStartDate() {
@@ -157,7 +148,6 @@ public class Task {
         this.timestamp = timestamp;
     }
 
-    // NEW: AI Count Getters & Setters
     public boolean isRequireAiCount() {
         return requireAiCount;
     }
@@ -174,7 +164,6 @@ public class Task {
         this.aiCountValue = aiCountValue;
     }
 
-    // NEW: Task Type Getters & Setters
     public String getTaskType() {
         return taskType != null ? taskType : "Permanent";
     }
@@ -183,7 +172,6 @@ public class Task {
         this.taskType = taskType;
     }
 
-    // NEW: Completed Date Getters & Setters
     public long getCompletedDateMillis() {
         return completedDateMillis;
     }

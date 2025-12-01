@@ -30,10 +30,9 @@ public class CalendarDialogFragment extends DialogFragment {
     private OnDateSelectedListener listener;
     private SimpleDateFormat dateFormat = new SimpleDateFormat("MMM dd, yyyy", Locale.US);
 
-    // Modified factory method to accept the currently selected date
     public static CalendarDialogFragment newInstance(@Nullable Long initialDateMillis) {
         CalendarDialogFragment fragment = new CalendarDialogFragment();
-        if (initialDateMillis != null) {
+        if (initialDateMillis != null && initialDateMillis != -1) {
             Bundle args = new Bundle();
             args.putLong("initial_date", initialDateMillis);
             fragment.setArguments(args);
@@ -65,14 +64,13 @@ public class CalendarDialogFragment extends DialogFragment {
 
         calendarView = view.findViewById(R.id.calendar_view);
 
-        // Set max date to today (prevent future selection)
+        // Set max date to today
         Calendar today = Calendar.getInstance();
         calendarView.setMaxDate(today.getTimeInMillis());
 
         // Use initial date argument if available to show the previously selected date
         if (getArguments() != null && getArguments().containsKey("initial_date")) {
             long initialDate = getArguments().getLong("initial_date");
-            // Set the calendar view to the previously selected date, without animation/immediate notification
             calendarView.setDate(initialDate, false, false);
         }
 
@@ -89,8 +87,9 @@ public class CalendarDialogFragment extends DialogFragment {
             todayCheck.set(Calendar.MILLISECOND, 0);
 
             if (selected.after(todayCheck)) {
+                // If it's a future date, select today instead
+                selected = todayCheck;
                 Toast.makeText(getContext(), "Cannot select future dates", Toast.LENGTH_SHORT).show();
-                return;
             }
 
             // Immediately apply the selected date and dismiss

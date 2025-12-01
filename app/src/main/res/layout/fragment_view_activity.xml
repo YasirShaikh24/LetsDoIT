@@ -65,7 +65,7 @@
         android:layout_below="@id/ll_header"
         android:layout_marginHorizontal="16dp"
         android:layout_marginBottom="16dp"
-        android:hint="Search by task title (e.g., search by task)"
+        android:hint="Search by task title or assigned user name"
         android:visibility="gone"
         app:startIconDrawable="@drawable/ic_search"
         style="@style/CustomTextInputLayout">
