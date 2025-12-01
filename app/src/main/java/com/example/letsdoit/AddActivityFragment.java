@@ -9,7 +9,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
-import android.widget.CheckBox;
 import android.widget.DatePicker;
 import android.widget.LinearLayout;
 import android.widget.RadioButton;
@@ -36,13 +35,10 @@ public class AddActivityFragment extends Fragment {
     private TextInputEditText etTitle, etDescription, etRemarks, etStartDate, etEndDate;
     private TextInputEditText etAssigneeDisplay;
     private RadioGroup rgPriority;
-    // MODIFIED: Replaced CheckBox with RadioGroup
     private RadioGroup rgRequireAiCount;
-    // NEW: RadioGroup for Task Type
     private RadioGroup rgTaskType;
     private Button btnSaveTask;
     private LinearLayout llAssignUserSection;
-    // NEW: LinearLayout for Date Range
     private LinearLayout llDateRangeSection;
 
     private FirebaseFirestore db;
@@ -51,7 +47,9 @@ public class AddActivityFragment extends Fragment {
     private String loggedInUserRole;
 
     private List<String> selectedAssignees = new ArrayList<>();
+    // This list holds the display names for the dialog (including "All Team Members")
     private List<String> allUserDisplayNames = new ArrayList<>();
+    // This list holds the actual User objects (excluding "All Team Members")
     private List<User> allUsers = new ArrayList<>();
 
     private static final String TAG = "AddActivityFragment";
@@ -91,29 +89,24 @@ public class AddActivityFragment extends Fragment {
         etDescription = view.findViewById(R.id.et_description);
         etRemarks = view.findViewById(R.id.et_remarks);
         rgPriority = view.findViewById(R.id.rg_priority);
-        // MODIFIED: Using RadioGroup
         rgRequireAiCount = view.findViewById(R.id.rg_require_ai_count);
         btnSaveTask = view.findViewById(R.id.btn_save_task);
 
-        // NEW: Task Type and Date Range Section
         rgTaskType = view.findViewById(R.id.rg_task_type);
         llDateRangeSection = view.findViewById(R.id.ll_date_range_section);
         etStartDate = view.findViewById(R.id.et_start_date);
         etEndDate = view.findViewById(R.id.et_end_date);
 
-        // Task Type Listener to toggle date range visibility
         rgTaskType.setOnCheckedChangeListener((group, checkedId) -> {
             if (checkedId == R.id.rb_additional) {
                 llDateRangeSection.setVisibility(View.VISIBLE);
             } else {
                 llDateRangeSection.setVisibility(View.GONE);
-                // Clear dates when switching to permanent
                 etStartDate.setText("");
                 etEndDate.setText("");
             }
         });
 
-        // Initialize date visibility based on default checked item (Permanent)
         llDateRangeSection.setVisibility(View.GONE);
 
         etStartDate.setOnClickListener(v -> showDatePicker(etStartDate));
@@ -160,10 +153,15 @@ public class AddActivityFragment extends Fragment {
                 .addOnSuccessListener(queryDocumentSnapshots -> {
                     allUsers.clear();
                     allUserDisplayNames.clear();
+
+                    // 1. Add "All Team Members" option at index 0 for display
+                    allUserDisplayNames.add("All Team Members");
+
                     for (QueryDocumentSnapshot document : queryDocumentSnapshots) {
                         User user = document.toObject(User.class);
                         allUsers.add(user);
-                        String displayName = user.getDisplayName() + " (" + user.getEmail() + ")";
+                        // 2. Add only the display name (as requested)
+                        String displayName = user.getDisplayName();
                         allUserDisplayNames.add(displayName);
                     }
                     updateAssigneeDisplay();
@@ -175,41 +173,79 @@ public class AddActivityFragment extends Fragment {
     }
 
     private void showMultiSelectUserDialog() {
-        if (allUserDisplayNames.isEmpty()) {
+        if (allUserDisplayNames.size() <= 1) { // Only "All Team Members" or empty list
             Toast.makeText(getContext(), "No users found to assign.", Toast.LENGTH_SHORT).show();
             return;
         }
 
         final CharSequence[] items = allUserDisplayNames.toArray(new CharSequence[0]);
-        final boolean[] checkedItems = new boolean[allUsers.size()];
+        final boolean[] checkedItems = new boolean[allUserDisplayNames.size()];
+        final int actualUserCount = allUsers.size();
 
-        for (int i = 0; i < allUsers.size(); i++) {
+        // Initialization: Check individual users first
+        boolean allChecked = true;
+        for (int i = 0; i < actualUserCount; i++) {
+            // Index i+1 in checkedItems corresponds to user at index i in allUsers
             if (selectedAssignees.contains(allUsers.get(i).getEmail())) {
-                checkedItems[i] = true;
+                checkedItems[i + 1] = true;
             } else {
-                checkedItems[i] = false;
+                allChecked = false;
             }
         }
+        // Set initial state of "All" checkbox (index 0)
+        checkedItems[0] = allChecked;
+
 
         AlertDialog.Builder builder = new AlertDialog.Builder(requireContext());
         builder.setTitle("Select Team Members")
-                .setMultiChoiceItems(items, checkedItems, new DialogInterface.OnMultiChoiceClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which, boolean isChecked) {
-                        checkedItems[which] = isChecked;
-                    }
-                })
-                .setPositiveButton("OK", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int id) {
-                        selectedAssignees.clear();
-                        for (int i = 0; i < allUsers.size(); i++) {
-                            if (checkedItems[i]) {
-                                selectedAssignees.add(allUsers.get(i).getEmail());
+                // Use a custom click listener to handle the "All" checkbox logic
+                .setMultiChoiceItems(items, checkedItems, (dialog, which, isChecked) -> {
+                    if (which == 0) {
+                        // "All Team Members" is selected/deselected
+                        for (int i = 1; i < checkedItems.length; i++) {
+                            checkedItems[i] = isChecked;
+                            // Manually update the list view state
+                            ((AlertDialog) dialog).getListView().setItemChecked(i, isChecked);
+                        }
+                    } else {
+                        // Individual user selected/deselected
+                        if (!isChecked) {
+                            // If any user is deselected, deselect "All Team Members"
+                            checkedItems[0] = false;
+                            ((AlertDialog) dialog).getListView().setItemChecked(0, false);
+                        } else {
+                            // Check if all individual members are now selected
+                            boolean allSelected = true;
+                            for (int i = 1; i < checkedItems.length; i++) {
+                                if (!checkedItems[i]) {
+                                    allSelected = false;
+                                    break;
+                                }
+                            }
+                            if (allSelected) {
+                                checkedItems[0] = true;
+                                ((AlertDialog) dialog).getListView().setItemChecked(0, true);
                             }
                         }
-                        updateAssigneeDisplay();
                     }
+                })
+                .setPositiveButton("OK", (dialog, id) -> {
+                    selectedAssignees.clear();
+                    if (checkedItems[0]) {
+                        // If "All" is selected, add all user emails
+                        for (User user : allUsers) {
+                            selectedAssignees.add(user.getEmail());
+                        }
+                    } else {
+                        // Otherwise, iterate through individual users (index 1 onwards)
+                        for (int i = 1; i < allUserDisplayNames.size(); i++) {
+                            if (checkedItems[i]) {
+                                // allUsers index is i - 1
+                                selectedAssignees.add(allUsers.get(i - 1).getEmail());
+                            }
+                        }
+                    }
+                    updateAssigneeDisplay();
                 })
                 .setNegativeButton("Cancel", null)
                 .show();
@@ -218,6 +254,8 @@ public class AddActivityFragment extends Fragment {
     private void updateAssigneeDisplay() {
         if (selectedAssignees.isEmpty()) {
             etAssigneeDisplay.setText("No users selected");
+        } else if (selectedAssignees.size() == allUsers.size()) {
+            etAssigneeDisplay.setText("All Team Members");
         } else {
             List<String> displayNames = new ArrayList<>();
             for (String email : selectedAssignees) {
@@ -237,19 +275,17 @@ public class AddActivityFragment extends Fragment {
         String description = etDescription.getText().toString().trim();
         String remarks = etRemarks.getText().toString().trim();
 
-        // NEW: Get Task Type
         int selectedTaskTypeId = rgTaskType.getCheckedRadioButtonId();
         if (selectedTaskTypeId == -1) {
             Toast.makeText(getContext(), "Please select a task duration type.", Toast.LENGTH_SHORT).show();
             return;
         }
         RadioButton selectedTaskTypeButton = getView().findViewById(selectedTaskTypeId);
-        String taskType = selectedTaskTypeButton.getText().toString(); // "Permanent" or "Additional"
+        String taskType = selectedTaskTypeButton.getText().toString();
 
         String startDate = "";
         String endDate = "";
 
-        // Only get dates if Task Type is "Additional" (dates are cleared on switch to Permanent)
         if (taskType.equalsIgnoreCase("Additional")) {
             startDate = etStartDate.getText().toString().trim();
             endDate = etEndDate.getText().toString().trim();
@@ -260,8 +296,6 @@ public class AddActivityFragment extends Fragment {
             etTitle.setError("Title is required");
             return;
         }
-
-        // DESCRIPTION IS NOW OPTIONAL - Validation removed.
 
         if ("admin".equals(loggedInUserRole) && selectedAssignees.isEmpty()) {
             Toast.makeText(getContext(), "Please assign the task to at least one user.", Toast.LENGTH_SHORT).show();
@@ -277,20 +311,16 @@ public class AddActivityFragment extends Fragment {
         RadioButton priorityButton = getView().findViewById(selectedPriorityId);
         String priority = priorityButton.getText().toString().toLowerCase();
 
-        // MODIFIED: Get AI Count radio button state
         int selectedAiCountId = rgRequireAiCount.getCheckedRadioButtonId();
-        // requireAiCount is true only if 'Yes' radio button is checked (R.id.rb_ai_count_yes)
         boolean requireAiCount = (selectedAiCountId == R.id.rb_ai_count_yes);
 
         btnSaveTask.setEnabled(false);
         btnSaveTask.setText("Saving...");
 
-        // UPDATED: Added taskType argument
         saveTaskToFirestore(title, description, priority, remarks, selectedAssignees, startDate, endDate, requireAiCount, taskType);
     }
 
     private void saveTaskToFirestore(String title, String description, String priority, String remarks, List<String> assignedTo, String startDate, String endDate, boolean requireAiCount, String taskType) {
-        // UPDATED: Added taskType argument
         Task task = new Task(title, description, priority, remarks, assignedTo, startDate, endDate, requireAiCount, taskType);
 
         db.collection("tasks")
@@ -316,11 +346,9 @@ public class AddActivityFragment extends Fragment {
         etEndDate.setText("");
         rgPriority.clearCheck();
 
-        // NEW: Reset Task Type to Permanent and hide dates
         rgTaskType.check(R.id.rb_permanent);
         llDateRangeSection.setVisibility(View.GONE);
 
-        // MODIFIED: Reset AI Count to No
         rgRequireAiCount.check(R.id.rb_ai_count_no);
 
         if ("admin".equals(loggedInUserRole)) {
