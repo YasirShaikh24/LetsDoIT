@@ -4,42 +4,30 @@ package com.example.letsdoit;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.CheckBox;
+import android.widget.ImageButton;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import java.util.List;
-import java.util.Set;
 
 public class MemberAdapter extends RecyclerView.Adapter<MemberAdapter.MemberViewHolder> {
 
-    // NEW INTERFACE
+    // NEW INTERFACE: Simplified for single item deletion
     public interface MemberDeleteListener {
-        void onMemberSelectionChanged(User user, boolean isSelected);
+        void onMemberDeleteClick(User user);
     }
 
     private List<User> memberList;
-    private Set<User> selectedMembers; // To track selected members
     private MemberDeleteListener listener;
-    private boolean isDeleteMode = false; // State to control checkbox visibility
+
+    // isDeleteMode, selectedMembers removed
 
     // UPDATED Constructor
-    public MemberAdapter(List<User> memberList, Set<User> selectedMembers, MemberDeleteListener listener) {
+    public MemberAdapter(List<User> memberList, MemberDeleteListener listener) {
         this.memberList = memberList;
-        this.selectedMembers = selectedMembers;
         this.listener = listener;
-    }
-
-    // NEW: Toggle delete mode and notify data change
-    public void toggleDeleteMode(boolean isDeleteMode) {
-        this.isDeleteMode = isDeleteMode;
-        notifyDataSetChanged();
-    }
-
-    public boolean isDeleteMode() {
-        return isDeleteMode;
     }
 
     @NonNull
@@ -62,26 +50,12 @@ public class MemberAdapter extends RecyclerView.Adapter<MemberAdapter.MemberView
         // Display Password
         holder.tvMemberPassword.setText(user.getPassword() != null ? user.getPassword() : "N/A");
 
-        // Handle Checkbox visibility and state
-        if (isDeleteMode) {
-            holder.cbMemberSelect.setVisibility(View.VISIBLE);
-            holder.cbMemberSelect.setChecked(selectedMembers.contains(user));
-
-            holder.cbMemberSelect.setOnCheckedChangeListener(null); // Clear listener to prevent unwanted calls during binding
-
-            holder.cbMemberSelect.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                if (listener != null) {
-                    listener.onMemberSelectionChanged(user, isChecked);
-                }
-            });
-
-            // Make the whole item clickable to select/deselect
-            holder.itemView.setOnClickListener(v -> holder.cbMemberSelect.setChecked(!holder.cbMemberSelect.isChecked()));
-
-        } else {
-            holder.cbMemberSelect.setVisibility(View.GONE);
-            holder.itemView.setOnClickListener(null); // Disable item click when not in delete mode
-        }
+        // Attach listener to the new delete button
+        holder.btnDeleteMember.setOnClickListener(v -> {
+            if (listener != null) {
+                listener.onMemberDeleteClick(user);
+            }
+        });
     }
 
     @Override
@@ -91,14 +65,14 @@ public class MemberAdapter extends RecyclerView.Adapter<MemberAdapter.MemberView
 
     static class MemberViewHolder extends RecyclerView.ViewHolder {
         TextView tvSerialNumber, tvMemberEmail, tvMemberPassword;
-        CheckBox cbMemberSelect; // NEW
+        ImageButton btnDeleteMember;
 
         public MemberViewHolder(@NonNull View itemView) {
             super(itemView);
             tvSerialNumber = itemView.findViewById(R.id.tv_serial_number);
             tvMemberEmail = itemView.findViewById(R.id.tv_member_email);
             tvMemberPassword = itemView.findViewById(R.id.tv_member_password);
-            cbMemberSelect = itemView.findViewById(R.id.cb_member_select); // NEW
+            btnDeleteMember = itemView.findViewById(R.id.btn_delete_member);
         }
     }
 }

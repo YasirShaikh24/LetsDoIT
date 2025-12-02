@@ -5,8 +5,7 @@ import android.content.DialogInterface;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
-import android.widget.Button;
-import android.widget.ImageButton;
+import android.widget.Button; // Changed import from ImageButton to Button
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -14,35 +13,24 @@ import android.widget.Toast;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.content.ContextCompat;
-import androidx.recyclerview.widget.DividerItemDecoration;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.google.android.gms.tasks.Tasks;
-import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 public class ViewMembersActivity extends AppCompatActivity implements MemberAdapter.MemberDeleteListener {
 
     private RecyclerView recyclerView;
     private MemberAdapter memberAdapter;
     private List<User> memberList;
-    private Set<User> selectedMembers; // Set to track selected members
     private FirebaseFirestore db;
     private ProgressBar progressBar;
     private TextView tvEmptyState;
-    private Button btnDeleteMode; // Changed to Button
-    private Button btnConfirmDelete; // NEW
-    private TextView tvSelectHeader; // NEW
-
-    private boolean isDeleteMode = false; // NEW state flag
+    private Button btnBackToProfile; // CHANGED: Type is now Button
 
     private static final String TAG = "ViewMembersActivity";
 
@@ -51,98 +39,42 @@ public class ViewMembersActivity extends AppCompatActivity implements MemberAdap
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_view_members);
 
+        // Hide the default ActionBar (Toolbar) back button
         if (getSupportActionBar() != null) {
-            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+            getSupportActionBar().setDisplayHomeAsUpEnabled(false);
             getSupportActionBar().setTitle("Team Members");
         }
 
         db = FirebaseFirestore.getInstance();
-        selectedMembers = new HashSet<>(); // Initialize Set
 
         recyclerView = findViewById(R.id.recycler_view_members);
         progressBar = findViewById(R.id.progress_bar);
         tvEmptyState = findViewById(R.id.tv_empty_state);
-        btnDeleteMode = findViewById(R.id.btn_delete_mode); // NEW
-        btnConfirmDelete = findViewById(R.id.btn_confirm_delete); // NEW
-        tvSelectHeader = findViewById(R.id.tv_select_header); // NEW
+        btnBackToProfile = findViewById(R.id.btn_back_to_profile); // CHANGED: Find the Button
+
+        // Set click listener for the custom back button to go back to Profile Fragment (via MainActivity)
+        btnBackToProfile.setOnClickListener(v -> finish());
 
         memberList = new ArrayList<>();
-        // Updated adapter constructor
-        memberAdapter = new MemberAdapter(memberList, selectedMembers, this);
+        memberAdapter = new MemberAdapter(memberList, this);
         LinearLayoutManager layoutManager = new LinearLayoutManager(this);
         recyclerView.setLayoutManager(layoutManager);
 
-        // Add a divider for better table visibility
-        DividerItemDecoration dividerItemDecoration = new DividerItemDecoration(recyclerView.getContext(),
-                layoutManager.getOrientation());
-        recyclerView.addItemDecoration(dividerItemDecoration);
-
         recyclerView.setAdapter(memberAdapter);
-
-        // NEW: Set click listeners
-        btnDeleteMode.setOnClickListener(v -> toggleDeleteMode());
-        btnConfirmDelete.setOnClickListener(v -> showDeleteConfirmationDialog());
-        updateDeleteModeUI(); // Initialize UI state
 
         loadMembers();
     }
 
+    // Since we are using a custom button, we override this to do nothing or rely on the system's default behavior
     @Override
     public boolean onSupportNavigateUp() {
-        finish();
-        return true;
+        return false;
     }
 
-    // NEW: Toggle delete mode functionality
-    private void toggleDeleteMode() {
-        isDeleteMode = !isDeleteMode;
-        selectedMembers.clear(); // Clear selections on mode toggle
-        updateDeleteModeUI();
-        memberAdapter.toggleDeleteMode(isDeleteMode); // Tell adapter to update views
-    }
-
-    // NEW: Update UI elements based on delete mode
-    private void updateDeleteModeUI() {
-        if (isDeleteMode) {
-            btnDeleteMode.setText("CANCEL");
-            // Use existing drawables/colors
-            btnDeleteMode.setBackground(ContextCompat.getDrawable(this, R.drawable.button_secondary_background));
-            btnDeleteMode.setTextColor(ContextCompat.getColor(this, R.color.text_primary));
-
-            btnConfirmDelete.setVisibility(View.VISIBLE);
-            tvSelectHeader.setVisibility(View.VISIBLE);
-            updateConfirmButtonState();
-        } else {
-            btnDeleteMode.setText("DELETE");
-            btnDeleteMode.setBackground(ContextCompat.getDrawable(this, R.drawable.button_background)); // Red button
-            btnDeleteMode.setTextColor(ContextCompat.getColor(this, R.color.white));
-
-            btnConfirmDelete.setVisibility(View.GONE);
-            tvSelectHeader.setVisibility(View.GONE);
-        }
-    }
-
-    // NEW: Update confirmation button text and state
-    private void updateConfirmButtonState() {
-        int count = selectedMembers.size();
-        if (count > 0) {
-            btnConfirmDelete.setText("DELETE " + count + " SELECTED MEMBER(S)");
-            btnConfirmDelete.setEnabled(true);
-        } else {
-            btnConfirmDelete.setText("SELECT MEMBERS TO DELETE");
-            btnConfirmDelete.setEnabled(false);
-        }
-    }
-
-    // NEW: Implementation of the selection listener
+    // Implementation of the single deletion listener
     @Override
-    public void onMemberSelectionChanged(User user, boolean isSelected) {
-        if (isSelected) {
-            selectedMembers.add(user);
-        } else {
-            selectedMembers.remove(user);
-        }
-        updateConfirmButtonState();
+    public void onMemberDeleteClick(User user) {
+        showDeleteConfirmationDialog(user);
     }
 
     private void loadMembers() {
@@ -200,11 +132,9 @@ public class ViewMembersActivity extends AppCompatActivity implements MemberAdap
                     if (memberList.isEmpty()) {
                         tvEmptyState.setText("No members found.");
                         tvEmptyState.setVisibility(View.VISIBLE);
-                    } else {
-                        // Ensure delete mode state is correctly reflected after data load
-                        memberAdapter.toggleDeleteMode(isDeleteMode);
                     }
                     recyclerView.setVisibility(memberList.isEmpty() ? View.GONE : View.VISIBLE);
+                    memberAdapter.notifyDataSetChanged(); // Ensure data refresh
                 })
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Error loading admins", e);
@@ -213,58 +143,44 @@ public class ViewMembersActivity extends AppCompatActivity implements MemberAdap
                 });
     }
 
-    // NEW: Show confirmation dialog before deletion
-    private void showDeleteConfirmationDialog() {
-        if (selectedMembers.isEmpty()) {
-            Toast.makeText(this, "Please select at least one member to delete.", Toast.LENGTH_SHORT).show();
+    // Show confirmation dialog before deletion
+    private void showDeleteConfirmationDialog(User userToDelete) {
+        if (userToDelete.getDocumentId() == null) {
+            Toast.makeText(this, "Cannot delete member without ID.", Toast.LENGTH_SHORT).show();
             return;
         }
 
         new AlertDialog.Builder(this)
                 .setTitle("Confirm Deletion")
-                .setMessage("Are you sure you want to permanently delete " + selectedMembers.size() + " selected member(s)?")
-                .setPositiveButton("DELETE", (dialog, which) -> deleteSelectedMembers())
+                .setMessage("Are you sure you want to permanently delete member " + userToDelete.getEmail() + "?")
+                .setPositiveButton("DELETE", (dialog, which) -> deleteSingleMember(userToDelete))
                 .setNegativeButton("Cancel", null)
                 .show();
     }
 
-    // NEW: Implement batch permanent deletion
-    private void deleteSelectedMembers() {
-        if (selectedMembers.isEmpty()) return;
+    // Implement single permanent deletion
+    private void deleteSingleMember(User user) {
+        String collectionPath = "admin".equals(user.getRole()) ? "admins" : "users";
 
-        btnConfirmDelete.setEnabled(false);
-        btnConfirmDelete.setText("Deleting...");
-        progressBar.setVisibility(View.VISIBLE);
+        db.collection(collectionPath)
+                .document(user.getDocumentId())
+                .delete()
+                .addOnSuccessListener(aVoid -> {
+                    Toast.makeText(this, "Member deleted successfully.", Toast.LENGTH_LONG).show();
 
-        List<com.google.android.gms.tasks.Task<Void>> deleteTasks = new ArrayList<>();
+                    // Manually remove from list and notify adapter for instant UI update
+                    memberList.remove(user);
+                    memberAdapter.notifyDataSetChanged();
 
-        for (User user : selectedMembers) {
-            // Determine collection based on role. Deletion must be permanent from both 'users' and 'admins' collection.
-            String collectionPath = "admin".equals(user.getRole()) ? "admins" : "users";
-            CollectionReference collectionRef = db.collection(collectionPath);
-
-            if (user.getDocumentId() != null) {
-                // Delete document by its ID
-                deleteTasks.add(collectionRef.document(user.getDocumentId()).delete());
-            } else {
-                Log.e(TAG, "Cannot delete user without document ID: " + user.getEmail());
-            }
-        }
-
-        // Wait for all delete tasks to complete
-        Tasks.whenAllSuccess(deleteTasks)
-                .addOnSuccessListener(results -> {
-                    Toast.makeText(this, selectedMembers.size() + " member(s) deleted successfully.", Toast.LENGTH_LONG).show();
-                    // Reset state and reload data
-                    toggleDeleteMode();
-                    loadMembers();
+                    if (memberList.isEmpty()) {
+                        tvEmptyState.setText("No members found.");
+                        tvEmptyState.setVisibility(View.VISIBLE);
+                        recyclerView.setVisibility(View.GONE);
+                    }
                 })
                 .addOnFailureListener(e -> {
-                    Log.e(TAG, "Error deleting members: ", e);
-                    Toast.makeText(this, "Error deleting members. Some deletions may have failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
-                    // Reset state to cancel and reload data
-                    toggleDeleteMode();
-                    loadMembers();
+                    Log.e(TAG, "Error deleting member: ", e);
+                    Toast.makeText(this, "Error deleting member: " + e.getMessage(), Toast.LENGTH_LONG).show();
                 });
     }
 }

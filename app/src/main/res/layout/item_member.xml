@@ -1,48 +1,96 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="horizontal"
-    android:paddingVertical="8dp">
+    android:layout_marginHorizontal="4dp"
+    android:layout_marginVertical="6dp"
+    app:cardCornerRadius="10dp"
+    app:cardElevation="3dp"
+    android:foreground="?attr/selectableItemBackground">
 
-    <TextView
-        android:id="@+id/tv_serial_number"
-        android:layout_width="0dp"
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_weight="0.15"
-        android:text="1."
-        android:textSize="14sp"
-        android:textColor="@color/text_primary"
-        android:textAlignment="center"/>
+        android:orientation="horizontal"
+        android:paddingVertical="12dp"
+        android:paddingStart="16dp"
+        android:paddingEnd="8dp"
+        android:gravity="center_vertical">
 
-    <TextView
-        android:id="@+id/tv_member_email"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_weight="0.4"
-        android:text="user@example.com"
-        android:textSize="14sp"
-        android:textColor="@color/text_primary"
-        android:textAlignment="viewStart"/>
+        <!-- Serial Number -->
+        <TextView
+            android:id="@+id/tv_serial_number"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.15"
+            android:text="1."
+            android:textSize="14sp"
+            android:textColor="@color/text_primary"
+            android:textStyle="bold"
+            android:textAlignment="viewStart"/>
 
-    <TextView
-        android:id="@+id/tv_member_password"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_weight="0.35"
-        android:text="password123"
-        android:textSize="14sp"
-        android:textColor="@color/text_secondary"
-        android:textAlignment="viewStart"/>
+        <!-- Email Details -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.45"
+            android:orientation="vertical"
+            android:layout_marginEnd="8dp">
 
-    <CheckBox
-        android:id="@+id/cb_member_select"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_weight="0.1"
-        android:layout_gravity="center_vertical"
-        android:minWidth="0dp"
-        android:minHeight="0dp"
-        android:padding="0dp"
-        android:visibility="gone"/>
-</LinearLayout>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Email"
+                android:textSize="10sp"
+                android:textColor="@color/text_secondary"
+                android:textStyle="bold"/>
+
+            <TextView
+                android:id="@+id/tv_member_email"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="user@example.com"
+                android:textSize="14sp"
+                android:textColor="@color/text_primary"/>
+        </LinearLayout>
+
+        <!-- Password Details -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.3"
+            android:orientation="vertical"
+            android:layout_marginEnd="8dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Password"
+                android:textSize="10sp"
+                android:textColor="@color/text_secondary"
+                android:textStyle="bold"/>
+
+            <TextView
+                android:id="@+id/tv_member_password"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="password123"
+                android:textSize="14sp"
+                android:textColor="@color/text_primary"/>
+        </LinearLayout>
+
+        <!-- Delete Button -->
+        <ImageButton
+            android:id="@+id/btn_delete_member"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_delete"
+            android:contentDescription="Delete Member"
+            android:scaleType="centerInside"
+            app:tint="#D32F2F"
+            android:layout_weight="0.1"/>
+
+    </LinearLayout>
+</androidx.cardview.widget.CardView>
