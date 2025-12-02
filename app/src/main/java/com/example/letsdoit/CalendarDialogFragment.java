@@ -87,12 +87,10 @@ public class CalendarDialogFragment extends DialogFragment {
             todayCheck.set(Calendar.MILLISECOND, 0);
 
             if (selected.after(todayCheck)) {
-                // If it's a future date, select today instead
                 selected = todayCheck;
                 Toast.makeText(getContext(), "Cannot select future dates", Toast.LENGTH_SHORT).show();
             }
 
-            // Immediately apply the selected date and dismiss
             if (listener != null) {
                 String formattedDate = dateFormat.format(selected.getTime());
                 listener.onDateSelected(selected.getTimeInMillis(), formattedDate);
