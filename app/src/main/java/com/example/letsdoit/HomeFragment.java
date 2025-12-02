@@ -43,8 +43,8 @@ public class HomeFragment extends Fragment {
         if (welcomeMessage != null) {
             welcomeTextView.setText(welcomeMessage);
         } else {
-            // Fallback
-            welcomeTextView.setText("Home / Dashboard");
+            // Fallback - Updated from "Home / Dashboard" to "Dashboard"
+            welcomeTextView.setText("Dashboard");
         }
 
         return view;

@@ -62,33 +62,40 @@ public class ProfileActivityFragment extends Fragment {
         btnAddMember = view.findViewById(R.id.btn_add_member);
         btnViewMembers = view.findViewById(R.id.btn_view_members);
 
+        // Sets the display name (e.g., "MAHIM")
         if (displayName != null && !displayName.isEmpty()) {
-            tvDisplayName.setText(displayName);
+            // Capitalize the display name
+            tvDisplayName.setText(displayName.toUpperCase());
         } else {
-            tvDisplayName.setText("User");
+            tvDisplayName.setText("USER");
         }
 
         if (loggedInUserEmail != null) {
             tvUserEmail.setText(loggedInUserEmail);
         }
 
+        // Sets the user role (e.g., "Admin" or "User")
         if (loggedInUserRole != null) {
             String roleDisplay = loggedInUserRole.substring(0, 1).toUpperCase() + loggedInUserRole.substring(1);
-            tvUserRole.setText("Role: " + roleDisplay);
+            tvUserRole.setText(roleDisplay); // MODIFIED: Removed "Role: " prefix
         }
 
-        // Show "Add Member" and "View Members" button only for admin
+        // Show "View Members" and "Add Members" button only for admin
         if ("admin".equals(loggedInUserRole)) {
+            // 1. View Members button is now at the bottom
+            btnViewMembers.setVisibility(View.VISIBLE);
+            btnViewMembers.setOnClickListener(v -> openViewMembersActivity());
+
+            // 2. Add Member button is now at the bottom
             btnAddMember.setVisibility(View.VISIBLE);
             btnAddMember.setOnClickListener(v -> openAddMemberActivity());
 
-            btnViewMembers.setVisibility(View.VISIBLE);
-            btnViewMembers.setOnClickListener(v -> openViewMembersActivity());
         } else {
             btnAddMember.setVisibility(View.GONE);
             btnViewMembers.setVisibility(View.GONE);
         }
 
+        // 3. Logout (always visible)
         btnLogout.setOnClickListener(v -> logout());
 
         return view;

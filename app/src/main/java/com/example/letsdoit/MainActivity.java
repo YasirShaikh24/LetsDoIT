@@ -29,7 +29,8 @@ public class MainActivity extends AppCompatActivity {
         } else if (displayName != null) {
             welcomeMessage = "Welcome " + displayName;
         } else {
-            welcomeMessage = "Home / Dashboard";
+            // Updated fallback from "Home / Dashboard" to just "Dashboard"
+            welcomeMessage = "Dashboard";
         }
 
         BottomNavigationView bottomNav = findViewById(R.id.bottom_navigation);

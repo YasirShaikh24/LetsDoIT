@@ -20,6 +20,7 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.Fragment;
 
+import com.google.android.material.bottomnavigation.BottomNavigationView; // Added import
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
@@ -327,6 +328,17 @@ public class AddActivityFragment extends Fragment {
                 .add(task)
                 .addOnSuccessListener(documentReference -> {
                     Toast.makeText(getContext(), "Task saved successfully!", Toast.LENGTH_SHORT).show();
+
+                    // NEW LOGIC: Redirect to View Activity
+                    if (getActivity() instanceof MainActivity) {
+                        MainActivity mainActivity = (MainActivity) getActivity();
+                        BottomNavigationView bottomNav = mainActivity.findViewById(R.id.bottom_navigation);
+                        if (bottomNav != null) {
+                            // Switch the selected tab to "View Activity"
+                            bottomNav.setSelectedItemId(R.id.navigation_view_activity);
+                        }
+                    }
+
                     clearForm();
                     btnSaveTask.setEnabled(true);
                     btnSaveTask.setText("Save Task");
