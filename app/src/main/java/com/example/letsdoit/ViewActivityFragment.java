@@ -45,8 +45,8 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
 
     private RecyclerView recyclerView;
     private TaskAdapter taskAdapter;
-    private List<Task> taskList; // Holds actual data from Firestore
-    private List<Task> filteredTaskList; // Holds clones with adjusted status for display
+    private List<Task> taskList;
+    private List<Task> filteredTaskList;
     private FirebaseFirestore db;
     private ProgressBar progressBar;
     private TextView tvEmptyState;
@@ -66,6 +66,7 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
     // Map to store user email to display name for search filtering
     private Map<String, String> userDisplayNameMap = new HashMap<>();
 
+    // Stores the selected date in milliseconds (or -1 for 'Today')
     private long selectedDateMillis = -1;
     private final SimpleDateFormat dateFormat = new SimpleDateFormat("MMM dd, yyyy", Locale.US);
     private final SimpleDateFormat dateIndicatorFormat = new SimpleDateFormat("MMM dd, yyyy", Locale.US);
@@ -120,6 +121,7 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
     }
 
     private void setupCalendar() {
+        // Initializes/resets selectedDateMillis to -1 (Today)
         selectedDateMillis = -1;
         updateDateIndicator();
 
@@ -127,6 +129,15 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
             CalendarDialogFragment dialogFragment = CalendarDialogFragment.newInstance(selectedDateMillis != -1 ? selectedDateMillis : null);
             dialogFragment.setOnDateSelectedListener(this);
             dialogFragment.show(getParentFragmentManager(), "CalendarDialog");
+        });
+
+        // NEW: Clicking the date indicator text snaps back to today
+        tvDateIndicator.setOnClickListener(v -> {
+            if (selectedDateMillis != -1) {
+                selectedDateMillis = -1; // Reset to today
+                updateDateIndicator();
+                applyFilter();
+            }
         });
     }
 
@@ -158,17 +169,29 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
         });
     }
 
+    // MODIFIED: Logic ensures selectedDateMillis is set to -1 if 'Today' is selected
     @Override
     public void onDateSelected(long dateInMillis, String formattedDate) {
-        selectedDateMillis = dateInMillis;
+        long todayStart = getDayStartMillis(System.currentTimeMillis());
+        long selectedDayStart = getDayStartMillis(dateInMillis);
+
+        // If the user selected the actual current day, reset to -1 so the indicator shows "📅 Today"
+        if (selectedDayStart == todayStart) {
+            selectedDateMillis = -1;
+        } else {
+            selectedDateMillis = dateInMillis;
+        }
+
         updateDateIndicator();
         applyFilter();
     }
 
     private void updateDateIndicator() {
         if (selectedDateMillis == -1) {
+            // SHOW 'Today' text for the current day
             tvDateIndicator.setText("📅 Today");
         } else {
+            // SHOW formatted date for past days
             String formattedDate = dateIndicatorFormat.format(new Date(selectedDateMillis));
             tvDateIndicator.setText("📅 " + formattedDate);
         }
@@ -202,31 +225,50 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
     private String getTaskStatusOnDate(Task task, long filterDateMillis) {
         String currentStatus = task.getStatus();
 
+        // 1. Determine the start/end of the day being filtered
+        long actualFilterDateMillis = filterDateMillis == -1 ? System.currentTimeMillis() : filterDateMillis;
+        long filterDayStart = getDayStartMillis(actualFilterDateMillis);
+        long filterDayEnd = filterDayStart + (24 * 60 * 60 * 1000L) - 1;
+        long completionTime = task.getCompletedDateMillis();
+        long todayStart = getDayStartMillis(System.currentTimeMillis());
+
+        if (task.getTaskType().equalsIgnoreCase("permanent")) {
+            // Permanent Task Logic: Daily Status Reset.
+
+            // A. Check for COMPLETED status on the viewed day (This is the highest priority status)
+            if (completionTime > filterDayStart && completionTime <= filterDayEnd) {
+                return "Completed";
+            }
+
+            // B. Check for IN PROGRESS status on the viewed day (Only applicable for TODAY's view)
+            // If viewing TODAY and the task's firestore status is "In Progress", show it.
+            if (filterDayStart == todayStart && currentStatus.equalsIgnoreCase("in progress")) {
+                return "In Progress";
+            }
+
+            // C. All other cases (uncompleted, viewing past/future day, or viewing today with status="Pending") default to Pending.
+            return "Pending";
+        }
+
+        // --- Logic for ADDITIONAL tasks follows (as they are not daily tasks) ---
+
+        // If viewing Today or Future, use current status from Firestore
         if (filterDateMillis == -1 || getDayStartMillis(filterDateMillis) >= getDayStartMillis(System.currentTimeMillis())) {
             return currentStatus;
         }
 
-        long filterDayStart = getDayStartMillis(filterDateMillis);
-        long filterDayEnd = filterDayStart + (24 * 60 * 60 * 1000L) - 1;
-
-        if (task.getTaskType().equalsIgnoreCase("permanent")) {
-            long completionTime = task.getCompletedDateMillis();
-
-            if (completionTime > filterDayStart && completionTime <= filterDayEnd) {
-                return "Completed";
-            }
-            return "Pending";
-        }
+        // --- Historical Status Logic (Past Date Selected for Additional Tasks) ---
 
         if (currentStatus.equalsIgnoreCase("Completed")) {
-            long completionTime = task.getCompletedDateMillis();
-
+            // If completion happened AFTER the viewed day ended, the status on that day was Pending.
             if (completionTime > 0 && completionTime > filterDayEnd) {
                 return "Pending";
             }
+            // Otherwise, it was completed on or before the filter date.
             return "Completed";
         }
 
+        // For tasks not currently completed, or Additional tasks with no precise history, assume Pending.
         return "Pending";
     }
 
@@ -307,10 +349,12 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
             String taskType = task.getTaskType().toLowerCase();
 
             if (taskType.equals("permanent")) {
+                // Permanent tasks are visible if they were created before the end of the filter day.
                 if (task.getTimestamp() < filterDayStart + (24 * 60 * 60 * 1000L)) {
                     dateFilteredList.add(task);
                 }
             } else if (taskType.equals("additional")) {
+                // Additional tasks are visible STRICTLY ONLY within their date range.
                 try {
                     String startDateStr = task.getStartDate();
                     String endDateStr = task.getEndDate();
@@ -523,6 +567,7 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
     @Override
     public void onTaskEditClick(Task task, int position) {
         if ("admin".equals(loggedInUserRole) && task.getId() != null) {
+            // Edit opens a new Activity, which triggers an update via onResume when returning.
             android.content.Intent intent = new android.content.Intent(getActivity(), EditTaskActivity.class);
             intent.putExtra(EXTRA_TASK_ID, task.getId());
             startActivity(intent);
@@ -532,8 +577,8 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
     }
 
     @Override
-    public void onTaskDeleteClick(Task task, int position) {
-        showDeleteConfirmationDialog(task, position);
+    public void onTaskDeleteClick(Task taskToDelete, int position) {
+        showDeleteConfirmationDialog(taskToDelete, position);
     }
 
     private void showReadOnlyDialog(Task task) {
@@ -704,6 +749,7 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
             finalCompletionTime = System.currentTimeMillis();
             update.put("completedDateMillis", finalCompletionTime);
         } else {
+            // This handles setting status to "Pending" or "In Progress", resetting completion for the next day.
             finalCompletionTime = 0;
             update.put("completedDateMillis", 0);
         }
@@ -735,6 +781,7 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
                     }
 
                     applyFilter();
+                    // APPLY FILTER is sufficient for immediate UI refresh for status change.
 
                     String message = "Task updated successfully!";
                     if (task.isRequireAiCount() && aiCountValue != null && !aiCountValue.isEmpty()) {
@@ -758,21 +805,35 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
                 .show();
     }
 
-    private void deleteTaskFromFirestore(Task task, int position) {
-        if (task.getId() == null) {
+    private void deleteTaskFromFirestore(Task taskToDelete, int position) {
+        if (taskToDelete.getId() == null) {
             Toast.makeText(getContext(), "Error: Task ID not found for deletion.", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        db.collection("tasks").document(task.getId())
+        db.collection("tasks").document(taskToDelete.getId())
                 .delete()
                 .addOnSuccessListener(aVoid -> {
-                    taskList.remove(task);
-                    applyFilter();
+                    // 1. Remove the original task from the master list (by ID)
+                    // Note: Task objects are clones, so removeIf is safer than .remove(taskToDelete)
+                    taskList.removeIf(t -> t.getId().equals(taskToDelete.getId()));
+
+                    // 2. Remove the clone directly from the display list and notify RecyclerView for instant UI feedback
+                    if (position >= 0 && position < filteredTaskList.size() && filteredTaskList.get(position).getId().equals(taskToDelete.getId())) {
+                        filteredTaskList.remove(position);
+                        taskAdapter.notifyItemRemoved(position);
+                    } else {
+                        // Fallback to full list update if position/identity check fails
+                        applyFilter();
+                    }
+
+                    // 3. Update empty state and overall filters/UI
+                    updateEmptyState();
+
                     Toast.makeText(getContext(), "Task deleted successfully!", Toast.LENGTH_SHORT).show();
                 })
                 .addOnFailureListener(e -> {
-                    Log.e(TAG, "Error deleting task " + task.getId(), e);
+                    Log.e(TAG, "Error deleting task " + taskToDelete.getId(), e);
                     Toast.makeText(getContext(), "Failed to delete task: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                 });
     }
@@ -781,6 +842,7 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
     public void onResume() {
         super.onResume();
         if (loggedInUserEmail != null) {
+            // This ensures instant refresh after returning from EditTaskActivity.
             loadTasks();
         }
     }

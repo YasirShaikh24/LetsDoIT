@@ -1,7 +1,9 @@
 // src/main/java/com/example/letsdoit/LoginActivity.java
 package com.example.letsdoit;
 
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.util.Log;
 import android.widget.Button;
@@ -20,6 +22,7 @@ public class LoginActivity extends AppCompatActivity {
     private TextInputEditText etEmail, etPassword;
     private Button btnLogin;
     private FirebaseFirestore db;
+    private SharedPreferences sharedPreferences;
 
     private static final String TAG = "LoginActivity";
     private static final String ADMIN_EMAIL = "mahimhussain444@gmail.com";
@@ -29,9 +32,38 @@ public class LoginActivity extends AppCompatActivity {
     public static final String EXTRA_USER_ROLE = "extra_user_role";
     public static final String EXTRA_USER_EMAIL = "extra_user_email";
 
+    // SharedPreferences Constants
+    private static final String PREFS_NAME = "LoginPrefs";
+    private static final String KEY_IS_LOGGED_IN = "isLoggedIn";
+    private static final String KEY_EMAIL = "email";
+    private static final String KEY_ROLE = "role";
+    private static final String KEY_DISPLAY_NAME = "displayName";
+
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        sharedPreferences = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+
+        // CHECK FOR SAVED SESSION AND AUTO-LOGIN
+        if (sharedPreferences.getBoolean(KEY_IS_LOGGED_IN, false)) {
+            String email = sharedPreferences.getString(KEY_EMAIL, null);
+            String role = sharedPreferences.getString(KEY_ROLE, null);
+            String displayName = sharedPreferences.getString(KEY_DISPLAY_NAME, null);
+
+            if (email != null && role != null && displayName != null) {
+                // Bypass login and go directly to MainActivity
+                Intent intent = new Intent(LoginActivity.this, MainActivity.class);
+                intent.putExtra(EXTRA_DISPLAY_NAME, displayName);
+                intent.putExtra(EXTRA_USER_ROLE, role);
+                intent.putExtra(EXTRA_USER_EMAIL, email);
+                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(intent);
+                finish();
+                return;
+            }
+        }
+
         setContentView(R.layout.activity_login);
 
         db = FirebaseFirestore.getInstance();
@@ -39,6 +71,8 @@ public class LoginActivity extends AppCompatActivity {
         etEmail = findViewById(R.id.et_email);
         etPassword = findViewById(R.id.et_password);
         btnLogin = findViewById(R.id.btn_login);
+
+        // Removed manual email pre-fill to allow for platform-level autofill (password manager)
 
         btnLogin.setOnClickListener(v -> attemptLogin());
     }
@@ -176,6 +210,14 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void onLoginSuccess(String email, String role, String displayName) {
+        // SAVE LOGIN SESSION
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+        editor.putBoolean(KEY_IS_LOGGED_IN, true);
+        editor.putString(KEY_EMAIL, email);
+        editor.putString(KEY_ROLE, role);
+        editor.putString(KEY_DISPLAY_NAME, displayName);
+        editor.apply();
+
         Toast.makeText(this, "Login successful!", Toast.LENGTH_SHORT).show();
         btnLogin.setEnabled(true);
         btnLogin.setText("Login");

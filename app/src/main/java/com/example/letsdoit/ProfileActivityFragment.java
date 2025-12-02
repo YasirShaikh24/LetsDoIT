@@ -1,7 +1,9 @@
 // src/main/java/com/example/letsdoit/ProfileActivityFragment.java
 package com.example.letsdoit;
 
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -22,6 +24,10 @@ public class ProfileActivityFragment extends Fragment {
     private String loggedInUserEmail;
     private String loggedInUserRole;
     private String displayName;
+
+    // SharedPreferences Constants (Must match LoginActivity)
+    private static final String PREFS_NAME = "LoginPrefs";
+    private static final String KEY_IS_LOGGED_IN = "isLoggedIn";
 
     public static ProfileActivityFragment newInstance(String email, String role, String displayName) {
         ProfileActivityFragment fragment = new ProfileActivityFragment();
@@ -99,6 +105,14 @@ public class ProfileActivityFragment extends Fragment {
     }
 
     private void logout() {
+        // Clear SharedPreferences to end the session
+        if (getActivity() != null) {
+            SharedPreferences sharedPreferences = getActivity().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+            SharedPreferences.Editor editor = sharedPreferences.edit();
+            editor.putBoolean(KEY_IS_LOGGED_IN, false);
+            editor.apply();
+        }
+
         Toast.makeText(getContext(), "Logged out successfully", Toast.LENGTH_SHORT).show();
 
         Intent intent = new Intent(getActivity(), LoginActivity.class);
