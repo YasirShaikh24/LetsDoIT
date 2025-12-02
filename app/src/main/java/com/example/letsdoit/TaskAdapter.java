@@ -2,7 +2,6 @@ package com.example.letsdoit;
 
 import android.content.Context;
 import android.graphics.Color;
-import android.graphics.drawable.GradientDrawable;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -51,79 +50,114 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
     public void onBindViewHolder(@NonNull TaskViewHolder holder, int position) {
         Task task = taskList.get(position);
 
-        // 1. Title, Description, Priority
+        // Title and Description
         holder.tvTitle.setText(task.getTitle() != null ? task.getTitle() : "No Title");
         holder.tvDescription.setText(task.getDescription() != null ? task.getDescription() : "No Description");
-        String priority = task.getPriority() != null ? task.getPriority().toLowerCase() : "low";
 
+        // Priority
+        String priority = task.getPriority() != null ? task.getPriority().toLowerCase() : "low";
         int priorityColor;
+        String priorityText;
+
         switch (priority) {
             case "high":
                 priorityColor = Color.parseColor("#EF5350");
-                holder.tvPriority.setText("!!! HIGH");
+                priorityText = "HIGH";
                 break;
             case "medium":
                 priorityColor = Color.parseColor("#FFA726");
-                holder.tvPriority.setText("!! MEDIUM");
+                priorityText = "MEDIUM";
                 break;
             case "low":
             default:
                 priorityColor = Color.parseColor("#66BB6A");
-                holder.tvPriority.setText("! LOW");
+                priorityText = "LOW";
                 break;
         }
-        GradientDrawable priorityDrawable = (GradientDrawable) holder.tvPriority.getBackground().mutate();
-        priorityDrawable.setColor(priorityColor);
 
-        // 2. Status Display
+        holder.tvPriority.setText(priorityText);
+        holder.tvPriority.setBackgroundTintList(android.content.res.ColorStateList.valueOf(priorityColor));
+        holder.priorityStrip.setBackgroundColor(priorityColor);
+
+        // Status
         String status = task.getStatus().toLowerCase();
-        int statusColorResId;
+        int statusColor;
         String statusDisplay;
 
         switch (status) {
             case "pending":
-                statusColorResId = R.color.status_pending;
-                statusDisplay = "\uD83D\uDD50 PENDING";
+                statusColor = Color.parseColor("#FFA726");
+                statusDisplay = "PENDING";
                 break;
             case "in progress":
-                statusColorResId = R.color.status_in_progress;
-                statusDisplay = "\uD83D\uDEE0 IN PROGRESS";
+                statusColor = Color.parseColor("#42A5F5");
+                statusDisplay = "IN PROGRESS";
                 break;
             case "completed":
-                statusColorResId = R.color.status_completed;
-                statusDisplay = "✅ COMPLETED";
+                statusColor = Color.parseColor("#66BB6A");
+                statusDisplay = "COMPLETED";
                 break;
             default:
-                statusColorResId = android.R.color.darker_gray;
-                statusDisplay = "❓ UNKNOWN";
+                statusColor = Color.parseColor("#9E9E9E");
+                statusDisplay = "UNKNOWN";
         }
 
         holder.tvStatus.setText(statusDisplay);
+        holder.tvStatus.setBackgroundTintList(android.content.res.ColorStateList.valueOf(statusColor));
 
-        GradientDrawable statusDrawable = (GradientDrawable) holder.tvStatus.getBackground().mutate();
-        statusDrawable.setColor(ContextCompat.getColor(context, statusColorResId));
-
-        // Remove status click listener (now entire card is clickable)
-        holder.tvStatus.setOnClickListener(null);
-        holder.tvStatus.setAlpha(1.0f);
-
-        // NEW: AI Count Display
+        // AI Count
         if (task.isRequireAiCount()) {
-            holder.tvAiCount.setVisibility(View.VISIBLE);
-
+            holder.cardAiCount.setVisibility(View.VISIBLE);
             String aiCountValue = task.getAiCountValue();
             if (aiCountValue != null && !aiCountValue.isEmpty()) {
                 holder.tvAiCount.setText("🔢 AI Count: " + aiCountValue);
-                holder.tvAiCount.setTextColor(Color.parseColor("#4CAF50"));
+                holder.cardAiCount.setCardBackgroundColor(Color.parseColor("#E8F5E9"));
+                holder.tvAiCount.setTextColor(Color.parseColor("#2E7D32"));
             } else {
-                holder.tvAiCount.setText("🔢 AI Count: Required (Not submitted yet)");
-                holder.tvAiCount.setTextColor(Color.parseColor("#FF9800"));
+                holder.tvAiCount.setText("🔢 AI Count: Required (Not submitted)");
+                holder.cardAiCount.setCardBackgroundColor(Color.parseColor("#FFF3E0"));
+                holder.tvAiCount.setTextColor(Color.parseColor("#E65100"));
             }
         } else {
-            holder.tvAiCount.setVisibility(View.GONE);
+            holder.cardAiCount.setVisibility(View.GONE);
         }
 
-        // 3. Admin Actions (Edit/Delete)
+        // Date Range
+        String startDate = task.getStartDate();
+        String endDate = task.getEndDate();
+        if ((startDate != null && !startDate.isEmpty()) || (endDate != null && !endDate.isEmpty())) {
+            holder.layoutDateRange.setVisibility(View.VISIBLE);
+            String dateRangeText = "";
+            dateRangeText += (startDate != null && !startDate.isEmpty()) ? startDate : "?";
+            dateRangeText += " → ";
+            dateRangeText += (endDate != null && !endDate.isEmpty()) ? endDate : "?";
+            holder.tvDateRange.setText(dateRangeText);
+        } else {
+            holder.layoutDateRange.setVisibility(View.GONE);
+        }
+
+        // Remarks
+        String remarks = task.getRemarks();
+        if (remarks != null && !remarks.isEmpty()) {
+            holder.tvRemarks.setVisibility(View.VISIBLE);
+            holder.tvRemarks.setText("📝 " + remarks);
+        } else {
+            holder.tvRemarks.setVisibility(View.GONE);
+        }
+
+        // Timestamp
+        SimpleDateFormat sdf = new SimpleDateFormat("MMM dd, yyyy", Locale.getDefault());
+        holder.tvTimestamp.setText(sdf.format(new Date(task.getTimestamp())));
+
+        // Files
+        if (!task.getFileUrls().isEmpty()) {
+            holder.tvFiles.setVisibility(View.VISIBLE);
+            holder.tvFiles.setText("📎 " + task.getFileUrls().size());
+        } else {
+            holder.tvFiles.setVisibility(View.GONE);
+        }
+
+        // Admin Actions
         if ("admin".equals(loggedInUserRole)) {
             holder.llAdminActions.setVisibility(View.VISIBLE);
 
@@ -142,45 +176,7 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
             holder.llAdminActions.setVisibility(View.GONE);
         }
 
-        // 4. Task Creation Timestamp
-        SimpleDateFormat sdf = new SimpleDateFormat("MMM dd, yyyy", Locale.getDefault());
-        holder.tvTimestamp.setText("Created: " + sdf.format(new Date(task.getTimestamp())));
-
-        // 5. File Attachments
-        if (!task.getFileUrls().isEmpty()) {
-            holder.tvFiles.setVisibility(View.VISIBLE);
-            holder.tvFiles.setText(task.getFileUrls().size() + " file(s)");
-        } else {
-            holder.tvFiles.setVisibility(View.GONE);
-        }
-
-        // 6. Remarks
-        String remarks = task.getRemarks();
-        if (remarks != null && !remarks.isEmpty()) {
-            holder.tvRemarks.setVisibility(View.VISIBLE);
-            holder.tvRemarks.setText("Remarks: " + remarks);
-        } else {
-            holder.tvRemarks.setVisibility(View.GONE);
-        }
-
-        // 7. Start Date and End Date
-        String startDate = task.getStartDate();
-        String endDate = task.getEndDate();
-
-        if ((startDate != null && !startDate.isEmpty()) || (endDate != null && !endDate.isEmpty())) {
-            holder.tvDateRange.setVisibility(View.VISIBLE);
-
-            String dateRangeText = "Dates: ";
-            dateRangeText += (startDate != null && !startDate.isEmpty()) ? startDate : "?";
-            dateRangeText += " - ";
-            dateRangeText += (endDate != null && !endDate.isEmpty()) ? endDate : "?";
-
-            holder.tvDateRange.setText(dateRangeText);
-        } else {
-            holder.tvDateRange.setVisibility(View.GONE);
-        }
-
-        // NEW: Make entire card clickable for users
+        // Card Click for Users
         if ("user".equals(loggedInUserRole)) {
             holder.cardView.setOnClickListener(v -> {
                 if (listener != null) {
@@ -202,15 +198,19 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
     }
 
     static class TaskViewHolder extends RecyclerView.ViewHolder {
-        TextView tvTitle, tvDescription, tvPriority, tvStatus, tvTimestamp, tvFiles, tvRemarks, tvDateRange;
-        TextView tvAiCount;
+        CardView cardView;
+        View priorityStrip;
+        TextView tvTitle, tvDescription, tvPriority, tvStatus;
+        TextView tvTimestamp, tvFiles, tvRemarks, tvDateRange, tvAiCount;
+        CardView cardAiCount;
+        LinearLayout layoutDateRange;
         ImageButton btnEditTask, btnDeleteTask;
         LinearLayout llAdminActions;
-        CardView cardView;
 
         public TaskViewHolder(@NonNull View itemView) {
             super(itemView);
             cardView = itemView.findViewById(R.id.card_view);
+            priorityStrip = itemView.findViewById(R.id.priority_strip);
             tvTitle = itemView.findViewById(R.id.tv_task_title);
             tvDescription = itemView.findViewById(R.id.tv_task_description);
             tvPriority = itemView.findViewById(R.id.tv_task_priority);
@@ -220,6 +220,8 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
             tvRemarks = itemView.findViewById(R.id.tv_task_remarks);
             tvDateRange = itemView.findViewById(R.id.tv_task_date_range);
             tvAiCount = itemView.findViewById(R.id.tv_task_ai_count);
+            cardAiCount = itemView.findViewById(R.id.card_ai_count);
+            layoutDateRange = itemView.findViewById(R.id.layout_date_range);
 
             llAdminActions = itemView.findViewById(R.id.ll_admin_actions);
             btnEditTask = itemView.findViewById(R.id.btn_edit_task);

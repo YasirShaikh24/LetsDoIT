@@ -4,157 +4,232 @@
     android:id="@+id/card_view"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_margin="8dp"
-    app:cardCornerRadius="8dp"
-    app:cardElevation="4dp">
+    android:layout_marginHorizontal="8dp"
+    android:layout_marginVertical="6dp"
+    app:cardCornerRadius="16dp"
+    app:cardElevation="5dp"
+    android:foreground="?attr/selectableItemBackground">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="16dp">
+        android:orientation="horizontal">
+
+        <View
+            android:id="@+id/priority_strip"
+            android:layout_width="6dp"
+            android:layout_height="match_parent"
+            android:background="#EF5350"/>
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginBottom="8dp">
+            android:orientation="vertical"
+            android:padding="16dp"
+            android:background="@android:color/white">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="10dp">
+
+                <TextView
+                    android:id="@+id/tv_task_priority"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="HIGH"
+                    android:textSize="10sp"
+                    android:textStyle="bold"
+                    android:textColor="@android:color/white"
+                    android:background="@drawable/rounded_tag_background"
+                    android:backgroundTint="#EF5350"
+                    android:paddingHorizontal="8dp"
+                    android:paddingVertical="3dp"
+                    android:layout_marginEnd="10dp"/>
+
+                <View
+                    android:layout_width="0dp"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"/>
+
+                <TextView
+                    android:id="@+id/tv_task_status"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="PENDING"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:textColor="@android:color/white"
+                    android:background="@drawable/rounded_tag_background"
+                    android:backgroundTint="#FFA726"
+                    android:paddingHorizontal="12dp"
+                    android:paddingVertical="5dp"/>
+            </LinearLayout>
 
             <TextView
                 android:id="@+id/tv_task_title"
-                android:layout_width="0dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
                 android:text="Task Title"
                 android:textSize="18sp"
                 android:textStyle="bold"
-                android:textColor="@color/text_primary"/>
+                android:textColor="@color/text_primary"
+                android:maxLines="2"
+                android:ellipsize="end"
+                android:layout_marginBottom="8dp"/>
 
             <TextView
-                android:id="@+id/tv_task_status"
-                android:layout_width="wrap_content"
+                android:id="@+id/tv_task_description"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="PENDING"
-                android:textSize="12sp"
-                android:textColor="@android:color/white"
-                android:padding="4dp"
-                android:paddingStart="8dp"
-                android:paddingEnd="8dp"
-                android:layout_marginEnd="8dp"
-                android:background="@drawable/rounded_tag_background" />
+                android:text="Task description goes here"
+                android:textSize="14sp"
+                android:textColor="@color/text_secondary"
+                android:maxLines="3"
+                android:ellipsize="end"
+                android:lineSpacingMultiplier="1.2"
+                android:layout_marginBottom="12dp"/>
+
+            <androidx.cardview.widget.CardView
+                android:id="@+id/card_ai_count"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:cardCornerRadius="8dp"
+                app:cardElevation="0dp"
+                app:cardBackgroundColor="#E8F5E9"
+                android:layout_marginBottom="12dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/tv_task_ai_count"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="🔢 AI Count: ABC123"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:textColor="#2E7D32"
+                    android:padding="10dp"/>
+            </androidx.cardview.widget.CardView>
+
+            <LinearLayout
+                android:id="@+id/layout_date_range"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:background="@drawable/rounded_tag_background"
+                android:backgroundTint="#F5F5F5"
+                android:padding="10dp"
+                android:layout_marginBottom="12dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="🗓️"
+                    android:textSize="14sp"
+                    android:layout_marginEnd="6dp"/>
+
+                <TextView
+                    android:id="@+id/tv_task_date_range"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Start - End"
+                    android:textSize="12sp"
+                    android:textColor="@color/text_primary"
+                    android:fontFamily="sans-serif-medium"/>
+            </LinearLayout>
 
             <TextView
-                android:id="@+id/tv_task_priority"
-                android:layout_width="wrap_content"
+                android:id="@+id/tv_task_remarks"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="HIGH"
+                android:text="📝 Remarks: Additional notes"
                 android:textSize="12sp"
-                android:textColor="@android:color/white"
-                android:padding="4dp"
-                android:paddingStart="8dp"
-                android:paddingEnd="8dp"
-                android:background="@drawable/rounded_tag_background" />
-        </LinearLayout>
-
-        <TextView
-            android:id="@+id/tv_task_description"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Task description goes here"
-            android:textSize="14sp"
-            android:textColor="@color/text_primary"
-            android:layout_marginBottom="8dp"/>
-
-        <TextView
-            android:id="@+id/tv_task_ai_count"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="🔢 AI Count: ABC123"
-            android:textSize="13sp"
-            android:textStyle="bold"
-            android:fontFamily="sans-serif-medium"
-            android:textColor="@color/primary_purple"
-            android:background="@color/background_input"
-            android:padding="8dp"
-            android:layout_marginBottom="8dp"
-            android:visibility="gone"/>
-
-        <TextView
-            android:id="@+id/tv_task_date_range"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Dates: Start - End"
-            android:textSize="12sp"
-            android:fontFamily="sans-serif-medium"
-            android:textColor="@android:color/darker_gray"
-            android:layout_marginBottom="8dp"
-            android:visibility="gone"/>
-
-        <TextView
-            android:id="@+id/tv_task_remarks"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Remarks: Additional notes"
-            android:textSize="12sp"
-            android:fontFamily="sans-serif-medium"
-            android:textColor="@android:color/darker_gray"
-            android:layout_marginBottom="8dp"
-            android:visibility="gone"/>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:layout_marginTop="8dp">
-
-            <TextView
-                android:id="@+id/tv_task_timestamp"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Nov 02, 2025"
-                android:textSize="12sp"
-                android:textColor="@android:color/darker_gray"/>
-
-            <TextView
-                android:id="@+id/tv_task_files"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="2 file(s)"
-                android:textSize="12sp"
-                android:textColor="@android:color/holo_blue_dark"
-                android:layout_marginEnd="16dp"
+                android:textColor="@color/text_secondary"
+                android:textStyle="italic"
+                android:layout_marginBottom="12dp"
                 android:visibility="gone"/>
 
             <LinearLayout
-                android:id="@+id/ll_admin_actions"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:visibility="gone">
+                android:gravity="center_vertical">
 
-                <ImageButton
-                    android:id="@+id/btn_edit_task"
-                    android:layout_width="36dp"
-                    android:layout_height="36dp"
-                    android:layout_marginEnd="8dp"
-                    android:background="@drawable/rounded_icon_background"
-                    android:src="@drawable/ic_edit"
-                    android:tint="@color/primary_purple"
-                    android:contentDescription="Edit Task"/>
+                <TextView
+                    android:id="@+id/tv_task_timestamp"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Nov 02, 2025"
+                    android:textSize="11sp"
+                    android:textColor="@color/text_hint"
+                    android:drawableStart="@drawable/ic_calendar"
+                    android:drawableTint="@color/text_hint"
+                    android:drawablePadding="4dp"
+                    android:gravity="center_vertical"/>
 
-                <ImageButton
-                    android:id="@+id/btn_delete_task"
-                    android:layout_width="36dp"
-                    android:layout_height="36dp"
-                    android:background="@drawable/rounded_icon_background_red"
-                    android:src="@drawable/ic_delete"
-                    android:tint="@color/white"
-                    android:contentDescription="Delete Task"/>
+                <TextView
+                    android:id="@+id/tv_task_files"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="📎 2"
+                    android:textSize="11sp"
+                    android:textColor="@color/primary_purple"
+                    android:layout_marginEnd="12dp"
+                    android:visibility="gone"/>
+
+                <LinearLayout
+                    android:id="@+id/ll_admin_actions"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:visibility="gone">
+
+                    <androidx.cardview.widget.CardView
+                        android:layout_width="34dp"
+                        android:layout_height="34dp"
+                        app:cardCornerRadius="17dp"
+                        app:cardElevation="2dp"
+                        app:cardBackgroundColor="@color/background_input"
+                        android:layout_marginEnd="8dp">
+
+                        <ImageButton
+                            android:id="@+id/btn_edit_task"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:background="?attr/selectableItemBackgroundBorderless"
+                            android:src="@drawable/ic_edit"
+                            android:scaleType="centerInside"
+                            android:padding="7dp"
+                            android:tint="@color/primary_purple"
+                            android:contentDescription="Edit Task"/>
+                    </androidx.cardview.widget.CardView>
+
+                    <androidx.cardview.widget.CardView
+                        android:layout_width="34dp"
+                        android:layout_height="34dp"
+                        app:cardCornerRadius="17dp"
+                        app:cardElevation="2dp"
+                        app:cardBackgroundColor="#FFEBEE">
+
+                        <ImageButton
+                            android:id="@+id/btn_delete_task"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:background="?attr/selectableItemBackgroundBorderless"
+                            android:src="@drawable/ic_delete"
+                            android:scaleType="centerInside"
+                            android:padding="7dp"
+                            android:tint="#D32F2F"
+                            android:contentDescription="Delete Task"/>
+                    </androidx.cardview.widget.CardView>
+                </LinearLayout>
             </LinearLayout>
         </LinearLayout>
-
     </LinearLayout>
-
 </androidx.cardview.widget.CardView>

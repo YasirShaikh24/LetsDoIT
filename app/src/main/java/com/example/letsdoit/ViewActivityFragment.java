@@ -1,4 +1,3 @@
-// src/main/java/com/example/letsdoit/ViewActivityFragment.java
 package com.example.letsdoit;
 
 import android.app.Dialog;
@@ -11,6 +10,7 @@ import android.view.ViewGroup;
 import android.view.Window;
 import android.widget.Button;
 import android.widget.ImageButton;
+import android.widget.LinearLayout; // Import LinearLayout
 import android.widget.ProgressBar;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
@@ -49,7 +49,12 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
     private List<Task> filteredTaskList; // Holds clones with adjusted status for display
     private FirebaseFirestore db;
     private ProgressBar progressBar;
-    private TextView tvEmptyState;
+
+    // FIX: Changed tvEmptyState from TextView to LinearLayout for container
+    private LinearLayout llEmptyState;
+    // NEW: Added a TextView for the message inside the container
+    private TextView tvEmptyStateTitle;
+
     private RadioGroup rgStatusFilter;
     private TextView tvDateIndicator;
     private ImageButton btnCalendar;
@@ -95,7 +100,11 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
 
         recyclerView = view.findViewById(R.id.recycler_view_tasks);
         progressBar = view.findViewById(R.id.progress_bar);
-        tvEmptyState = view.findViewById(R.id.tv_empty_state);
+
+        // FIX: Assigning the correct views based on updated XML IDs
+        llEmptyState = view.findViewById(R.id.ll_empty_state);
+        tvEmptyStateTitle = view.findViewById(R.id.tv_empty_state_title);
+
         rgStatusFilter = view.findViewById(R.id.rg_status_filter);
         tvDateIndicator = view.findViewById(R.id.tv_date_indicator);
         btnCalendar = view.findViewById(R.id.btn_calendar);
@@ -230,6 +239,19 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
         return "Pending";
     }
 
+    private int getPriorityRank(String priority) {
+        if (priority == null) return 0;
+        switch (priority.toLowerCase()) {
+            case "high":
+                return 3;
+            case "medium":
+                return 2;
+            case "low":
+            default:
+                return 1;
+        }
+    }
+
     private void applyFilter() {
         List<Task> dateFilteredList = applyDateFilter(taskList);
         List<Task> searchFilteredList = applySearchFilter(dateFilteredList, currentSearchQuery);
@@ -263,6 +285,21 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
                 filteredTaskList.add(taskForDisplay);
             }
         }
+
+        // ENHANCEMENT: Custom sorting by Priority (High -> Medium -> Low) and then by Timestamp (Descending)
+        Collections.sort(filteredTaskList, (t1, t2) -> {
+            // 1. Priority Comparison (High > Medium > Low) - Descending order
+            int p1 = getPriorityRank(t1.getPriority());
+            int p2 = getPriorityRank(t2.getPriority());
+
+            if (p1 != p2) {
+                return Integer.compare(p2, p1);
+            }
+
+            // 2. Secondary sort: Timestamp (Newer tasks first, DESCENDING)
+            // This is a stable sort: if priorities are equal, the original timestamp sort from Firestore is maintained.
+            return Long.compare(t2.getTimestamp(), t1.getTimestamp());
+        });
 
         taskAdapter.notifyDataSetChanged();
         updateEmptyState();
@@ -341,21 +378,21 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
         if (filteredTaskList.isEmpty()) {
             String filterName = currentFilter.substring(0, 1).toUpperCase() + currentFilter.substring(1);
             if (currentFilter.equals("all")) {
-                tvEmptyState.setText("No tasks found for this date.");
+                tvEmptyStateTitle.setText("No tasks found for this date."); // FIX: Setting text on the inner TextView
             } else {
-                tvEmptyState.setText("No " + filterName + " tasks found for this date.");
+                tvEmptyStateTitle.setText("No " + filterName + " tasks found for this date."); // FIX: Setting text on the inner TextView
             }
-            tvEmptyState.setVisibility(View.VISIBLE);
+            llEmptyState.setVisibility(View.VISIBLE); // FIX: Setting visibility on the outer LinearLayout
             recyclerView.setVisibility(View.GONE);
         } else {
-            tvEmptyState.setVisibility(View.GONE);
+            llEmptyState.setVisibility(View.GONE);
             recyclerView.setVisibility(View.VISIBLE);
         }
     }
 
     private void loadTasks() {
         progressBar.setVisibility(View.VISIBLE);
-        tvEmptyState.setVisibility(View.GONE);
+        llEmptyState.setVisibility(View.GONE);
         recyclerView.setVisibility(View.GONE);
         loadAllUsers();
     }
@@ -429,8 +466,8 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Error loading tasks for admin", e);
                     progressBar.setVisibility(View.GONE);
-                    tvEmptyState.setText("Error loading tasks: " + e.getMessage());
-                    tvEmptyState.setVisibility(View.VISIBLE);
+                    tvEmptyStateTitle.setText("Error loading tasks: " + e.getMessage()); // FIX: Setting text on the inner TextView
+                    llEmptyState.setVisibility(View.VISIBLE); // FIX: Setting visibility on the outer LinearLayout
                     recyclerView.setVisibility(View.GONE);
                 });
     }
@@ -455,12 +492,8 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
                         }
                     }
 
-                    Collections.sort(taskList, new Comparator<Task>() {
-                        @Override
-                        public int compare(Task t1, Task t2) {
-                            return Long.compare(t2.getTimestamp(), t1.getTimestamp());
-                        }
-                    });
+                    // Original sort by timestamp - kept for consistency before filter is applied
+                    Collections.sort(taskList, (t1, t2) -> Long.compare(t2.getTimestamp(), t1.getTimestamp()));
 
                     applyFilter();
                     progressBar.setVisibility(View.GONE);
@@ -468,8 +501,8 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Error loading tasks for user", e);
                     progressBar.setVisibility(View.GONE);
-                    tvEmptyState.setText("Error loading tasks: " + e.getMessage());
-                    tvEmptyState.setVisibility(View.VISIBLE);
+                    tvEmptyStateTitle.setText("Error loading tasks: " + e.getMessage()); // FIX: Setting text on the inner TextView
+                    llEmptyState.setVisibility(View.VISIBLE); // FIX: Setting visibility on the outer LinearLayout
                     recyclerView.setVisibility(View.GONE);
                 });
     }
@@ -767,7 +800,8 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
         db.collection("tasks").document(task.getId())
                 .delete()
                 .addOnSuccessListener(aVoid -> {
-                    taskList.remove(task);
+                    // Find and remove the task from the main list as well
+                    taskList.removeIf(t -> t.getId().equals(task.getId()));
                     applyFilter();
                     Toast.makeText(getContext(), "Task deleted successfully!", Toast.LENGTH_SHORT).show();
                 })
