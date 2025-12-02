@@ -160,7 +160,7 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void registerAdminInDatabase(String email, String password) {
-        User newAdmin = new User(email, "admin", "Admin", password);
+        User newAdmin = new User(email, "admin", "Mohsin Mir", password); // Display name is "Mohsin Mir"
 
         db.collection("admins")
                 .add(newAdmin)

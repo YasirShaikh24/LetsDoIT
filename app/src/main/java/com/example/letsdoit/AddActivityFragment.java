@@ -1,4 +1,3 @@
-// src/main/java/com/example/letsdoit/AddActivityFragment.java
 package com.example.letsdoit;
 
 import android.app.DatePickerDialog;

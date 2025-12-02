@@ -1,4 +1,3 @@
-// src/main/java/com/example/letsdoit/User.java
 package com.example.letsdoit;
 
 public class User {

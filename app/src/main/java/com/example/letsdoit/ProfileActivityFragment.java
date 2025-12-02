@@ -18,7 +18,7 @@ import androidx.fragment.app.Fragment;
 
 public class ProfileActivityFragment extends Fragment {
 
-    private TextView tvUserEmail, tvUserRole, tvDisplayName;
+    private TextView tvUserEmail, tvDisplayName; // tvUserRole removed
     private Button btnLogout, btnAddMember, btnViewMembers;
 
     private String loggedInUserEmail;
@@ -57,14 +57,20 @@ public class ProfileActivityFragment extends Fragment {
 
         tvDisplayName = view.findViewById(R.id.tv_display_name);
         tvUserEmail = view.findViewById(R.id.tv_user_email);
-        tvUserRole = view.findViewById(R.id.tv_user_role);
+        // tvUserRole removed from here
+
         btnLogout = view.findViewById(R.id.btn_logout);
         btnAddMember = view.findViewById(R.id.btn_add_member);
         btnViewMembers = view.findViewById(R.id.btn_view_members);
 
-        // Sets the display name (e.g., "MAHIM")
+        // Logic to set admin name to "Mohsin Mir" by default
+        if ("admin".equals(loggedInUserRole)) {
+            if (displayName == null || displayName.isEmpty() || displayName.equalsIgnoreCase("Admin")) {
+                displayName = "Mohsin Mir";
+            }
+        }
+
         if (displayName != null && !displayName.isEmpty()) {
-            // Capitalize the display name
             tvDisplayName.setText(displayName.toUpperCase());
         } else {
             tvDisplayName.setText("USER");
@@ -74,19 +80,15 @@ public class ProfileActivityFragment extends Fragment {
             tvUserEmail.setText(loggedInUserEmail);
         }
 
-        // Sets the user role (e.g., "Admin" or "User")
-        if (loggedInUserRole != null) {
-            String roleDisplay = loggedInUserRole.substring(0, 1).toUpperCase() + loggedInUserRole.substring(1);
-            tvUserRole.setText(roleDisplay); // MODIFIED: Removed "Role: " prefix
-        }
+        // Role display logic removed
 
         // Show "View Members" and "Add Members" button only for admin
         if ("admin".equals(loggedInUserRole)) {
-            // 1. View Members button is now at the bottom
+            // 1. View Members
             btnViewMembers.setVisibility(View.VISIBLE);
             btnViewMembers.setOnClickListener(v -> openViewMembersActivity());
 
-            // 2. Add Member button is now at the bottom
+            // 2. Add Member
             btnAddMember.setVisibility(View.VISIBLE);
             btnAddMember.setOnClickListener(v -> openAddMemberActivity());
 

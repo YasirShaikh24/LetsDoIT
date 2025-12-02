@@ -1,4 +1,3 @@
-// src/main/java/com/example/letsdoit/ViewActivityFragment.java
 package com.example.letsdoit;
 
 import android.app.Dialog;
