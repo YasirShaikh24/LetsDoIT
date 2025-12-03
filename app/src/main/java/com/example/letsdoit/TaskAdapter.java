@@ -16,6 +16,7 @@ import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
@@ -160,37 +161,45 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
                 String userStatus = task.getUserStatus(loggedInUserEmail);
 
                 if (aiCountValue != null && !aiCountValue.isEmpty()) {
-                    holder.tvAiCount.setText("箸 AI Count: " + aiCountValue);
+                    holder.tvAiCount.setText("🔢 AI Count: " + aiCountValue);
                     holder.cardAiCount.setCardBackgroundColor(Color.parseColor("#E8F5E9"));
                     holder.tvAiCount.setTextColor(Color.parseColor("#2E7D32"));
                 } else if (userStatus != null && userStatus.equalsIgnoreCase("Completed")) {
                     // Task is completed but AI count is missing (shouldn't happen, but handle gracefully)
-                    holder.tvAiCount.setText("箸 AI Count: Not recorded");
+                    holder.tvAiCount.setText("🔢 AI Count: Not recorded");
                     holder.cardAiCount.setCardBackgroundColor(Color.parseColor("#FFF3E0"));
                     holder.tvAiCount.setTextColor(Color.parseColor("#E65100"));
                 } else {
-                    holder.tvAiCount.setText("箸 AI Count: Required (Not submitted)");
+                    holder.tvAiCount.setText("🔢 AI Count: Required (Not submitted)");
                     holder.cardAiCount.setCardBackgroundColor(Color.parseColor("#FFF3E0"));
                     holder.tvAiCount.setTextColor(Color.parseColor("#E65100"));
                 }
             } else {
-                // ADMIN VIEW: Show summary of all users' AI counts
+                // ADMIN VIEW: Show list of submitted AI counts
                 Map<String, String> userAiCountMap = task.getUserAiCount();
-                int submitted = 0;
+                List<String> submittedCounts = new ArrayList<>();
                 int required = task.getAssignedTo().size();
 
                 for (String email : task.getAssignedTo()) {
                     String aiCount = userAiCountMap.get(email);
                     if (aiCount != null && !aiCount.isEmpty()) {
-                        submitted++;
+                        submittedCounts.add(aiCount);
                     }
                 }
 
-                holder.tvAiCount.setText("箸 AI Count: " + submitted + "/" + required + " submitted");
-                if (submitted == required) {
-                    holder.cardAiCount.setCardBackgroundColor(Color.parseColor("#E8F5E9"));
-                    holder.tvAiCount.setTextColor(Color.parseColor("#2E7D32"));
+                String displayCounts = submittedCounts.isEmpty() ? "None submitted" : String.join(", ", submittedCounts);
+
+                holder.tvAiCount.setText("🔢 AI Count: " + displayCounts);
+
+                if (submittedCounts.size() == required) {
+                    holder.cardAiCount.setCardBackgroundColor(Color.parseColor("#E8F5E9")); // Light Green
+                    holder.tvAiCount.setTextColor(Color.parseColor("#2E7D32")); // Dark Green
+                } else if (submittedCounts.isEmpty()) {
+                    // Gray/default background when nothing is submitted
+                    holder.cardAiCount.setCardBackgroundColor(Color.parseColor("#F5F5F5"));
+                    holder.tvAiCount.setTextColor(Color.parseColor("#9E9E9E"));
                 } else {
+                    // Orange/Yellow when some, but not all, are submitted
                     holder.cardAiCount.setCardBackgroundColor(Color.parseColor("#FFF3E0"));
                     holder.tvAiCount.setTextColor(Color.parseColor("#E65100"));
                 }
@@ -209,7 +218,7 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
                 holder.layoutDateRange.setVisibility(View.VISIBLE);
                 String dateRangeText = "";
                 dateRangeText += (startDate != null && !startDate.isEmpty()) ? startDate : "?";
-                dateRangeText += " 竊";
+                dateRangeText += " - ";
                 dateRangeText += (endDate != null && !endDate.isEmpty()) ? endDate : "?";
                 holder.tvDateRange.setText(dateRangeText);
             } else {
@@ -223,7 +232,7 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
         String remarks = task.getRemarks();
         if (remarks != null && !remarks.isEmpty()) {
             holder.tvRemarks.setVisibility(View.VISIBLE);
-            holder.tvRemarks.setText("統 " + remarks);
+            holder.tvRemarks.setText("📝 " + remarks);
         } else {
             holder.tvRemarks.setVisibility(View.GONE);
         }

@@ -751,8 +751,6 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
         }
 
         if (task.isRequireAiCount()) {
-            llAiCountSection.setVisibility(View.VISIBLE);
-
             // Get user-specific AI count
             String existingAiCount = task.getUserAiCount(loggedInUserEmail);
             if (existingAiCount != null && !existingAiCount.isEmpty()) {
@@ -776,6 +774,36 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
             rbCompleted.setChecked(true);
         }
 
+        // --- NEW LOGIC: Control AI Count visibility based on status selection ---
+        rgDialogStatus.setOnCheckedChangeListener((group, checkedId) -> {
+            if (!task.isRequireAiCount()) return; // Only apply logic if AI count is required
+
+            if (checkedId == R.id.rb_dialog_completed) {
+                llAiCountSection.setVisibility(View.VISIBLE);
+                // Optionally set initial count if it exists
+                String currentCount = task.getUserAiCount(loggedInUserEmail);
+                if (currentCount != null && !currentCount.isEmpty()) {
+                    etAiCount.setText(currentCount);
+                }
+            } else {
+                // When switching away from COMPLETED, hide the input and clear any error or text
+                llAiCountSection.setVisibility(View.GONE);
+                etAiCount.setError(null);
+                // NOTE: We don't clear the text field itself here, only the error, to allow user to see what they typed if they switch back.
+                // The crucial clearing happens in updateTaskInFirestore.
+            }
+        });
+
+        // Set initial visibility based on the current status
+        if (task.isRequireAiCount()) {
+            if (!currentUserStatus.equals("completed")) {
+                llAiCountSection.setVisibility(View.GONE);
+            } else {
+                llAiCountSection.setVisibility(View.VISIBLE);
+            }
+        }
+
+
         btnSubmit.setOnClickListener(v -> {
             int selectedStatusId = rgDialogStatus.getCheckedRadioButtonId();
             if (selectedStatusId == -1) {
@@ -796,6 +824,10 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
                         Toast.makeText(getContext(), "Please enter AI Count to mark as completed", Toast.LENGTH_SHORT).show();
                         return;
                     }
+                }
+                // If status is not Completed, the aiCountInput should be cleared on submission regardless of text field state
+                if (!newStatus.equalsIgnoreCase("✅ Completed")) {
+                    aiCountInput = "";
                 }
             }
 
@@ -835,9 +867,15 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
         update.put("userCompletedDate", userCompletedDateMap);
 
         // Update user-specific AI count
-        if (task.isRequireAiCount() && aiCountValue != null && !aiCountValue.isEmpty()) {
-            Map<String, String> userAiCountMap = task.getUserAiCount();
-            userAiCountMap.put(loggedInUserEmail, aiCountValue);
+        Map<String, String> userAiCountMap = task.getUserAiCount();
+        if (task.isRequireAiCount()) {
+            if (newStatus.equalsIgnoreCase("Completed")) {
+                // Store the submitted AI Count value
+                userAiCountMap.put(loggedInUserEmail, aiCountValue);
+            } else {
+                // If status is not completed (Pending/In Progress), the AI count must be cleared
+                userAiCountMap.put(loggedInUserEmail, "");
+            }
             update.put("userAiCount", userAiCountMap);
         }
 
@@ -847,8 +885,9 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
                     // Update local task object
                     task.setUserStatus(loggedInUserEmail, newStatus);
                     task.setUserCompletedDate(loggedInUserEmail, finalCompletionTime);
-                    if (aiCountValue != null && !aiCountValue.isEmpty()) {
-                        task.setUserAiCount(loggedInUserEmail, aiCountValue);
+                    if (task.isRequireAiCount()) {
+                        // Use the updated aiCountValue which is cleared if status is not Completed
+                        task.setUserAiCount(loggedInUserEmail, newStatus.equalsIgnoreCase("Completed") ? aiCountValue : "");
                     }
 
                     // Update in taskList
@@ -856,8 +895,8 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
                         if (t.getId().equals(task.getId())) {
                             t.setUserStatus(loggedInUserEmail, newStatus);
                             t.setUserCompletedDate(loggedInUserEmail, finalCompletionTime);
-                            if (aiCountValue != null && !aiCountValue.isEmpty()) {
-                                t.setUserAiCount(loggedInUserEmail, aiCountValue);
+                            if (task.isRequireAiCount()) {
+                                t.setUserAiCount(loggedInUserEmail, newStatus.equalsIgnoreCase("Completed") ? aiCountValue : "");
                             }
                             break;
                         }
@@ -866,7 +905,7 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
                     applyFilter();
 
                     String message = "Task updated successfully!";
-                    if (task.isRequireAiCount() && aiCountValue != null && !aiCountValue.isEmpty()) {
+                    if (task.isRequireAiCount() && newStatus.equalsIgnoreCase("Completed") && aiCountValue != null && !aiCountValue.isEmpty()) {
                         message += " AI Count: " + aiCountValue;
                     }
                     Toast.makeText(getContext(), message, Toast.LENGTH_SHORT).show();
@@ -993,13 +1032,15 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
         final int blueText = ContextCompat.getColor(requireContext(), R.color.status_in_progress);
         final int lightBlueBg = Color.parseColor("#E3F2FD");
 
-        final int orangeText = ContextCompat.getColor(requireContext(), R.color.status_pending);
-        final int lightOrangeBg = Color.parseColor("#FFF8E1");
+        // NEW: Red color scheme for Pending (as requested)
+        final int redText = Color.parseColor("#D32F2F"); // Dark Red (same as delete icon)
+        final int lightRedBg = Color.parseColor("#FFEBEE"); // Light Red/Pinkish background
 
         // Add users to the LinearLayout sections as individual tags
         addStatusTags(llCompleted, statusGroups.get("completed"), greenText, lightGreenBg);
         addStatusTags(llInProgress, statusGroups.get("in progress"), blueText, lightBlueBg);
-        addStatusTags(llPending, statusGroups.get("pending"), orangeText, lightOrangeBg);
+        // Using the new red scheme for Pending
+        addStatusTags(llPending, statusGroups.get("pending"), redText, lightRedBg);
 
         // 4. Set Close Button Listener
         btnClose.setOnClickListener(v -> dialog.dismiss());
@@ -1031,7 +1072,7 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
             TextView tvName = new TextView(getContext());
             tvName.setText(name);
             tvName.setTextColor(textColor);
-            tvName.setTextSize(12f);
+            tvName.setTextSize(14f); // INCREASED SIZE from 12f to 14f
             tvName.setTypeface(Typeface.DEFAULT_BOLD);
             tvName.setPadding(12, 6, 12, 6);
 
