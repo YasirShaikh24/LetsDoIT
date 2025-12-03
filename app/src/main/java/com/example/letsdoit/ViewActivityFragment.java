@@ -1,3 +1,4 @@
+// src/main/java/com/example/letsdoit/ViewActivityFragment.java
 package com.example.letsdoit;
 
 import android.app.Dialog;
@@ -16,13 +17,17 @@ import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.graphics.Color;
+import android.graphics.Typeface;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.cardview.widget.CardView; // Required for dynamic tag creation
 
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
@@ -110,7 +115,7 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
 
         taskList = new ArrayList<>();
         filteredTaskList = new ArrayList<>();
-        taskAdapter = new TaskAdapter(filteredTaskList, getContext(), this, loggedInUserRole);
+        taskAdapter = new TaskAdapter(filteredTaskList, getContext(), this, loggedInUserRole, loggedInUserEmail);
         recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
         recyclerView.setAdapter(taskAdapter);
 
@@ -224,53 +229,51 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
         return calendar.getTimeInMillis();
     }
 
+    // Task status logic remains the same for user view, as requested.
     private String getTaskStatusOnDate(Task task, long filterDateMillis) {
-        String currentStatus = task.getStatus();
+        // Get the user-specific status
+        String currentUserStatus = task.getUserStatus(loggedInUserEmail);
 
-        // 1. Determine the start/end of the day being filtered
         long actualFilterDateMillis = filterDateMillis == -1 ? System.currentTimeMillis() : filterDateMillis;
         long filterDayStart = getDayStartMillis(actualFilterDateMillis);
         long filterDayEnd = filterDayStart + (24 * 60 * 60 * 1000L) - 1;
-        long completionTime = task.getCompletedDateMillis();
+        long completionTime = task.getUserCompletedDate(loggedInUserEmail);
         long todayStart = getDayStartMillis(System.currentTimeMillis());
 
         if (task.getTaskType().equalsIgnoreCase("permanent")) {
-            // Permanent Task Logic: Daily Status Reset.
+            // Permanent Task Logic: Daily Status Reset per user
 
-            // A. Check for COMPLETED status on the viewed day (This is the highest priority status)
+            // A. Check for COMPLETED status on the viewed day
             if (completionTime > filterDayStart && completionTime <= filterDayEnd) {
                 return "Completed";
             }
 
-            // B. Check for IN PROGRESS status on the viewed day (Only applicable for TODAY's view)
-            // If viewing TODAY and the task's firestore status is "In Progress", show it.
-            if (filterDayStart == todayStart && currentStatus.equalsIgnoreCase("in progress")) {
+            // B. Check for IN PROGRESS status on the viewed day (Only TODAY)
+            if (filterDayStart == todayStart && currentUserStatus.equalsIgnoreCase("in progress")) {
                 return "In Progress";
             }
 
-            // C. All other cases (uncompleted, viewing past/future day, or viewing today with status="Pending") default to Pending.
+            // C. Default to Pending
             return "Pending";
         }
 
-        // --- Logic for ADDITIONAL tasks follows (as they are not daily tasks) ---
+        // --- Logic for ADDITIONAL tasks ---
 
-        // If viewing Today or Future, use current status from Firestore
+        // If viewing Today or Future, use current user status
         if (filterDateMillis == -1 || getDayStartMillis(filterDateMillis) >= getDayStartMillis(System.currentTimeMillis())) {
-            return currentStatus;
+            return currentUserStatus;
         }
 
-        // --- Historical Status Logic (Past Date Selected for Additional Tasks) ---
+        // --- Historical Status Logic (Past Date) ---
 
-        if (currentStatus.equalsIgnoreCase("Completed")) {
-            // If completion happened AFTER the viewed day ended, the status on that day was Pending.
+        if (currentUserStatus.equalsIgnoreCase("Completed")) {
+            // If completion happened AFTER the viewed day ended
             if (completionTime > 0 && completionTime > filterDayEnd) {
                 return "Pending";
             }
-            // Otherwise, it was completed on or before the filter date.
             return "Completed";
         }
 
-        // For tasks not currently completed, or Additional tasks with no precise history, assume Pending.
         return "Pending";
     }
 
@@ -303,6 +306,11 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
             taskForDisplay.setTaskType(originalTask.getTaskType());
             taskForDisplay.setCompletedDateMillis(originalTask.getCompletedDateMillis());
 
+            // CRITICAL FIX: Copy over per-user status maps for BOTH admin and user views
+            taskForDisplay.setUserStatus(originalTask.getUserStatus());
+            taskForDisplay.setUserAiCount(originalTask.getUserAiCount());
+            taskForDisplay.setUserCompletedDate(originalTask.getUserCompletedDate());
+
             long filterDateMillis = selectedDateMillis == -1 ? System.currentTimeMillis() : selectedDateMillis;
             String historicalStatus = getTaskStatusOnDate(originalTask, filterDateMillis);
             taskForDisplay.setStatus(historicalStatus);
@@ -313,7 +321,6 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
                 filteredTaskList.add(taskForDisplay);
             }
         }
-
         taskAdapter.notifyDataSetChanged();
         updateEmptyState();
     }
@@ -563,6 +570,22 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
 
     @Override
     public void onTaskStatusClick(Task task, int position) {
+        // --- NEW ADMIN LOGIC (Admin clicks open the review dialog) ---
+        if ("admin".equals(loggedInUserRole)) {
+            Task originalTask = taskList.stream()
+                    .filter(t -> t.getId().equals(task.getId()))
+                    .findFirst().orElse(null);
+
+            if (originalTask != null) {
+                showAdminTaskReviewDialog(originalTask);
+            } else {
+                Toast.makeText(getContext(), "Error: Original task data not found.", Toast.LENGTH_SHORT).show();
+            }
+            return;
+        }
+        // --- END NEW ADMIN LOGIC ---
+
+        // Existing User Logic
         if ("user".equals(loggedInUserRole)) {
             long todayStart = getDayStartMillis(System.currentTimeMillis());
             boolean isTaskEditable = true;
@@ -624,6 +647,7 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
         showDeleteConfirmationDialog(taskToDelete, position);
     }
 
+    // Existing showReadOnlyDialog method (kept as-is for user side logic)
     private void showReadOnlyDialog(Task task) {
         Dialog dialog = new Dialog(requireContext());
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
@@ -641,7 +665,10 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
 
         tvDialogTitle.setText(task.getTitle());
         tvDialogDescription.setText(task.getDescription());
-        tvDialogStatus.setText("Status: " + task.getStatus().toUpperCase());
+
+        // Show user-specific status
+        String userStatus = task.getUserStatus(loggedInUserEmail);
+        tvDialogStatus.setText("Status: " + userStatus.toUpperCase());
 
         String startDate = task.getStartDate();
         String endDate = task.getEndDate();
@@ -665,7 +692,7 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
         }
 
         if (task.isRequireAiCount()) {
-            String aiCountValue = task.getAiCountValue();
+            String aiCountValue = task.getUserAiCount(loggedInUserEmail);
             tvDialogAiCount.setText("AI Count: " + (aiCountValue != null && !aiCountValue.isEmpty() ? aiCountValue : "N/A (Required)"));
             tvDialogAiCount.setVisibility(View.VISIBLE);
         } else {
@@ -677,6 +704,7 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
     }
 
 
+    // Existing showTaskDetailDialog method (kept as-is for user side logic)
     private void showTaskDetailDialog(Task task, int position) {
         Dialog dialog = new Dialog(requireContext());
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
@@ -725,7 +753,8 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
         if (task.isRequireAiCount()) {
             llAiCountSection.setVisibility(View.VISIBLE);
 
-            String existingAiCount = task.getAiCountValue();
+            // Get user-specific AI count
+            String existingAiCount = task.getUserAiCount(loggedInUserEmail);
             if (existingAiCount != null && !existingAiCount.isEmpty()) {
                 etAiCount.setText(existingAiCount);
                 tvAiCountLabel.setText("AI Count (You can edit)");
@@ -737,12 +766,13 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
             llAiCountSection.setVisibility(View.GONE);
         }
 
-        String currentStatus = task.getStatus().toLowerCase();
-        if (currentStatus.equals("pending")) {
+        // Get user-specific status
+        String currentUserStatus = task.getUserStatus(loggedInUserEmail).toLowerCase();
+        if (currentUserStatus.equals("pending")) {
             rbPending.setChecked(true);
-        } else if (currentStatus.equals("in progress")) {
+        } else if (currentUserStatus.equals("in progress")) {
             rbInProgress.setChecked(true);
-        } else if (currentStatus.equals("completed")) {
+        } else if (currentUserStatus.equals("completed")) {
             rbCompleted.setChecked(true);
         }
 
@@ -778,6 +808,7 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
         dialog.show();
     }
 
+    // Existing updateTaskInFirestore method (kept as-is for user side logic)
     private void updateTaskInFirestore(Task task, String newStatus, String aiCountValue, int position, Dialog dialog) {
         if (task.getId() == null) {
             Toast.makeText(getContext(), "Error: Task ID not found.", Toast.LENGTH_SHORT).show();
@@ -785,46 +816,54 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
         }
 
         Map<String, Object> update = new HashMap<>();
-        update.put("status", newStatus);
 
+        // Update user-specific status
+        Map<String, String> userStatusMap = task.getUserStatus();
+        userStatusMap.put(loggedInUserEmail, newStatus);
+        update.put("userStatus", userStatusMap);
+
+        // Update user-specific completion date
+        Map<String, Long> userCompletedDateMap = task.getUserCompletedDate();
         final long finalCompletionTime;
         if (newStatus.equalsIgnoreCase("Completed")) {
             finalCompletionTime = System.currentTimeMillis();
-            update.put("completedDateMillis", finalCompletionTime);
+            userCompletedDateMap.put(loggedInUserEmail, finalCompletionTime);
         } else {
-            // This handles setting status to "Pending" or "In Progress", resetting completion for the next day.
             finalCompletionTime = 0;
-            update.put("completedDateMillis", 0);
+            userCompletedDateMap.put(loggedInUserEmail, 0L);
         }
+        update.put("userCompletedDate", userCompletedDateMap);
 
-        if (task.isRequireAiCount()) {
-            if (aiCountValue != null && !aiCountValue.isEmpty()) {
-                update.put("aiCountValue", aiCountValue);
-            }
+        // Update user-specific AI count
+        if (task.isRequireAiCount() && aiCountValue != null && !aiCountValue.isEmpty()) {
+            Map<String, String> userAiCountMap = task.getUserAiCount();
+            userAiCountMap.put(loggedInUserEmail, aiCountValue);
+            update.put("userAiCount", userAiCountMap);
         }
 
         db.collection("tasks").document(task.getId())
                 .update(update)
                 .addOnSuccessListener(aVoid -> {
-                    task.setStatus(newStatus);
-                    task.setCompletedDateMillis(finalCompletionTime);
+                    // Update local task object
+                    task.setUserStatus(loggedInUserEmail, newStatus);
+                    task.setUserCompletedDate(loggedInUserEmail, finalCompletionTime);
                     if (aiCountValue != null && !aiCountValue.isEmpty()) {
-                        task.setAiCountValue(aiCountValue);
+                        task.setUserAiCount(loggedInUserEmail, aiCountValue);
                     }
 
+                    // Update in taskList
                     for (Task t : taskList) {
                         if (t.getId().equals(task.getId())) {
-                            t.setStatus(newStatus);
-                            t.setCompletedDateMillis(finalCompletionTime);
+                            t.setUserStatus(loggedInUserEmail, newStatus);
+                            t.setUserCompletedDate(loggedInUserEmail, finalCompletionTime);
                             if (aiCountValue != null && !aiCountValue.isEmpty()) {
-                                t.setAiCountValue(aiCountValue);
+                                t.setUserAiCount(loggedInUserEmail, aiCountValue);
                             }
                             break;
                         }
                     }
 
                     applyFilter();
-                    // APPLY FILTER is sufficient for immediate UI refresh for status change.
 
                     String message = "Task updated successfully!";
                     if (task.isRequireAiCount() && aiCountValue != null && !aiCountValue.isEmpty()) {
@@ -839,11 +878,11 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
                 });
     }
 
-    private void showDeleteConfirmationDialog(Task task, int position) {
+    private void showDeleteConfirmationDialog(Task taskToDelete, int position) {
         new AlertDialog.Builder(requireContext())
                 .setTitle("Delete Task")
                 .setMessage("Are you sure you want to delete this task? This action cannot be undone.")
-                .setPositiveButton("Delete", (dialog, which) -> deleteTaskFromFirestore(task, position))
+                .setPositiveButton("Delete", (dialog, which) -> deleteTaskFromFirestore(taskToDelete, position))
                 .setNegativeButton("Cancel", null)
                 .show();
     }
@@ -887,6 +926,136 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
         if (loggedInUserEmail != null) {
             // This ensures instant refresh after returning from EditTaskActivity.
             loadTasks();
+        }
+    }
+
+    // --- UPDATED ADMIN REVIEW DIALOG METHODS ---
+
+    private void showAdminTaskReviewDialog(Task task) {
+        Dialog dialog = new Dialog(requireContext());
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        dialog.setContentView(R.layout.dialog_admin_task_review);
+        dialog.getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        dialog.setCancelable(true);
+
+        TextView tvTitle = dialog.findViewById(R.id.tv_dialog_task_title);
+        TextView tvAssignedInfo = dialog.findViewById(R.id.tv_assigned_info);
+        LinearLayout llCompleted = dialog.findViewById(R.id.ll_completed_users);
+        LinearLayout llInProgress = dialog.findViewById(R.id.ll_in_progress_users);
+        LinearLayout llPending = dialog.findViewById(R.id.ll_pending_users);
+        Button btnClose = dialog.findViewById(R.id.btn_close_review);
+
+        // 1. Set Task Title
+        tvTitle.setText(task.getTitle());
+
+        // 2. Set "Assigned to All" visibility
+        boolean isAssignedToAll = task.getAssignedTo().size() == userDisplayNameMap.size();
+
+        if (isAssignedToAll && task.getAssignedTo().size() > 0) {
+            tvAssignedInfo.setVisibility(View.VISIBLE);
+            tvAssignedInfo.setText("Assigned To All");
+        } else {
+            tvAssignedInfo.setVisibility(View.GONE);
+        }
+
+        // 3. Populate User Sections
+        llCompleted.removeAllViews();
+        llInProgress.removeAllViews();
+        llPending.removeAllViews();
+
+        Map<String, List<String>> statusGroups = new HashMap<>();
+        statusGroups.put("completed", new ArrayList<>());
+        statusGroups.put("in progress", new ArrayList<>());
+        statusGroups.put("pending", new ArrayList<>());
+
+        // Group assigned users by status
+        for (String email : task.getAssignedTo()) {
+            String status = task.getUserStatus(email);
+            String displayName = userDisplayNameMap.get(email);
+
+            String cleanStatus = (status != null && !status.isEmpty()) ? status.toLowerCase() : "pending";
+            if (displayName == null) displayName = email;
+
+            if (cleanStatus.contains("completed")) {
+                statusGroups.get("completed").add(displayName);
+            } else if (cleanStatus.contains("in progress")) {
+                statusGroups.get("in progress").add(displayName);
+            } else {
+                statusGroups.get("pending").add(displayName);
+            }
+        }
+
+        // Define the color scheme for the new UI tags
+        final int greenText = ContextCompat.getColor(requireContext(), R.color.status_completed);
+        // Using a light green color that is slightly different from the default background
+        final int lightGreenBg = Color.parseColor("#E8F5E9");
+
+        final int blueText = ContextCompat.getColor(requireContext(), R.color.status_in_progress);
+        final int lightBlueBg = Color.parseColor("#E3F2FD");
+
+        final int orangeText = ContextCompat.getColor(requireContext(), R.color.status_pending);
+        final int lightOrangeBg = Color.parseColor("#FFF8E1");
+
+        // Add users to the LinearLayout sections as individual tags
+        addStatusTags(llCompleted, statusGroups.get("completed"), greenText, lightGreenBg);
+        addStatusTags(llInProgress, statusGroups.get("in progress"), blueText, lightBlueBg);
+        addStatusTags(llPending, statusGroups.get("pending"), orangeText, lightOrangeBg);
+
+        // 4. Set Close Button Listener
+        btnClose.setOnClickListener(v -> dialog.dismiss());
+
+        dialog.show();
+    }
+
+    /**
+     * Dynamically creates a CardView tag for each name and adds them to the container.
+     * This achieves the best UI for inline, wrapping tags.
+     */
+    private void addStatusTags(LinearLayout container, List<String> names, int textColor, int backgroundColor) {
+
+        if (names.isEmpty()) {
+            TextView tv = new TextView(getContext());
+            tv.setText("None");
+            tv.setTextColor(ContextCompat.getColor(requireContext(), R.color.text_secondary));
+            tv.setTextSize(14f);
+            tv.setPadding(4, 0, 0, 0);
+            container.addView(tv);
+            return;
+        }
+
+        // Since the parent LinearLayout in XML has horizontal orientation, adding multiple views
+        // with margin simulates a tag cloud (Flexbox-like wrapping, depending on device layout properties).
+        for (String name : names) {
+
+            // 1. Create the TextView (User Name)
+            TextView tvName = new TextView(getContext());
+            tvName.setText(name);
+            tvName.setTextColor(textColor);
+            tvName.setTextSize(12f);
+            tvName.setTypeface(Typeface.DEFAULT_BOLD);
+            tvName.setPadding(12, 6, 12, 6);
+
+            // 2. Create the CardView (Background Box)
+            CardView card = new CardView(getContext());
+            card.setRadius(8f); // Rounded corners
+            card.setCardElevation(0f);
+            card.setCardBackgroundColor(backgroundColor);
+            card.addView(tvName);
+
+            // 3. Set layout parameters with margins for spacing
+            LinearLayout.LayoutParams cardParams = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+            );
+            // Margin to separate the tags inline (right) and vertically (bottom)
+            // Use 8dp for both to achieve the tag cloud effect
+            int margin = (int) (8 * getResources().getDisplayMetrics().density);
+            cardParams.setMargins(0, 0, margin, margin);
+
+            card.setLayoutParams(cardParams);
+
+            // 4. Add the CardView to the parent container
+            container.addView(card);
         }
     }
 }

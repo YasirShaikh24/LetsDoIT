@@ -3,45 +3,57 @@ package com.example.letsdoit;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class Task {
     private String id;
     private String title;
     private String description;
     private String priority;
-    private String status;
+    private String status; // Keep for backward compatibility
 
-    // List fields - fileUrls removed
     private List<String> assignedTo;
 
-    // String fields
+    // NEW: Per-user status tracking
+    // Map: email -> status (Pending/In Progress/Completed)
+    private Map<String, String> userStatus;
+
+    // NEW: Per-user AI count tracking
+    // Map: email -> aiCountValue
+    private Map<String, String> userAiCount;
+
+    // NEW: Per-user completion time tracking
+    // Map: email -> completedDateMillis
+    private Map<String, Long> userCompletedDate;
+
     private String remarks;
     private String startDate;
     private String endDate;
-    private String taskType; // NEW FIELD for Permanent/Additional
+    private String taskType;
 
-    // NEW: AI Count fields
     private boolean requireAiCount;
-    private String aiCountValue;
+    private String aiCountValue; // Keep for backward compatibility
 
-    // NEW: Field for historical status tracking (completion only)
-    private long completedDateMillis;
-
-    // Field for backward compatibility
-    private String assignedToEmail;
+    private long completedDateMillis; // Keep for backward compatibility
+    private String assignedToEmail; // Keep for backward compatibility
 
     private long timestamp;
 
     public Task() {
-        // Required empty constructor for Firestore
         this.requireAiCount = false;
         this.aiCountValue = "";
         this.taskType = "Permanent";
         this.completedDateMillis = 0;
+        this.userStatus = new HashMap<>();
+        this.userAiCount = new HashMap<>();
+        this.userCompletedDate = new HashMap<>();
     }
 
-    public Task(String title, String description, String priority, String remarks, List<String> assignedTo, String startDate, String endDate, boolean requireAiCount, String taskType) {
+    public Task(String title, String description, String priority, String remarks,
+                List<String> assignedTo, String startDate, String endDate,
+                boolean requireAiCount, String taskType) {
         this.title = title;
         this.description = description;
         this.priority = priority;
@@ -55,9 +67,93 @@ public class Task {
         this.status = "Pending";
         this.taskType = taskType;
         this.completedDateMillis = 0;
+
+        // Initialize per-user status tracking
+        this.userStatus = new HashMap<>();
+        this.userAiCount = new HashMap<>();
+        this.userCompletedDate = new HashMap<>();
+
+        // Set initial status for all assigned users
+        if (assignedTo != null) {
+            for (String email : assignedTo) {
+                this.userStatus.put(email, "Pending");
+                this.userAiCount.put(email, "");
+                this.userCompletedDate.put(email, 0L);
+            }
+        }
     }
 
-    // --- GETTERS & SETTERS ---
+    // --- NEW METHODS FOR PER-USER STATUS ---
+
+    public String getUserStatus(String userEmail) {
+        if (userStatus != null && userStatus.containsKey(userEmail)) {
+            return userStatus.get(userEmail);
+        }
+        return "Pending"; // Default if not found
+    }
+
+    public void setUserStatus(String userEmail, String status) {
+        if (userStatus == null) {
+            userStatus = new HashMap<>();
+        }
+        userStatus.put(userEmail, status);
+    }
+
+    public String getUserAiCount(String userEmail) {
+        if (userAiCount != null && userAiCount.containsKey(userEmail)) {
+            return userAiCount.get(userEmail);
+        }
+        return "";
+    }
+
+    public void setUserAiCount(String userEmail, String aiCount) {
+        if (userAiCount == null) {
+            userAiCount = new HashMap<>();
+        }
+        userAiCount.put(userEmail, aiCount);
+    }
+
+    public long getUserCompletedDate(String userEmail) {
+        if (userCompletedDate != null && userCompletedDate.containsKey(userEmail)) {
+            Long date = userCompletedDate.get(userEmail);
+            return date != null ? date : 0L;
+        }
+        return 0L;
+    }
+
+    public void setUserCompletedDate(String userEmail, long completedDate) {
+        if (userCompletedDate == null) {
+            userCompletedDate = new HashMap<>();
+        }
+        userCompletedDate.put(userEmail, completedDate);
+    }
+
+    // Getters and setters for the Maps
+    public Map<String, String> getUserStatus() {
+        return userStatus != null ? userStatus : new HashMap<>();
+    }
+
+    public void setUserStatus(Map<String, String> userStatus) {
+        this.userStatus = userStatus;
+    }
+
+    public Map<String, String> getUserAiCount() {
+        return userAiCount != null ? userAiCount : new HashMap<>();
+    }
+
+    public void setUserAiCount(Map<String, String> userAiCount) {
+        this.userAiCount = userAiCount;
+    }
+
+    public Map<String, Long> getUserCompletedDate() {
+        return userCompletedDate != null ? userCompletedDate : new HashMap<>();
+    }
+
+    public void setUserCompletedDate(Map<String, Long> userCompletedDate) {
+        this.userCompletedDate = userCompletedDate;
+    }
+
+    // --- EXISTING GETTERS & SETTERS (keep for compatibility) ---
 
     public String getId() {
         return id;
