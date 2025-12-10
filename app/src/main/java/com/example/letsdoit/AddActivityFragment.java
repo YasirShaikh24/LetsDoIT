@@ -1,3 +1,4 @@
+// src/main/java/com/example/letsdoit/AddActivityFragment.java
 package com.example.letsdoit;
 
 import android.app.DatePickerDialog;
@@ -32,14 +33,16 @@ import java.util.Locale;
 
 public class AddActivityFragment extends Fragment {
 
-    private TextInputEditText etTitle, etDescription, etRemarks, etStartDate, etEndDate;
+    private TextInputEditText etTitle, etDescription, etStartDate, etEndDate; // etRemarks removed
     private TextInputEditText etAssigneeDisplay;
-    private RadioGroup rgPriority;
+    // private RadioGroup rgPriority; // rgPriority removed
     private RadioGroup rgRequireAiCount;
     private RadioGroup rgTaskType;
+    private RadioGroup rgWeekDays; // NEW
     private Button btnSaveTask;
     private LinearLayout llAssignUserSection;
     private LinearLayout llDateRangeSection;
+    private LinearLayout llWeekDaysSection; // NEW
 
     private FirebaseFirestore db;
 
@@ -51,6 +54,9 @@ public class AddActivityFragment extends Fragment {
     private List<String> allUserDisplayNames = new ArrayList<>();
     // This list holds the actual User objects (excluding "All Team Members")
     private List<User> allUsers = new ArrayList<>();
+
+    // NEW: List to track selected days for permanent tasks
+    private List<String> selectedDays = new ArrayList<>();
 
     private static final String TAG = "AddActivityFragment";
     private final SimpleDateFormat dateFormat = new SimpleDateFormat("MMM dd, yyyy", Locale.US);
@@ -73,9 +79,7 @@ public class AddActivityFragment extends Fragment {
             loggedInUserRole = getArguments().getString(LoginActivity.EXTRA_USER_ROLE);
         }
 
-        if (!"admin".equals(loggedInUserRole)) {
-            selectedAssignees.add(loggedInUserEmail);
-        }
+        // Removed logic for user auto-assignment on onCreate, now handled dynamically in rgTaskType listener
 
         db = FirebaseFirestore.getInstance();
     }
@@ -87,8 +91,8 @@ public class AddActivityFragment extends Fragment {
 
         etTitle = view.findViewById(R.id.et_title);
         etDescription = view.findViewById(R.id.et_description);
-        etRemarks = view.findViewById(R.id.et_remarks);
-        rgPriority = view.findViewById(R.id.rg_priority);
+        // etRemarks removed
+        // rgPriority removed
         rgRequireAiCount = view.findViewById(R.id.rg_require_ai_count);
         btnSaveTask = view.findViewById(R.id.btn_save_task);
 
@@ -97,17 +101,11 @@ public class AddActivityFragment extends Fragment {
         etStartDate = view.findViewById(R.id.et_start_date);
         etEndDate = view.findViewById(R.id.et_end_date);
 
-        rgTaskType.setOnCheckedChangeListener((group, checkedId) -> {
-            if (checkedId == R.id.rb_additional) {
-                llDateRangeSection.setVisibility(View.VISIBLE);
-            } else {
-                llDateRangeSection.setVisibility(View.GONE);
-                etStartDate.setText("");
-                etEndDate.setText("");
-            }
-        });
+        llWeekDaysSection = view.findViewById(R.id.ll_week_days_section); // NEW
+        rgWeekDays = view.findViewById(R.id.rg_week_days); // NEW
 
-        llDateRangeSection.setVisibility(View.GONE);
+        setupTaskTypeListener(); // NEW method for cleaner logic
+        setupWeekDaysListener(); // NEW method for multi-select logic
 
         etStartDate.setOnClickListener(v -> showDatePicker(etStartDate));
         etEndDate.setOnClickListener(v -> showDatePicker(etEndDate));
@@ -115,18 +113,114 @@ public class AddActivityFragment extends Fragment {
         llAssignUserSection = view.findViewById(R.id.ll_assign_user_section);
         etAssigneeDisplay = view.findViewById(R.id.et_assigned_to_display);
 
+        // Assignment setup is now controlled by the task type listener below
         if ("admin".equals(loggedInUserRole)) {
-            llAssignUserSection.setVisibility(View.VISIBLE);
             loadUsersForAssignment();
             etAssigneeDisplay.setOnClickListener(v -> showMultiSelectUserDialog());
-        } else {
-            llAssignUserSection.setVisibility(View.GONE);
         }
+
+        // Initialize state to Permanent
+        rgTaskType.check(R.id.rb_permanent);
+        llDateRangeSection.setVisibility(View.GONE);
+        llAssignUserSection.setVisibility(View.GONE);
+        llWeekDaysSection.setVisibility(View.VISIBLE);
+        // Initial autoAssignAllUsers() will be handled by loadUsersForAssignment -> autoAssignAllUsers
 
         btnSaveTask.setOnClickListener(v -> saveTask());
 
         return view;
     }
+
+    private void setupTaskTypeListener() {
+        rgTaskType.setOnCheckedChangeListener((group, checkedId) -> {
+            boolean isPermanent = checkedId == R.id.rb_permanent;
+
+            // Date Range / Week Days visibility
+            llDateRangeSection.setVisibility(isPermanent ? View.GONE : View.VISIBLE);
+            llWeekDaysSection.setVisibility(isPermanent ? View.VISIBLE : View.GONE);
+            if (isPermanent) {
+                etStartDate.setText("");
+                etEndDate.setText("");
+            } else {
+                // Clear selected days if switching to Additional
+                clearSelectedDays();
+            }
+
+            // Assignee visibility/selection logic
+            if ("admin".equals(loggedInUserRole)) {
+                if (isPermanent) {
+                    // Permanent: Auto-assign to ALL and hide selection
+                    llAssignUserSection.setVisibility(View.GONE);
+                    // Force selectedAssignees to contain ALL user emails
+                    autoAssignAllUsers();
+                } else {
+                    // Additional: Show selection and CLEAR/RESET assignees (UPDATED LOGIC)
+                    llAssignUserSection.setVisibility(View.VISIBLE);
+                    selectedAssignees.clear(); // Clear assigned list
+                    updateAssigneeDisplay(); // Show "No users selected"
+                }
+            } else {
+                // Regular user: Always auto-assigned to themselves, so selection is always hidden.
+                llAssignUserSection.setVisibility(View.GONE);
+                selectedAssignees.clear();
+                selectedAssignees.add(loggedInUserEmail);
+            }
+        });
+    }
+
+    private void setupWeekDaysListener() {
+        // This implements multi-select by manually managing the 'selectedDays' list and
+        // toggling the checked state/RadioGroup logic manually.
+        for (int i = 0; i < rgWeekDays.getChildCount(); i++) {
+            RadioButton rb = (RadioButton) rgWeekDays.getChildAt(i);
+            rb.setOnClickListener(v -> {
+                RadioButton clickedRb = (RadioButton) v;
+                String day = clickedRb.getText().toString(); // e.g., "M", "T", "W"
+                String fullDayName = getFullDayName(day);
+
+                // Force toggle state and update list
+                if (selectedDays.contains(fullDayName)) {
+                    selectedDays.remove(fullDayName);
+                    clickedRb.setChecked(false);
+                } else {
+                    selectedDays.add(fullDayName);
+                    clickedRb.setChecked(true);
+                }
+
+                // Since we are inside a RadioGroup, clear all other checks and re-set the clicked state
+                // to make it behave like a multi-select visual component.
+                int id = clickedRb.getId();
+                rgWeekDays.clearCheck();
+                clickedRb.setId(id);
+                clickedRb.setChecked(selectedDays.contains(fullDayName));
+            });
+        }
+    }
+
+    private void clearSelectedDays() {
+        selectedDays.clear();
+        if (rgWeekDays != null) {
+            // Uncheck all buttons visually
+            for (int i = 0; i < rgWeekDays.getChildCount(); i++) {
+                RadioButton rb = (RadioButton) rgWeekDays.getChildAt(i);
+                rb.setChecked(false);
+            }
+        }
+    }
+
+    private String getFullDayName(String dayAbbr) {
+        switch (dayAbbr) {
+            case "M": return "Mon";
+            case "T": return "Tue";
+            case "W": return "Wed";
+            case "Th": return "Thu";
+            case "F": return "Fri";
+            case "Sa": return "Sat";
+            case "Su": return "Sun";
+            default: return "";
+        }
+    }
+
 
     private void showDatePicker(final TextInputEditText dateEditText) {
         final Calendar calendar = Calendar.getInstance();
@@ -164,12 +258,24 @@ public class AddActivityFragment extends Fragment {
                         String displayName = user.getDisplayName();
                         allUserDisplayNames.add(displayName);
                     }
-                    updateAssigneeDisplay();
+                    // Initial state is Permanent, so auto-assign all users.
+                    autoAssignAllUsers();
                 })
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Failed to load users for assignment: " + e.getMessage());
                     Toast.makeText(getContext(), "Could not load users for assignment.", Toast.LENGTH_SHORT).show();
+                    // Fallback to auto-assign all if list fails to load (might be empty)
+                    autoAssignAllUsers();
                 });
+    }
+
+    // NEW: Helper method to force selection of all users
+    private void autoAssignAllUsers() {
+        selectedAssignees.clear();
+        for (User user : allUsers) {
+            selectedAssignees.add(user.getEmail());
+        }
+        updateAssigneeDisplay(); // Update display to show "All Team Members"
     }
 
     private void showMultiSelectUserDialog() {
@@ -254,7 +360,7 @@ public class AddActivityFragment extends Fragment {
     private void updateAssigneeDisplay() {
         if (selectedAssignees.isEmpty()) {
             etAssigneeDisplay.setText("No users selected");
-        } else if (selectedAssignees.size() == allUsers.size()) {
+        } else if (selectedAssignees.size() == allUsers.size() && allUsers.size() > 0) {
             etAssigneeDisplay.setText("All Team Members");
         } else {
             List<String> displayNames = new ArrayList<>();
@@ -273,7 +379,8 @@ public class AddActivityFragment extends Fragment {
     private void saveTask() {
         String title = etTitle.getText().toString().trim();
         String description = etDescription.getText().toString().trim();
-        String remarks = etRemarks.getText().toString().trim();
+        String remarks = ""; // REMOVED: Default to empty string
+        String priority = "medium"; // REMOVED: Default to a fixed value
 
         int selectedTaskTypeId = rgTaskType.getCheckedRadioButtonId();
         if (selectedTaskTypeId == -1) {
@@ -285,10 +392,18 @@ public class AddActivityFragment extends Fragment {
 
         String startDate = "";
         String endDate = "";
+        List<String> finalSelectedDays = new ArrayList<>();
 
         if (taskType.equalsIgnoreCase("Additional")) {
             startDate = etStartDate.getText().toString().trim();
             endDate = etEndDate.getText().toString().trim();
+        } else {
+            // Permanent task validation
+            finalSelectedDays.addAll(selectedDays);
+            if (finalSelectedDays.isEmpty()) {
+                Toast.makeText(getContext(), "Please select at least one active day for the permanent task.", Toast.LENGTH_SHORT).show();
+                return;
+            }
         }
 
 
@@ -297,19 +412,14 @@ public class AddActivityFragment extends Fragment {
             return;
         }
 
+        // Admin assignment validation (for additional tasks, or if all users were somehow cleared for permanent)
         if ("admin".equals(loggedInUserRole) && selectedAssignees.isEmpty()) {
             Toast.makeText(getContext(), "Please assign the task to at least one user.", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        int selectedPriorityId = rgPriority.getCheckedRadioButtonId();
-        if (selectedPriorityId == -1) {
-            Toast.makeText(getContext(), "Please select a priority", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        RadioButton priorityButton = getView().findViewById(selectedPriorityId);
-        String priority = priorityButton.getText().toString().toLowerCase();
+        // Priority validation removed
+        // Remarks validation removed
 
         int selectedAiCountId = rgRequireAiCount.getCheckedRadioButtonId();
         boolean requireAiCount = (selectedAiCountId == R.id.rb_ai_count_yes);
@@ -317,11 +427,12 @@ public class AddActivityFragment extends Fragment {
         btnSaveTask.setEnabled(false);
         btnSaveTask.setText("Saving...");
 
-        saveTaskToFirestore(title, description, priority, remarks, selectedAssignees, startDate, endDate, requireAiCount, taskType);
+        saveTaskToFirestore(title, description, priority, remarks, selectedAssignees, startDate, endDate, requireAiCount, taskType, finalSelectedDays);
     }
 
-    private void saveTaskToFirestore(String title, String description, String priority, String remarks, List<String> assignedTo, String startDate, String endDate, boolean requireAiCount, String taskType) {
-        Task task = new Task(title, description, priority, remarks, assignedTo, startDate, endDate, requireAiCount, taskType);
+    private void saveTaskToFirestore(String title, String description, String priority, String remarks, List<String> assignedTo, String startDate, String endDate, boolean requireAiCount, String taskType, List<String> selectedDays) {
+        // Use the new constructor
+        Task task = new Task(title, description, priority, remarks, assignedTo, startDate, endDate, requireAiCount, taskType, selectedDays);
 
         db.collection("tasks")
                 .add(task)
@@ -352,19 +463,24 @@ public class AddActivityFragment extends Fragment {
     private void clearForm() {
         etTitle.setText("");
         etDescription.setText("");
-        etRemarks.setText("");
+        // etRemarks removed
         etStartDate.setText("");
         etEndDate.setText("");
-        rgPriority.clearCheck();
+        // rgPriority removed
 
-        rgTaskType.check(R.id.rb_permanent);
+        // Reset all components to Permanent state
+        rgTaskType.check(R.id.rb_permanent); // This triggers the listener
         llDateRangeSection.setVisibility(View.GONE);
+        llWeekDaysSection.setVisibility(View.VISIBLE);
 
         rgRequireAiCount.check(R.id.rb_ai_count_no);
 
+        clearSelectedDays(); // Clear selected days list and visuals
+
         if ("admin".equals(loggedInUserRole)) {
-            selectedAssignees.clear();
-            updateAssigneeDisplay();
+            // Restore default state for admin: Permanent=All Users
+            autoAssignAllUsers();
+            llAssignUserSection.setVisibility(View.GONE);
         }
     }
 }

@@ -33,6 +33,9 @@ public class Task {
     private String endDate;
     private String taskType;
 
+    // NEW FIELD: Stores selected days (e.g., ["mon", "wed", "fri"])
+    private List<String> selectedDays;
+
     private boolean requireAiCount;
     private String aiCountValue; // Keep for backward compatibility
 
@@ -49,6 +52,7 @@ public class Task {
         this.userStatus = new HashMap<>();
         this.userAiCount = new HashMap<>();
         this.userCompletedDate = new HashMap<>();
+        this.selectedDays = new ArrayList<>(); // Initialize new field
     }
 
     public Task(String title, String description, String priority, String remarks,
@@ -72,6 +76,7 @@ public class Task {
         this.userStatus = new HashMap<>();
         this.userAiCount = new HashMap<>();
         this.userCompletedDate = new HashMap<>();
+        this.selectedDays = new ArrayList<>(); // Initialize new field
 
         // Set initial status for all assigned users
         if (assignedTo != null) {
@@ -82,6 +87,25 @@ public class Task {
             }
         }
     }
+
+    // NEW CONSTRUCTOR for the new logic
+    public Task(String title, String description, String priority, String remarks,
+                List<String> assignedTo, String startDate, String endDate,
+                boolean requireAiCount, String taskType, List<String> selectedDays) {
+        this(title, description, priority, remarks, assignedTo, startDate, endDate, requireAiCount, taskType);
+        this.selectedDays = selectedDays != null ? selectedDays : new ArrayList<>();
+    }
+
+
+    // --- NEW GETTER & SETTER for selectedDays ---
+    public List<String> getSelectedDays() {
+        return selectedDays != null ? selectedDays : new ArrayList<>();
+    }
+
+    public void setSelectedDays(List<String> selectedDays) {
+        this.selectedDays = selectedDays;
+    }
+
 
     // --- NEW METHODS FOR PER-USER STATUS ---
 
