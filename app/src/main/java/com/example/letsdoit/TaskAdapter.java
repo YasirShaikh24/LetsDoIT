@@ -55,161 +55,57 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
     public void onBindViewHolder(@NonNull TaskViewHolder holder, int position) {
         Task task = taskList.get(position);
 
-        // Title and Description
+        // --- 1. Title and Description ---
         holder.tvTitle.setText(task.getTitle() != null ? task.getTitle() : "No Title");
         holder.tvDescription.setText(task.getDescription() != null ? task.getDescription() : "No Description");
+        holder.tvDescription.setVisibility(View.VISIBLE);
 
-        // Priority
-        String priority = task.getPriority() != null ? task.getPriority().toLowerCase() : "low";
-        int priorityColor;
-        String priorityText;
+        // Hide priority stub
+        holder.tvPriority.setVisibility(View.GONE);
 
-        switch (priority) {
-            case "high":
-                priorityColor = Color.parseColor("#EF5350");
-                priorityText = "HIGH";
-                break;
-            case "medium":
-                priorityColor = Color.parseColor("#FFA726");
-                priorityText = "MEDIUM";
-                break;
-            case "low":
-            default:
-                priorityColor = Color.parseColor("#66BB6A");
-                priorityText = "LOW";
-                break;
-        }
+        // --- 2. Status (Global Status Logic: Done/Not Done) ---
+        // Status is determined by checking if ANY user has completed the task
+        String taskStatus = task.getStatus() != null ? task.getStatus().toLowerCase() : "pending";
+        int statusColor;
+        String statusDisplay;
 
-        holder.tvPriority.setText(priorityText);
-        holder.tvPriority.setBackgroundTintList(android.content.res.ColorStateList.valueOf(priorityColor));
-        holder.priorityStrip.setBackgroundColor(priorityColor);
-
-        // ADMIN VIEW: Show statistics instead of single status
-        if ("admin".equals(loggedInUserRole)) {
-            holder.tvStatus.setVisibility(View.GONE);
-            holder.llStatusStats.setVisibility(View.VISIBLE);
-
-            // Calculate statistics
-            int assigned = task.getAssignedTo().size();
-            int completed = 0;
-            int inProgress = 0;
-            int pending = 0;
-
-            Map<String, String> userStatusMap = task.getUserStatus();
-            for (String email : task.getAssignedTo()) {
-                String userStatus = userStatusMap.get(email);
-                if (userStatus == null) userStatus = "Pending";
-
-                switch (userStatus.toLowerCase()) {
-                    case "completed":
-                        completed++;
-                        break;
-                    case "in progress":
-                        inProgress++;
-                        break;
-                    case "pending":
-                    default:
-                        pending++;
-                        break;
-                }
-            }
-
-            // Display statistics
-            holder.tvAssignedStat.setText("Assigned: " + assigned);
-            holder.tvCompletedStat.setText("Completed: " + completed);
-            holder.tvInProgressStat.setText("In Progress: " + inProgress);
-            holder.tvPendingStat.setText("Pending: " + pending);
-
+        if (taskStatus.equals("completed")) {
+            statusColor = Color.parseColor("#66BB6A"); // Green
+            statusDisplay = "DONE";
         } else {
-            // USER VIEW: Show single status
-            holder.tvStatus.setVisibility(View.VISIBLE);
-            holder.llStatusStats.setVisibility(View.GONE);
-
-            String status = task.getStatus().toLowerCase();
-            int statusColor;
-            String statusDisplay;
-
-            switch (status) {
-                case "pending":
-                    statusColor = Color.parseColor("#FFA726");
-                    statusDisplay = "PENDING";
-                    break;
-                case "in progress":
-                    statusColor = Color.parseColor("#42A5F5");
-                    statusDisplay = "IN PROGRESS";
-                    break;
-                case "completed":
-                    statusColor = Color.parseColor("#66BB6A");
-                    statusDisplay = "COMPLETED";
-                    break;
-                default:
-                    statusColor = Color.parseColor("#9E9E9E");
-                    statusDisplay = "UNKNOWN";
-            }
-
-            holder.tvStatus.setText(statusDisplay);
-            holder.tvStatus.setBackgroundTintList(android.content.res.ColorStateList.valueOf(statusColor));
+            statusColor = Color.parseColor("#FFA726"); // Orange/Yellow
+            statusDisplay = "NOT DONE";
         }
 
-        // --- AI Count Section ---
+        holder.tvStatus.setText(statusDisplay);
+        holder.tvStatus.setBackgroundTintList(android.content.res.ColorStateList.valueOf(statusColor));
+        holder.tvStatus.setVisibility(View.VISIBLE);
+
+        // Hide admin stats layout (This was an unnecessary stub for a removed layout)
+        // holder.llStatusStats.setVisibility(View.GONE);
+
+
+        // --- 3. AI Count Section ---
         if (task.isRequireAiCount()) {
             holder.cardAiCount.setVisibility(View.VISIBLE);
 
-            if ("user".equals(loggedInUserRole)) {
-                // USER VIEW: Show their own AI count
-                String aiCountValue = task.getUserAiCount(loggedInUserEmail);
-                String userStatus = task.getUserStatus(loggedInUserEmail);
+            // Use the globally resolved AI count (which pulls from the user who completed it)
+            String aiCountValue = task.getAiCountValue();
 
-                if (aiCountValue != null && !aiCountValue.isEmpty()) {
-                    holder.tvAiCount.setText("🔢 AI Count: " + aiCountValue);
-                    holder.cardAiCount.setCardBackgroundColor(Color.parseColor("#E8F5E9"));
-                    holder.tvAiCount.setTextColor(Color.parseColor("#2E7D32"));
-                } else if (userStatus != null && userStatus.equalsIgnoreCase("Completed")) {
-                    // Task is completed but AI count is missing (shouldn't happen, but handle gracefully)
-                    holder.tvAiCount.setText("🔢 AI Count: Not recorded");
-                    holder.cardAiCount.setCardBackgroundColor(Color.parseColor("#FFF3E0"));
-                    holder.tvAiCount.setTextColor(Color.parseColor("#E65100"));
-                } else {
-                    holder.tvAiCount.setText("🔢 AI Count: Required (Not submitted)");
-                    holder.cardAiCount.setCardBackgroundColor(Color.parseColor("#FFF3E0"));
-                    holder.tvAiCount.setTextColor(Color.parseColor("#E65100"));
-                }
+            if (aiCountValue != null && !aiCountValue.isEmpty()) {
+                holder.tvAiCount.setText("🔢 AI Count: " + aiCountValue);
+                holder.cardAiCount.setCardBackgroundColor(Color.parseColor("#E8F5E9"));
+                holder.tvAiCount.setTextColor(Color.parseColor("#2E7D32"));
             } else {
-                // ADMIN VIEW: Show list of submitted AI counts
-                Map<String, String> userAiCountMap = task.getUserAiCount();
-                List<String> submittedCounts = new ArrayList<>();
-                int required = task.getAssignedTo().size();
-
-                for (String email : task.getAssignedTo()) {
-                    String aiCount = userAiCountMap.get(email);
-                    if (aiCount != null && !aiCount.isEmpty()) {
-                        submittedCounts.add(aiCount);
-                    }
-                }
-
-                String displayCounts = submittedCounts.isEmpty() ? "None submitted" : String.join(", ", submittedCounts);
-
-                holder.tvAiCount.setText("🔢 AI Count: " + displayCounts);
-
-                if (submittedCounts.size() == required) {
-                    holder.cardAiCount.setCardBackgroundColor(Color.parseColor("#E8F5E9")); // Light Green
-                    holder.tvAiCount.setTextColor(Color.parseColor("#2E7D32")); // Dark Green
-                } else if (submittedCounts.isEmpty()) {
-                    // Gray/default background when nothing is submitted
-                    holder.cardAiCount.setCardBackgroundColor(Color.parseColor("#F5F5F5"));
-                    holder.tvAiCount.setTextColor(Color.parseColor("#9E9E9E"));
-                } else {
-                    // Orange/Yellow when some, but not all, are submitted
-                    holder.cardAiCount.setCardBackgroundColor(Color.parseColor("#FFF3E0"));
-                    holder.tvAiCount.setTextColor(Color.parseColor("#E65100"));
-                }
+                holder.tvAiCount.setText("🔢 AI Count: Required (Not submitted)");
+                holder.cardAiCount.setCardBackgroundColor(Color.parseColor("#FFF3E0"));
+                holder.tvAiCount.setTextColor(Color.parseColor("#E65100"));
             }
         } else {
-            // Task does not require AI Count
             holder.cardAiCount.setVisibility(View.GONE);
         }
 
-        // --- Date Range Section (Moved after AI Count) ---
+        // --- 4. Date Range Section (Only for Additional Task Type) ---
         if (task.getTaskType() != null && task.getTaskType().equalsIgnoreCase("additional")) {
             String startDate = task.getStartDate();
             String endDate = task.getEndDate();
@@ -228,7 +124,7 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
             holder.layoutDateRange.setVisibility(View.GONE);
         }
 
-        // Remarks
+        // --- 5. Remarks, Timestamp, Files ---
         String remarks = task.getRemarks();
         if (remarks != null && !remarks.isEmpty()) {
             holder.tvRemarks.setVisibility(View.VISIBLE);
@@ -237,19 +133,14 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
             holder.tvRemarks.setVisibility(View.GONE);
         }
 
-        // Timestamp
+        // Timestamp (Creation Date)
         SimpleDateFormat sdf = new SimpleDateFormat("MMM dd, yyyy", Locale.getDefault());
         holder.tvTimestamp.setText(sdf.format(new Date(task.getTimestamp())));
 
-        // Files
-        if (!task.getFileUrls().isEmpty()) {
-            holder.tvFiles.setVisibility(View.VISIBLE);
-            holder.tvFiles.setText("📎 " + task.getFileUrls().size());
-        } else {
-            holder.tvFiles.setVisibility(View.GONE);
-        }
+        // Files - Assuming they should remain hidden based on new layout
+        holder.tvFiles.setVisibility(View.GONE);
 
-        // Admin Actions (Edit/Delete Buttons)
+        // --- 6. Admin Actions (Edit/Delete Buttons) ---
         if ("admin".equals(loggedInUserRole)) {
             holder.llAdminActions.setVisibility(View.VISIBLE);
 
@@ -268,10 +159,8 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
             holder.llAdminActions.setVisibility(View.GONE);
         }
 
-        // *** FIX: Card Click Logic - Enable for both Admin and User ***
-        // Admin needs to click to open the Task Review Dialog (handled in ViewActivityFragment.java)
-        // User needs to click to open the Task Detail/Update Dialog (handled in ViewActivityFragment.java)
-        if ("user".equals(loggedInUserRole) || "admin".equals(loggedInUserRole)) {
+        // --- 7. Card Click Logic (Admin: Do Nothing, User: Open Dialog) ---
+        if ("user".equals(loggedInUserRole)) {
             holder.cardView.setOnClickListener(v -> {
                 if (listener != null) {
                     listener.onTaskStatusClick(task, position);
@@ -280,6 +169,7 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
             holder.cardView.setClickable(true);
             holder.cardView.setFocusable(true);
         } else {
+            // Admin: Do nothing (as requested)
             holder.cardView.setOnClickListener(null);
             holder.cardView.setClickable(false);
             holder.cardView.setFocusable(false);
@@ -293,7 +183,6 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
 
     static class TaskViewHolder extends RecyclerView.ViewHolder {
         CardView cardView;
-        View priorityStrip;
         TextView tvTitle, tvDescription, tvPriority, tvStatus;
         TextView tvTimestamp, tvFiles, tvRemarks, tvDateRange, tvAiCount;
         CardView cardAiCount;
@@ -301,14 +190,13 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
         ImageButton btnEditTask, btnDeleteTask;
         LinearLayout llAdminActions;
 
-        // Admin statistics views
-        LinearLayout llStatusStats;
-        TextView tvAssignedStat, tvCompletedStat, tvInProgressStat, tvPendingStat;
+        // The following fields were removed because the corresponding views no longer exist in item_task.xml:
+        // LinearLayout llStatusStats;
+        // TextView tvAssignedStat, tvCompletedStat, tvInProgressStat, tvPendingStat;
 
         public TaskViewHolder(@NonNull View itemView) {
             super(itemView);
             cardView = itemView.findViewById(R.id.card_view);
-            priorityStrip = itemView.findViewById(R.id.priority_strip);
             tvTitle = itemView.findViewById(R.id.tv_task_title);
             tvDescription = itemView.findViewById(R.id.tv_task_description);
             tvPriority = itemView.findViewById(R.id.tv_task_priority);
@@ -325,11 +213,7 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
             btnEditTask = itemView.findViewById(R.id.btn_edit_task);
             btnDeleteTask = itemView.findViewById(R.id.btn_delete_task);
 
-            llStatusStats = itemView.findViewById(R.id.ll_status_stats);
-            tvAssignedStat = itemView.findViewById(R.id.tv_assigned_stat);
-            tvCompletedStat = itemView.findViewById(R.id.tv_completed_stat);
-            tvInProgressStat = itemView.findViewById(R.id.tv_in_progress_stat);
-            tvPendingStat = itemView.findViewById(R.id.tv_pending_stat);
+            // Removed references to the deleted admin stats views to fix the compilation error
         }
     }
 }

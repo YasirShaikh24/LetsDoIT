@@ -60,26 +60,6 @@
                     android:layout_height="44dp"
                     app:cardCornerRadius="22dp"
                     app:cardElevation="2dp"
-                    android:layout_marginEnd="10dp"
-                    app:cardBackgroundColor="@color/background_input">
-
-                    <ImageButton
-                        android:id="@+id/btn_search_toggle"
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:background="?attr/selectableItemBackgroundBorderless"
-                        android:src="@drawable/ic_search"
-                        android:scaleType="centerInside"
-                        android:padding="10dp"
-                        android:tint="@color/primary_purple"
-                        android:contentDescription="Search Tasks"/>
-                </androidx.cardview.widget.CardView>
-
-                <androidx.cardview.widget.CardView
-                    android:layout_width="44dp"
-                    android:layout_height="44dp"
-                    app:cardCornerRadius="22dp"
-                    app:cardElevation="2dp"
                     app:cardBackgroundColor="@color/primary_purple">
 
                     <ImageButton
@@ -100,7 +80,6 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:hint="Search tasks or users..."
-                android:visibility="gone"
                 android:layout_marginBottom="16dp"
                 app:boxCornerRadiusTopStart="12dp"
                 app:boxCornerRadiusTopEnd="12dp"
@@ -124,7 +103,7 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center"
-                android:weightSum="4">
+                android:weightSum="2">
 
                 <RadioGroup
                     android:id="@+id/rg_status_filter"
@@ -133,13 +112,26 @@
                     android:orientation="horizontal">
 
                     <RadioButton
-                        android:id="@+id/rb_filter_all"
+                        android:id="@+id/rb_filter_done"
                         android:layout_width="0dp"
                         android:layout_weight="1"
                         android:layout_height="36dp"
-                        android:text="All"
+                        android:text="Done"
                         android:paddingHorizontal="4dp"
                         android:layout_marginEnd="4dp"
+                        android:background="@drawable/radio_button_selector"
+                        android:button="@null"
+                        android:gravity="center"
+                        android:textSize="13sp"
+                        android:textColor="@color/radio_button_text_selector"/>
+
+                    <RadioButton
+                        android:id="@+id/rb_filter_not_done"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="36dp"
+                        android:text="Not Done"
+                        android:paddingHorizontal="4dp"
                         android:background="@drawable/radio_button_selector"
                         android:button="@null"
                         android:gravity="center"
@@ -147,46 +139,6 @@
                         android:checked="true"
                         android:textColor="@color/radio_button_text_selector"/>
 
-                    <RadioButton
-                        android:id="@+id/rb_filter_pending"
-                        android:layout_width="0dp"
-                        android:layout_weight="1"
-                        android:layout_height="36dp"
-                        android:text="Pending"
-                        android:paddingHorizontal="4dp"
-                        android:layout_marginEnd="4dp"
-                        android:background="@drawable/radio_button_selector"
-                        android:button="@null"
-                        android:gravity="center"
-                        android:textSize="13sp"
-                        android:textColor="@color/radio_button_text_selector"/>
-
-                    <RadioButton
-                        android:id="@+id/rb_filter_in_progress"
-                        android:layout_width="0dp"
-                        android:layout_weight="1"
-                        android:layout_height="36dp"
-                        android:text="In Progress"
-                        android:paddingHorizontal="4dp"
-                        android:layout_marginEnd="4dp"
-                        android:background="@drawable/radio_button_selector"
-                        android:button="@null"
-                        android:gravity="center"
-                        android:textSize="13sp"
-                        android:textColor="@color/radio_button_text_selector"/>
-
-                    <RadioButton
-                        android:id="@+id/rb_filter_completed"
-                        android:layout_width="0dp"
-                        android:layout_weight="1"
-                        android:layout_height="36dp"
-                        android:text="Completed"
-                        android:paddingHorizontal="4dp"
-                        android:background="@drawable/radio_button_selector"
-                        android:button="@null"
-                        android:gravity="center"
-                        android:textSize="13sp"
-                        android:textColor="@color/radio_button_text_selector"/>
                 </RadioGroup>
             </LinearLayout>
         </LinearLayout>

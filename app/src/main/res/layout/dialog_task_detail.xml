@@ -12,7 +12,6 @@
         android:orientation="vertical"
         android:padding="24dp">
 
-        <!-- Task Title -->
         <TextView
             android:id="@+id/tv_dialog_title"
             android:layout_width="match_parent"
@@ -21,9 +20,18 @@
             android:textSize="22sp"
             android:textStyle="bold"
             android:textColor="@color/text_primary"
-            android:layout_marginBottom="12dp"/>
+            android:layout_marginBottom="4dp"/>
 
-        <!-- Task Description -->
+        <TextView
+            android:id="@+id/tv_current_day"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="📅 Thursday"
+            android:textSize="14sp"
+            android:textColor="@color/primary_purple"
+            android:layout_marginBottom="12dp"
+            android:fontFamily="sans-serif-medium"/>
+
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -44,7 +52,6 @@
             android:padding="12dp"
             android:layout_marginBottom="16dp"/>
 
-        <!-- Dates -->
         <TextView
             android:id="@+id/tv_dialog_dates"
             android:layout_width="match_parent"
@@ -55,7 +62,6 @@
             android:layout_marginBottom="8dp"
             android:visibility="gone"/>
 
-        <!-- Remarks -->
         <TextView
             android:id="@+id/tv_dialog_remarks"
             android:layout_width="match_parent"
@@ -66,14 +72,12 @@
             android:layout_marginBottom="16dp"
             android:visibility="gone"/>
 
-        <!-- Divider -->
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
             android:background="#DDDDDD"
             android:layout_marginBottom="16dp"/>
 
-        <!-- AI Count Input Section -->
         <LinearLayout
             android:id="@+id/ll_ai_count_section"
             android:layout_width="match_parent"
@@ -109,7 +113,6 @@
 
         </LinearLayout>
 
-        <!-- Status Selection -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -127,36 +130,24 @@
             android:layout_marginBottom="24dp">
 
             <RadioButton
-                android:id="@+id/rb_dialog_pending"
+                android:id="@+id/rb_dialog_not_done"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="⏱️ Pending"
+                android:text="❌ Not Done"
                 android:textSize="16sp"
                 android:padding="12dp"
                 android:layout_marginBottom="8dp"
                 android:background="@drawable/radio_button_selector"
                 android:button="@null"
                 android:textColor="@color/radio_button_text_selector"
-                android:drawablePadding="8dp"/>
+                android:drawablePadding="8dp"
+                android:checked="true"/>
 
             <RadioButton
-                android:id="@+id/rb_dialog_in_progress"
+                android:id="@+id/rb_dialog_done"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="🔧 In Progress"
-                android:textSize="16sp"
-                android:padding="12dp"
-                android:layout_marginBottom="8dp"
-                android:background="@drawable/radio_button_selector"
-                android:button="@null"
-                android:textColor="@color/radio_button_text_selector"
-                android:drawablePadding="8dp"/>
-
-            <RadioButton
-                android:id="@+id/rb_dialog_completed"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="✅ Completed"
+                android:text="✅ Done"
                 android:textSize="16sp"
                 android:padding="12dp"
                 android:background="@drawable/radio_button_selector"
@@ -165,7 +156,6 @@
                 android:drawablePadding="8dp"/>
         </RadioGroup>
 
-        <!-- Action Buttons -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

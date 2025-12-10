@@ -16,15 +16,15 @@ public class Task {
 
     private List<String> assignedTo;
 
-    // NEW: Per-user status tracking
+    // Per-user status tracking
     // Map: email -> status (Pending/In Progress/Completed)
     private Map<String, String> userStatus;
 
-    // NEW: Per-user AI count tracking
+    // Per-user AI count tracking
     // Map: email -> aiCountValue
     private Map<String, String> userAiCount;
 
-    // NEW: Per-user completion time tracking
+    // Per-user completion time tracking
     // Map: email -> completedDateMillis
     private Map<String, Long> userCompletedDate;
 
@@ -33,7 +33,7 @@ public class Task {
     private String endDate;
     private String taskType;
 
-    // NEW FIELD: Stores selected days (e.g., ["mon", "wed", "fri"])
+    // Stores selected days (e.g., ["mon", "wed", "fri"])
     private List<String> selectedDays;
 
     private boolean requireAiCount;
@@ -88,7 +88,7 @@ public class Task {
         }
     }
 
-    // NEW CONSTRUCTOR for the new logic
+    // Constructor used by AddActivityFragment
     public Task(String title, String description, String priority, String remarks,
                 List<String> assignedTo, String startDate, String endDate,
                 boolean requireAiCount, String taskType, List<String> selectedDays) {
@@ -97,7 +97,7 @@ public class Task {
     }
 
 
-    // --- NEW GETTER & SETTER for selectedDays ---
+    // --- GETTER & SETTER for selectedDays ---
     public List<String> getSelectedDays() {
         return selectedDays != null ? selectedDays : new ArrayList<>();
     }
@@ -107,12 +107,20 @@ public class Task {
     }
 
 
-    // --- NEW METHODS FOR PER-USER STATUS ---
+    // --- METHODS FOR PER-USER STATUS ---
 
     public String getUserStatus(String userEmail) {
+        // Implementation of the "One Completes, All Complete" display rule:
+        // Check if ANY assigned user has completed the task globally.
+        if (userStatus != null && userStatus.containsValue("Completed")) {
+            return "Completed";
+        }
+
+        // Otherwise, return the specific user's status (or default to Pending if entry not found)
         if (userStatus != null && userStatus.containsKey(userEmail)) {
             return userStatus.get(userEmail);
         }
+
         return "Pending"; // Default if not found
     }
 
@@ -124,6 +132,22 @@ public class Task {
     }
 
     public String getUserAiCount(String userEmail) {
+        // When checking AI count, return the AI count of the FIRST user who completed the task
+        // OR the AI count of the current user if they are the one who completed it.
+
+        // Find the AI count of the user who marked it complete
+        if (userStatus != null && userStatus.containsValue("Completed")) {
+            for (Map.Entry<String, String> entry : userStatus.entrySet()) {
+                if (entry.getValue().equalsIgnoreCase("Completed")) {
+                    String completedUserEmail = entry.getKey();
+                    if (userAiCount != null && userAiCount.containsKey(completedUserEmail)) {
+                        return userAiCount.get(completedUserEmail);
+                    }
+                }
+            }
+        }
+
+        // If no one has completed it, return the current user's draft AI count (if they had one)
         if (userAiCount != null && userAiCount.containsKey(userEmail)) {
             return userAiCount.get(userEmail);
         }
@@ -138,6 +162,19 @@ public class Task {
     }
 
     public long getUserCompletedDate(String userEmail) {
+        // Returns the completion date of the first user who completed the task
+        if (userStatus != null && userStatus.containsValue("Completed")) {
+            for (Map.Entry<String, String> entry : userStatus.entrySet()) {
+                if (entry.getValue().equalsIgnoreCase("Completed")) {
+                    String completedUserEmail = entry.getKey();
+                    if (userCompletedDate != null && userCompletedDate.containsKey(completedUserEmail)) {
+                        Long date = userCompletedDate.get(completedUserEmail);
+                        return date != null ? date : 0L;
+                    }
+                }
+            }
+        }
+
         if (userCompletedDate != null && userCompletedDate.containsKey(userEmail)) {
             Long date = userCompletedDate.get(userEmail);
             return date != null ? date : 0L;
@@ -212,6 +249,10 @@ public class Task {
     }
 
     public String getStatus() {
+        // Check for global completion
+        if (userStatus != null && userStatus.containsValue("Completed")) {
+            return "Completed";
+        }
         return status != null ? status : "Pending";
     }
 
@@ -277,6 +318,17 @@ public class Task {
     }
 
     public String getAiCountValue() {
+        // Return the AI count of the user who marked it complete
+        if (userStatus != null && userStatus.containsValue("Completed")) {
+            for (Map.Entry<String, String> entry : userStatus.entrySet()) {
+                if (entry.getValue().equalsIgnoreCase("Completed")) {
+                    String completedUserEmail = entry.getKey();
+                    if (userAiCount != null && userAiCount.containsKey(completedUserEmail)) {
+                        return userAiCount.get(completedUserEmail);
+                    }
+                }
+            }
+        }
         return aiCountValue != null ? aiCountValue : "";
     }
 
@@ -293,6 +345,18 @@ public class Task {
     }
 
     public long getCompletedDateMillis() {
+        // Return the completion date of the first user who completed the task
+        if (userStatus != null && userStatus.containsValue("Completed")) {
+            for (Map.Entry<String, String> entry : userStatus.entrySet()) {
+                if (entry.getValue().equalsIgnoreCase("Completed")) {
+                    String completedUserEmail = entry.getKey();
+                    if (userCompletedDate != null && userCompletedDate.containsKey(completedUserEmail)) {
+                        Long date = userCompletedDate.get(completedUserEmail);
+                        return date != null ? date : 0L;
+                    }
+                }
+            }
+        }
         return completedDateMillis;
     }
 
