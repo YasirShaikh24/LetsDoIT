@@ -29,7 +29,6 @@ public class MainActivity extends AppCompatActivity {
         } else if (displayName != null) {
             welcomeMessage = "Welcome " + displayName;
         } else {
-            // Updated fallback from "Home / Dashboard" to just "Dashboard"
             welcomeMessage = "Dashboard";
         }
 
@@ -45,7 +44,8 @@ public class MainActivity extends AppCompatActivity {
             int itemId = item.getItemId();
 
             if (itemId == R.id.navigation_home) {
-                selectedFragment = HomeFragment.newInstance(welcomeMessage);
+                // UPDATED: Pass all required parameters to HomeFragment
+                selectedFragment = HomeFragment.newInstance(welcomeMessage, loggedInUserEmail, loggedInUserRole, displayName);
             } else if (itemId == R.id.navigation_add_activity) {
                 // Only admin can access this
                 if ("admin".equals(loggedInUserRole)) {

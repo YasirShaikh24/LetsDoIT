@@ -8,7 +8,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.widget.CalendarView;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -17,7 +16,6 @@ import androidx.fragment.app.DialogFragment;
 
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
-import java.util.Date;
 import java.util.Locale;
 
 public class CalendarDialogFragment extends DialogFragment {
@@ -32,11 +30,18 @@ public class CalendarDialogFragment extends DialogFragment {
 
     public static CalendarDialogFragment newInstance(@Nullable Long initialDateMillis) {
         CalendarDialogFragment fragment = new CalendarDialogFragment();
+        Bundle args = new Bundle();
+
         if (initialDateMillis != null && initialDateMillis != -1) {
-            Bundle args = new Bundle();
             args.putLong("initial_date", initialDateMillis);
-            fragment.setArguments(args);
+            args.putBoolean("has_initial_date", true);
+        } else {
+            // If no initial date or -1, use today
+            args.putLong("initial_date", System.currentTimeMillis());
+            args.putBoolean("has_initial_date", false);
         }
+
+        fragment.setArguments(args);
         return fragment;
     }
 
@@ -64,22 +69,27 @@ public class CalendarDialogFragment extends DialogFragment {
 
         calendarView = view.findViewById(R.id.calendar_view);
 
-        // Set max date to today
+        // Set max date to today (prevent future date selection)
         Calendar today = Calendar.getInstance();
+        today.set(Calendar.HOUR_OF_DAY, 23);
+        today.set(Calendar.MINUTE, 59);
+        today.set(Calendar.SECOND, 59);
+        today.set(Calendar.MILLISECOND, 999);
         calendarView.setMaxDate(today.getTimeInMillis());
 
-        // Use initial date argument if available to show the previously selected date
-        if (getArguments() != null && getArguments().containsKey("initial_date")) {
-            long initialDate = getArguments().getLong("initial_date");
-            calendarView.setDate(initialDate, false, false);
+        // Set the calendar to show the initial date
+        if (getArguments() != null) {
+            long initialDate = getArguments().getLong("initial_date", System.currentTimeMillis());
+            calendarView.setDate(initialDate, false, true);
         }
 
+        // Handle date selection
         calendarView.setOnDateChangeListener((view1, year, month, dayOfMonth) -> {
             Calendar selected = Calendar.getInstance();
             selected.set(year, month, dayOfMonth, 0, 0, 0);
             selected.set(Calendar.MILLISECOND, 0);
 
-            // Prevent future date selection
+            // Double-check: Prevent future date selection
             Calendar todayCheck = Calendar.getInstance();
             todayCheck.set(Calendar.HOUR_OF_DAY, 0);
             todayCheck.set(Calendar.MINUTE, 0);
@@ -87,14 +97,16 @@ public class CalendarDialogFragment extends DialogFragment {
             todayCheck.set(Calendar.MILLISECOND, 0);
 
             if (selected.after(todayCheck)) {
-                selected = todayCheck;
                 Toast.makeText(getContext(), "Cannot select future dates", Toast.LENGTH_SHORT).show();
+                return;
             }
 
+            // Notify listener and dismiss
             if (listener != null) {
                 String formattedDate = dateFormat.format(selected.getTime());
                 listener.onDateSelected(selected.getTimeInMillis(), formattedDate);
             }
+
             dismiss();
         });
     }
