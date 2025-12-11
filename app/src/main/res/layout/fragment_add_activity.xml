@@ -77,28 +77,116 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Select Active Days (Weekly)"
+                android:text="Select Active Days (Multiple Selection)"
                 android:textSize="14sp"
                 android:textColor="@color/text_secondary"
-                android:layout_marginBottom="8dp"/>
+                android:layout_marginBottom="12dp"/>
 
-            <RadioGroup
-                android:id="@+id/rg_week_days"
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:paddingVertical="4dp">
+                android:gravity="center">
 
-                <RadioButton android:id="@+id/rb_mon" style="@style/DayRadioButton" android:text="M"/>
-                <RadioButton android:id="@+id/rb_tue" style="@style/DayRadioButton" android:text="T"/>
-                <RadioButton android:id="@+id/rb_wed" style="@style/DayRadioButton" android:text="W"/>
-                <RadioButton android:id="@+id/rb_thu" style="@style/DayRadioButton" android:text="Th"/>
-                <RadioButton android:id="@+id/rb_fri" style="@style/DayRadioButton" android:text="F"/>
-                <RadioButton android:id="@+id/rb_sat" style="@style/DayRadioButton" android:text="Sa"/>
-                <RadioButton android:id="@+id/rb_sun" style="@style/DayRadioButton" android:text="Su"/>
+                <CheckBox
+                    android:id="@+id/cb_monday"
+                    android:layout_width="0dp"
+                    android:layout_height="48dp"
+                    android:layout_weight="1"
+                    android:text="M"
+                    android:gravity="center"
+                    android:button="@null"
+                    android:background="@drawable/checkbox_day_selector"
+                    android:textColor="@color/checkbox_text_color"
+                    android:textStyle="bold"
+                    android:textSize="14sp"
+                    android:layout_margin="2dp"/>
 
-            </RadioGroup>
+                <CheckBox
+                    android:id="@+id/cb_tuesday"
+                    android:layout_width="0dp"
+                    android:layout_height="48dp"
+                    android:layout_weight="1"
+                    android:text="T"
+                    android:gravity="center"
+                    android:button="@null"
+                    android:background="@drawable/checkbox_day_selector"
+                    android:textColor="@color/checkbox_text_color"
+                    android:textStyle="bold"
+                    android:textSize="14sp"
+                    android:layout_margin="2dp"/>
+
+                <CheckBox
+                    android:id="@+id/cb_wednesday"
+                    android:layout_width="0dp"
+                    android:layout_height="48dp"
+                    android:layout_weight="1"
+                    android:text="W"
+                    android:gravity="center"
+                    android:button="@null"
+                    android:background="@drawable/checkbox_day_selector"
+                    android:textColor="@color/checkbox_text_color"
+                    android:textStyle="bold"
+                    android:textSize="14sp"
+                    android:layout_margin="2dp"/>
+
+                <CheckBox
+                    android:id="@+id/cb_thursday"
+                    android:layout_width="0dp"
+                    android:layout_height="48dp"
+                    android:layout_weight="1"
+                    android:text="Th"
+                    android:gravity="center"
+                    android:button="@null"
+                    android:background="@drawable/checkbox_day_selector"
+                    android:textColor="@color/checkbox_text_color"
+                    android:textStyle="bold"
+                    android:textSize="14sp"
+                    android:layout_margin="2dp"/>
+
+                <CheckBox
+                    android:id="@+id/cb_friday"
+                    android:layout_width="0dp"
+                    android:layout_height="48dp"
+                    android:layout_weight="1"
+                    android:text="F"
+                    android:gravity="center"
+                    android:button="@null"
+                    android:background="@drawable/checkbox_day_selector"
+                    android:textColor="@color/checkbox_text_color"
+                    android:textStyle="bold"
+                    android:textSize="14sp"
+                    android:layout_margin="2dp"/>
+
+                <CheckBox
+                    android:id="@+id/cb_saturday"
+                    android:layout_width="0dp"
+                    android:layout_height="48dp"
+                    android:layout_weight="1"
+                    android:text="Sa"
+                    android:gravity="center"
+                    android:button="@null"
+                    android:background="@drawable/checkbox_day_selector"
+                    android:textColor="@color/checkbox_text_color"
+                    android:textStyle="bold"
+                    android:textSize="14sp"
+                    android:layout_margin="2dp"/>
+
+                <CheckBox
+                    android:id="@+id/cb_sunday"
+                    android:layout_width="0dp"
+                    android:layout_height="48dp"
+                    android:layout_weight="1"
+                    android:text="Su"
+                    android:gravity="center"
+                    android:button="@null"
+                    android:background="@drawable/checkbox_day_selector"
+                    android:textColor="@color/checkbox_text_color"
+                    android:textStyle="bold"
+                    android:textSize="14sp"
+                    android:layout_margin="2dp"/>
+
+            </LinearLayout>
         </LinearLayout>
 
 
@@ -249,18 +337,20 @@
                     android:button="@null"
                     android:textAlignment="center"
                     android:checked="true"
-                    android:textColor="@color/radio_button_text_selector"/> <RadioButton
-                android:id="@+id/rb_ai_count_yes"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Yes"
-                android:paddingStart="8dp"
-                android:paddingEnd="8dp"
-                android:background="@drawable/radio_button_selector"
-                android:button="@null"
-                android:textAlignment="center"
-                android:textColor="@color/radio_button_text_selector"/>
+                    android:textColor="@color/radio_button_text_selector"/>
+
+                <RadioButton
+                    android:id="@+id/rb_ai_count_yes"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Yes"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp"
+                    android:background="@drawable/radio_button_selector"
+                    android:button="@null"
+                    android:textAlignment="center"
+                    android:textColor="@color/radio_button_text_selector"/>
             </RadioGroup>
         </LinearLayout>
 

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- res/color/checkbox_text_color.xml -->
+<!-- This changes the text color based on checkbox state -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- When checkbox is CHECKED - White text -->
+    <item android:state_checked="true" android:color="#FFFFFF"/>
+
+    <!-- When checkbox is NOT CHECKED - Dark gray text -->
+    <item android:state_checked="false" android:color="#333333"/>
+
+</selector>

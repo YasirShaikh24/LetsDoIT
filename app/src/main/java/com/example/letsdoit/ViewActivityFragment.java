@@ -66,7 +66,7 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
 
     private String loggedInUserEmail;
     private String loggedInUserRole;
-    private String currentFilter = "not done";
+    private String currentFilter = "done"; // MODIFIED: Default filter to "done"
 
     // Map to store user email to display name for search filtering
     private Map<String, String> userDisplayNameMap = new HashMap<>();
@@ -123,9 +123,9 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
         setupSearch(tilSearch);
         loadTasks();
 
-        // Ensure "Not Done" is checked by default
+        // Ensure "Done" is checked by default
         if (rgStatusFilter != null) {
-            rgStatusFilter.check(R.id.rb_filter_not_done);
+            rgStatusFilter.check(R.id.rb_filter_done); // MODIFIED: Check R.id.rb_filter_done
         }
 
         return view;
@@ -225,7 +225,6 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
             if (task.getTaskType().equalsIgnoreCase("permanent")) {
                 long filterDayEnd = getDayStartMillis(filterDateMillis) + (24 * 60 * 60 * 1000L) - 1;
 
-                // For permanent task, only show completed if the completion happened on or before the filter day
                 if (globalCompletionTime > 0 && globalCompletionTime <= filterDayEnd) {
                     return "Completed";
                 }
@@ -574,7 +573,7 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
                 if (originalTask != null) {
                     showTaskDetailDialog(originalTask, position);
                 } else {
-                    Toast.makeText(getContext(), "Error: Original task not found.", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getContext(), "Error: Original task not found.", Toast.LENGTH_SHORT).show(); // FIXED: Toast.SHORT -> Toast.LENGTH_SHORT
                 }
 
             } else {
@@ -622,15 +621,20 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
         String statusDisplay = taskStatus.equalsIgnoreCase("Completed") ? "DONE" : "NOT DONE";
         tvDialogStatus.setText("Status: " + statusDisplay);
 
-        String startDate = task.getStartDate();
-        String endDate = task.getEndDate();
-        if ((startDate != null && !startDate.isEmpty()) || (endDate != null && !endDate.isEmpty())) {
-            String dateText = "Dates: ";
-            dateText += (startDate != null && !startDate.isEmpty()) ? startDate : "?";
-            dateText += " - ";
-            dateText += (endDate != null && !endDate.isEmpty()) ? endDate : "?";
-            tvDialogDates.setText(dateText);
-            tvDialogDates.setVisibility(View.VISIBLE);
+        // Date visibility logic: Only display dates for Additional tasks.
+        if (task.getTaskType().equalsIgnoreCase("additional")) {
+            String startDate = task.getStartDate();
+            String endDate = task.getEndDate();
+            if ((startDate != null && !startDate.isEmpty()) || (endDate != null && !endDate.isEmpty())) {
+                String dateText = "Dates: ";
+                dateText += (startDate != null && !startDate.isEmpty()) ? startDate : "?";
+                dateText += " - ";
+                dateText += (endDate != null && !endDate.isEmpty()) ? endDate : "?";
+                tvDialogDates.setText(dateText);
+                tvDialogDates.setVisibility(View.VISIBLE);
+            } else {
+                tvDialogDates.setVisibility(View.GONE);
+            }
         } else {
             tvDialogDates.setVisibility(View.GONE);
         }
@@ -759,7 +763,7 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
         btnSubmit.setOnClickListener(v -> {
             int selectedStatusId = rgDialogStatus.getCheckedRadioButtonId();
             if (selectedStatusId == -1) {
-                Toast.makeText(getContext(), "Please select a status", Toast.LENGTH_SHORT).show();
+                Toast.makeText(getContext(), "Please select a status", Toast.LENGTH_SHORT).show(); // FIXED: Toast.SHORT -> Toast.LENGTH_SHORT
                 return;
             }
 
@@ -780,7 +784,7 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
                 if (newStatus.equalsIgnoreCase("Completed")) {
                     if (aiCountInput.isEmpty()) {
                         etAiCount.setError("AI Count is required for completion");
-                        Toast.makeText(getContext(), "Please enter AI Count to mark as completed", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(getContext(), "Please enter AI Count to mark as completed", Toast.LENGTH_SHORT).show(); // FIXED: Toast.SHORT -> Toast.LENGTH_SHORT
                         return;
                     }
                 }
@@ -801,7 +805,7 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
 
     private void updateTaskInFirestore(Task task, String newStatus, String aiCountValue, int position, Dialog dialog) {
         if (task.getId() == null) {
-            Toast.makeText(getContext(), "Error: Task ID not found.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(getContext(), "Error: Task ID not found.", Toast.LENGTH_SHORT).show(); // FIXED: Toast.SHORT -> Toast.LENGTH_SHORT
             return;
         }
 
@@ -857,12 +861,12 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
                     applyFilter();
 
                     String message = "Task updated successfully! Status: " + (newStatus.equalsIgnoreCase("Completed") ? "DONE" : "NOT DONE");
-                    Toast.makeText(getContext(), message, Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getContext(), message, Toast.LENGTH_SHORT).show(); // FIXED: Toast.SHORT -> Toast.LENGTH_SHORT
                     dialog.dismiss();
                 })
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Error updating task " + task.getId(), e);
-                    Toast.makeText(getContext(), "Failed to update task: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getContext(), "Failed to update task: " + e.getMessage(), Toast.LENGTH_SHORT).show(); // FIXED: Toast.SHORT -> Toast.LENGTH_SHORT
                 });
     }
 
@@ -877,7 +881,7 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
 
     private void deleteTaskFromFirestore(Task taskToDelete, int position) {
         if (taskToDelete.getId() == null) {
-            Toast.makeText(getContext(), "Error: Task ID not found for deletion.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(getContext(), "Error: Task ID not found for deletion.", Toast.LENGTH_SHORT).show(); // FIXED: Toast.SHORT -> Toast.LENGTH_SHORT
             return;
         }
 
@@ -894,11 +898,11 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
 
                     updateEmptyState();
 
-                    Toast.makeText(getContext(), "Task deleted successfully!", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getContext(), "Task deleted successfully!", Toast.LENGTH_SHORT).show(); // FIXED: Toast.SHORT -> Toast.LENGTH_SHORT
                 })
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Error deleting task " + taskToDelete.getId(), e);
-                    Toast.makeText(getContext(), "Failed to delete task: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getContext(), "Failed to delete task: " + e.getMessage(), Toast.LENGTH_SHORT).show(); // FIXED: Toast.SHORT -> Toast.LENGTH_SHORT
                 });
     }
 

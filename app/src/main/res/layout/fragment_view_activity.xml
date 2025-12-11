@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#FAFAFA">
@@ -123,7 +124,7 @@
                         android:button="@null"
                         android:gravity="center"
                         android:textSize="13sp"
-                        android:textColor="@color/radio_button_text_selector"/>
+                        android:checked="true" android:textColor="@color/radio_button_text_selector"/>
 
                     <RadioButton
                         android:id="@+id/rb_filter_not_done"
@@ -136,8 +137,7 @@
                         android:button="@null"
                         android:gravity="center"
                         android:textSize="13sp"
-                        android:checked="true"
-                        android:textColor="@color/radio_button_text_selector"/>
+                        android:checked="false" android:textColor="@color/radio_button_text_selector"/>
 
                 </RadioGroup>
             </LinearLayout>

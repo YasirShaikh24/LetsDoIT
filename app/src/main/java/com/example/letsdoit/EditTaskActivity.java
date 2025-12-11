@@ -1,4 +1,3 @@
-// src/main/java/com/example/letsdoit/EditTaskActivity.java
 package com.example.letsdoit;
 
 import android.app.DatePickerDialog;
@@ -11,6 +10,7 @@ import android.widget.DatePicker;
 import android.widget.LinearLayout;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
+import android.widget.CheckBox; // <-- ADDED IMPORT
 import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
@@ -27,32 +27,31 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.stream.Collectors; // Added for stream use
 
 public class EditTaskActivity extends AppCompatActivity {
 
-    private TextInputEditText etTitle, etDescription, etStartDate, etEndDate; // etRemarks removed
+    private TextInputEditText etTitle, etDescription, etStartDate, etEndDate;
     private TextInputEditText etAssigneeDisplay;
-    // private RadioGroup rgPriority; // rgPriority removed
     private RadioGroup rgRequireAiCount;
     private RadioGroup rgTaskType;
-    private RadioGroup rgWeekDays; // NEW
+    // REMOVED: private RadioGroup rgWeekDays;
+
+    // ADDED: CheckBox declarations
+    private CheckBox cbMonday, cbTuesday, cbWednesday, cbThursday, cbFriday, cbSaturday, cbSunday;
+
     private Button btnSaveTask;
     private LinearLayout llAssignUserSection;
     private LinearLayout llDateRangeSection;
-    private LinearLayout llWeekDaysSection; // NEW
+    private LinearLayout llWeekDaysSection;
 
     private FirebaseFirestore db;
 
     private String taskId;
 
     private List<String> selectedAssignees = new ArrayList<>();
-    // This list holds the display names for the dialog (including "All Team Members")
     private List<String> allUserDisplayNames = new ArrayList<>();
-    // This list holds the actual User objects (excluding "All Team Members")
     private List<User> allUsers = new ArrayList<>();
 
-    // NEW: List to track selected days for permanent tasks
     private List<String> selectedDays = new ArrayList<>();
 
     private static final String TAG = "EditTaskActivity";
@@ -61,6 +60,7 @@ public class EditTaskActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        // Uses fragment_add_activity.xml which now has CheckBoxes
         setContentView(R.layout.fragment_add_activity);
 
         taskId = getIntent().getStringExtra(ViewActivityFragment.EXTRA_TASK_ID);
@@ -72,16 +72,12 @@ public class EditTaskActivity extends AppCompatActivity {
 
         db = FirebaseFirestore.getInstance();
 
-        initViews();
-        // Load users, and then load task data
         loadUsersForAssignment(this::loadTaskData);
     }
 
     private void initViews() {
         etTitle = findViewById(R.id.et_title);
         etDescription = findViewById(R.id.et_description);
-        // etRemarks removed
-        // rgPriority removed
         rgRequireAiCount = findViewById(R.id.rg_require_ai_count);
         btnSaveTask = findViewById(R.id.btn_save_task);
 
@@ -90,8 +86,17 @@ public class EditTaskActivity extends AppCompatActivity {
         etStartDate = findViewById(R.id.et_start_date);
         etEndDate = findViewById(R.id.et_end_date);
 
-        llWeekDaysSection = findViewById(R.id.ll_week_days_section); // NEW
-        rgWeekDays = findViewById(R.id.rg_week_days); // NEW
+        llWeekDaysSection = findViewById(R.id.ll_week_days_section);
+        // REMOVED: rgWeekDays = findViewById(R.id.rg_week_days);
+
+        // ADDED: Initialize CheckBoxes
+        cbMonday = findViewById(R.id.cb_monday);
+        cbTuesday = findViewById(R.id.cb_tuesday);
+        cbWednesday = findViewById(R.id.cb_wednesday);
+        cbThursday = findViewById(R.id.cb_thursday);
+        cbFriday = findViewById(R.id.cb_friday);
+        cbSaturday = findViewById(R.id.cb_saturday);
+        cbSunday = findViewById(R.id.cb_sunday);
 
         btnSaveTask.setText("Update Task");
 
@@ -102,11 +107,11 @@ public class EditTaskActivity extends AppCompatActivity {
         llAssignUserSection = findViewById(R.id.ll_assign_user_section);
         etAssigneeDisplay = findViewById(R.id.et_assigned_to_display);
 
-        llAssignUserSection.setVisibility(View.VISIBLE); // Always visible for admin by default
+        llAssignUserSection.setVisibility(View.VISIBLE);
         etAssigneeDisplay.setOnClickListener(v -> showMultiSelectUserDialog());
 
-        setupTaskTypeListener(); // NEW method for cleaner logic
-        setupWeekDaysListener(); // NEW method for multi-select logic
+        setupTaskTypeListener();
+        setupWeekDaysListener();
     }
 
     private void setupTaskTypeListener() {
@@ -116,59 +121,56 @@ public class EditTaskActivity extends AppCompatActivity {
             llDateRangeSection.setVisibility(isPermanent ? View.GONE : View.VISIBLE);
             llWeekDaysSection.setVisibility(isPermanent ? View.VISIBLE : View.GONE);
 
-            // Assignment visibility/selection logic for Admin (Edit is Admin-only)
             llAssignUserSection.setVisibility(isPermanent ? View.GONE : View.VISIBLE);
 
             if (isPermanent) {
-                // For Permanent, auto-set assignedTo to All
                 autoAssignAllUsers();
             } else {
-                // For Additional, clear selected days
                 clearSelectedDays();
-                // NEW: Clear assignees when switching to Additional
                 selectedAssignees.clear();
                 updateAssigneeDisplay();
             }
-
-            // Note: Date/Day inputs are populated during loadTaskData, this listener only handles view switching.
         });
     }
 
-    // Same multi-select logic as AddActivityFragment
     private void setupWeekDaysListener() {
-        for (int i = 0; i < rgWeekDays.getChildCount(); i++) {
-            RadioButton rb = (RadioButton) rgWeekDays.getChildAt(i);
-            rb.setOnClickListener(v -> {
-                RadioButton clickedRb = (RadioButton) v;
-                String day = clickedRb.getText().toString(); // e.g., "M", "T", "W"
+        // REPLACED: Logic to handle CheckBoxes
+        CheckBox[] checkBoxes = new CheckBox[]{
+                cbMonday, cbTuesday, cbWednesday, cbThursday, cbFriday, cbSaturday, cbSunday
+        };
+
+        for (CheckBox cb : checkBoxes) {
+            // Set new click listener for CheckBox
+            cb.setOnClickListener(v -> {
+                CheckBox clickedCb = (CheckBox) v;
+                String day = clickedCb.getText().toString();
                 String fullDayName = getFullDayName(day);
 
-                // Force toggle state and update list
-                if (selectedDays.contains(fullDayName)) {
-                    selectedDays.remove(fullDayName);
-                    clickedRb.setChecked(false);
+                // CheckBox state is automatically toggled on click. Update the selectedDays list based on the new state.
+                if (clickedCb.isChecked()) {
+                    if (!selectedDays.contains(fullDayName)) {
+                        selectedDays.add(fullDayName);
+                    }
                 } else {
-                    selectedDays.add(fullDayName);
-                    clickedRb.setChecked(true);
+                    selectedDays.remove(fullDayName);
                 }
 
-                // Since we are inside a RadioGroup, clear all other checks and re-set the clicked state
-                // to make it behave like a multi-select visual component.
-                int id = clickedRb.getId();
-                rgWeekDays.clearCheck();
-                clickedRb.setId(id);
-                clickedRb.setChecked(selectedDays.contains(fullDayName));
+                Log.d(TAG, "Selected days: " + selectedDays.toString());
             });
         }
     }
 
     private void clearSelectedDays() {
         selectedDays.clear();
-        if (rgWeekDays != null) {
-            for (int i = 0; i < rgWeekDays.getChildCount(); i++) {
-                RadioButton rb = (RadioButton) rgWeekDays.getChildAt(i);
-                rb.setChecked(false);
-            }
+        // REPLACED: Logic to clear CheckBoxes
+        if (cbMonday != null) {
+            cbMonday.setChecked(false);
+            cbTuesday.setChecked(false);
+            cbWednesday.setChecked(false);
+            cbThursday.setChecked(false);
+            cbFriday.setChecked(false);
+            cbSaturday.setChecked(false);
+            cbSunday.setChecked(false);
         }
     }
 
@@ -214,7 +216,6 @@ public class EditTaskActivity extends AppCompatActivity {
     private void populateTaskFields(Task task) {
         etTitle.setText(task.getTitle());
         etDescription.setText(task.getDescription());
-        // etRemarks removed
 
         String taskType = task.getTaskType() != null ? task.getTaskType() : "Permanent";
 
@@ -229,16 +230,19 @@ public class EditTaskActivity extends AppCompatActivity {
             ((RadioButton) findViewById(R.id.rb_permanent)).setChecked(true);
             llWeekDaysSection.setVisibility(View.VISIBLE);
             llDateRangeSection.setVisibility(View.GONE);
-            llAssignUserSection.setVisibility(View.GONE); // Hidden for permanent
-            // Populate selected days
+            llAssignUserSection.setVisibility(View.GONE);
+
             selectedDays.clear();
             selectedDays.addAll(task.getSelectedDays());
-            for (int i = 0; i < rgWeekDays.getChildCount(); i++) {
-                RadioButton rb = (RadioButton) rgWeekDays.getChildAt(i);
-                String fullDayName = getFullDayName(rb.getText().toString());
-                if (selectedDays.contains(fullDayName)) {
-                    rb.setChecked(true);
-                }
+
+            // REPLACED: Logic to apply the checked state to the CheckBoxes
+            CheckBox[] checkBoxes = new CheckBox[]{
+                    cbMonday, cbTuesday, cbWednesday, cbThursday, cbFriday, cbSaturday, cbSunday
+            };
+
+            for (CheckBox cb : checkBoxes) {
+                String fullDayName = getFullDayName(cb.getText().toString());
+                cb.setChecked(selectedDays.contains(fullDayName));
             }
         }
 
@@ -248,13 +252,9 @@ public class EditTaskActivity extends AppCompatActivity {
             ((RadioButton) findViewById(R.id.rb_ai_count_no)).setChecked(true);
         }
 
-        // Priority logic removed
-
-        selectedAssignees.clear(); // Clear before adding to avoid duplicates if autoAssignAllUsers() ran earlier
+        selectedAssignees.clear();
         selectedAssignees.addAll(task.getAssignedTo());
 
-        // If permanent is selected, autoAssignAllUsers will run in setupTaskTypeListener's check
-        // when the radio button is set. We call updateAssigneeDisplay() regardless.
         updateAssigneeDisplay();
     }
 
@@ -265,13 +265,11 @@ public class EditTaskActivity extends AppCompatActivity {
                     allUsers.clear();
                     allUserDisplayNames.clear();
 
-                    // 1. Add "All Team Members" option at index 0 for display
                     allUserDisplayNames.add("All Team Members");
 
                     for (QueryDocumentSnapshot document : queryDocumentSnapshots) {
                         User user = document.toObject(User.class);
                         allUsers.add(user);
-                        // 2. Add only the display name (as requested)
                         String displayName = user.getDisplayName();
                         allUserDisplayNames.add(displayName);
                     }
@@ -294,7 +292,6 @@ public class EditTaskActivity extends AppCompatActivity {
         final boolean[] checkedItems = new boolean[allUserDisplayNames.size()];
         final int actualUserCount = allUsers.size();
 
-        // Initialization: Check individual users first
         boolean allChecked = true;
         for (int i = 0; i < actualUserCount; i++) {
             if (selectedAssignees.contains(allUsers.get(i).getEmail())) {
@@ -303,27 +300,21 @@ public class EditTaskActivity extends AppCompatActivity {
                 allChecked = false;
             }
         }
-        // Set initial state of "All" checkbox (index 0)
         checkedItems[0] = allChecked;
 
         new AlertDialog.Builder(this)
                 .setTitle("Select Team Members")
                 .setMultiChoiceItems(items, checkedItems, (dialog, which, isChecked) -> {
                     if (which == 0) {
-                        // "All Team Members" is selected/deselected
                         for (int i = 1; i < checkedItems.length; i++) {
                             checkedItems[i] = isChecked;
-                            // Manually update the list view state
                             ((AlertDialog) dialog).getListView().setItemChecked(i, isChecked);
                         }
                     } else {
-                        // Individual user selected/deselected
                         if (!isChecked) {
-                            // If any user is deselected, deselect "All Team Members"
                             checkedItems[0] = false;
                             ((AlertDialog) dialog).getListView().setItemChecked(0, false);
                         } else {
-                            // Check if all individual members are now selected
                             boolean allSelected = true;
                             for (int i = 1; i < checkedItems.length; i++) {
                                 if (!checkedItems[i]) {
@@ -341,15 +332,12 @@ public class EditTaskActivity extends AppCompatActivity {
                 .setPositiveButton("OK", (dialog, id) -> {
                     selectedAssignees.clear();
                     if (checkedItems[0]) {
-                        // If "All" is selected, add all user emails
                         for (User user : allUsers) {
                             selectedAssignees.add(user.getEmail());
                         }
                     } else {
-                        // Otherwise, iterate through individual users (index 1 onwards)
                         for (int i = 1; i < allUserDisplayNames.size(); i++) {
                             if (checkedItems[i]) {
-                                // allUsers index is i - 1
                                 selectedAssignees.add(allUsers.get(i - 1).getEmail());
                             }
                         }
@@ -398,8 +386,8 @@ public class EditTaskActivity extends AppCompatActivity {
     private void updateTask() {
         String title = etTitle.getText().toString().trim();
         String description = etDescription.getText().toString().trim();
-        String remarks = ""; // REMOVED: Default to empty string
-        String priority = "medium"; // REMOVED: Default to fixed value
+        String remarks = "";
+        String priority = "medium";
 
         int selectedTaskTypeId = rgTaskType.getCheckedRadioButtonId();
         if (selectedTaskTypeId == -1) {
@@ -411,22 +399,19 @@ public class EditTaskActivity extends AppCompatActivity {
 
         String startDate = "";
         String endDate = "";
-        List<String> finalSelectedDays = new ArrayList<>(); // Use this list for the update
+        List<String> finalSelectedDays = new ArrayList<>();
 
         if (taskType.equalsIgnoreCase("Additional")) {
             startDate = etStartDate.getText().toString().trim();
             endDate = etEndDate.getText().toString().trim();
         } else {
-            // Permanent task validation and assignment
             finalSelectedDays.addAll(selectedDays);
             if (finalSelectedDays.isEmpty()) {
                 Toast.makeText(this, "Please select at least one active day for the permanent task.", Toast.LENGTH_SHORT).show();
                 return;
             }
-            // Overwrite selectedAssignees to be ALL users for Permanent tasks
             autoAssignAllUsers();
         }
-
 
         if (title.isEmpty()) {
             etTitle.setError("Title is required");
@@ -437,8 +422,6 @@ public class EditTaskActivity extends AppCompatActivity {
             Toast.makeText(this, "Please assign the task to at least one user.", Toast.LENGTH_SHORT).show();
             return;
         }
-
-        // Priority check removed
 
         int selectedAiCountId = rgRequireAiCount.getCheckedRadioButtonId();
         boolean requireAiCount = (selectedAiCountId == R.id.rb_ai_count_yes);
@@ -453,15 +436,15 @@ public class EditTaskActivity extends AppCompatActivity {
         Map<String, Object> taskUpdates = new HashMap<>();
         taskUpdates.put("title", title);
         taskUpdates.put("description", description);
-        taskUpdates.put("priority", priority); // Keep for compatibility, defaulted to "medium"
+        taskUpdates.put("priority", priority);
         taskUpdates.put("fileUrls", new ArrayList<String>());
-        taskUpdates.put("remarks", remarks); // Keep for compatibility, defaulted to ""
+        taskUpdates.put("remarks", remarks);
         taskUpdates.put("assignedTo", assignedTo);
         taskUpdates.put("startDate", startDate);
         taskUpdates.put("endDate", endDate);
         taskUpdates.put("requireAiCount", requireAiCount);
         taskUpdates.put("taskType", taskType);
-        taskUpdates.put("selectedDays", selectedDays); // NEW FIELD
+        taskUpdates.put("selectedDays", selectedDays);
 
         db.collection("tasks").document(taskId)
                 .update(taskUpdates)
