@@ -6,6 +6,15 @@
     <color name="primary_gradient_center">#7B68EE</color>
     <color name="primary_gradient_end">#6B5CE7</color>
 
+    <!-- Dark Header Gradient Colors -->
+    <color name="dark_gradient_start">#1a1a2e</color>
+    <color name="dark_gradient_middle">#16213e</color>
+    <color name="dark_gradient_end">#0f3460</color>
+
+    <!-- Light Card Gradient Colors -->
+    <color name="light_gradient_start">#FFFFFF</color>
+    <color name="light_gradient_end">#F8F9FF</color>
+
     <color name="text_primary">#333333</color>
     <color name="text_secondary">#666666</color>
     <color name="text_hint">#999999</color>
