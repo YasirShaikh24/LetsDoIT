@@ -4,6 +4,8 @@ package com.example.letsdoit;
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.app.Dialog;
+import android.graphics.Color;
+import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -23,6 +25,7 @@ import androidx.cardview.widget.CardView;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.core.content.ContextCompat;
 
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -54,8 +57,12 @@ public class HomeFragment extends Fragment implements CalendarDialogFragment.OnD
     private ProgressBar progressBar;
     private LinearLayout llDashboardContent;
     private FloatingActionButton fabCalendar;
-    // NEW
+
+    // NEW Views for Pie Chart Summary
     private TextView tvCalendarBanner;
+    private TextView tvDonePercentage, tvNotDonePercentage;
+    // Changed to use the new Custom View
+    private TaskPieChartView taskPieChartView;
 
     private FirebaseFirestore db;
     private List<Task> allTasks;
@@ -88,7 +95,7 @@ public class HomeFragment extends Fragment implements CalendarDialogFragment.OnD
         if (getArguments() != null) {
             welcomeMessage = getArguments().getString(ARG_WELCOME_MESSAGE);
             loggedInUserEmail = getArguments().getString(ARG_USER_EMAIL);
-            loggedInUserRole = getArguments().getString(ARG_USER_ROLE);
+            loggedInUserRole = getArguments().getString(LoginActivity.EXTRA_USER_ROLE);
             displayName = getArguments().getString(ARG_DISPLAY_NAME);
         }
         db = FirebaseFirestore.getInstance();
@@ -106,14 +113,24 @@ public class HomeFragment extends Fragment implements CalendarDialogFragment.OnD
         tvWelcomeName = view.findViewById(R.id.tv_welcome_name);
         tvDateIndicator = view.findViewById(R.id.tv_date_indicator);
         tvTotalTasksCount = view.findViewById(R.id.tv_total_tasks_count);
+
+        // These counts are inside the scroll-down cards:
         tvDoneCount = view.findViewById(R.id.tv_done_count);
         tvNotDoneCount = view.findViewById(R.id.tv_not_done_count);
+
         cardDone = view.findViewById(R.id.card_done);
         cardNotDone = view.findViewById(R.id.card_not_done);
         progressBar = view.findViewById(R.id.progress_bar);
         llDashboardContent = view.findViewById(R.id.ll_dashboard_content);
         fabCalendar = view.findViewById(R.id.fab_calendar);
-        tvCalendarBanner = view.findViewById(R.id.tv_calendar_banner); // NEW
+        tvCalendarBanner = view.findViewById(R.id.tv_calendar_banner);
+
+        // Initialize new Pie Chart related views
+        tvDonePercentage = view.findViewById(R.id.tv_done_percentage);
+        tvNotDonePercentage = view.findViewById(R.id.tv_not_done_percentage);
+
+        // Find the custom pie chart view
+        taskPieChartView = view.findViewById(R.id.pie_chart_view);
 
         // Set welcome name (display role or name)
         if (displayName != null && !displayName.isEmpty()) {
@@ -143,9 +160,6 @@ public class HomeFragment extends Fragment implements CalendarDialogFragment.OnD
         // Set click listeners for the Done/Not Done cards
         cardDone.setOnClickListener(v -> showTaskListDialog("Done Tasks", doneTasks));
         cardNotDone.setOnClickListener(v -> showTaskListDialog("Pending Tasks", notDoneTasks));
-
-        // Load tasks
-        // loadTasksForDate(); // Moved to onResume
 
         return view;
     }
@@ -393,10 +407,40 @@ public class HomeFragment extends Fragment implements CalendarDialogFragment.OnD
         return calendar.getTimeInMillis();
     }
 
+    // UPDATED: Simplifies text output and sends percentage to custom view
     private void updateDashboard() {
-        tvTotalTasksCount.setText(String.valueOf(allTasks.size()));
-        tvDoneCount.setText(String.valueOf(doneTasks.size()));
-        tvNotDoneCount.setText(String.valueOf(notDoneTasks.size()));
+        if (getContext() == null) return;
+
+        int totalTasks = allTasks.size();
+        int doneCount = doneTasks.size();
+        int notDoneCount = notDoneTasks.size();
+
+        // 1. Update the Total Assigned Count (Top of the main card)
+        tvTotalTasksCount.setText(String.valueOf(totalTasks));
+
+        // 2. Update the counts in the scroll-down cards
+        tvDoneCount.setText(String.valueOf(doneCount));
+        tvNotDoneCount.setText(String.valueOf(notDoneCount));
+
+        float doneFraction = 0f;
+
+        if (totalTasks == 0) {
+            // Simplified text output: "DONE (0/0)" and "PENDING (0/0)"
+            tvDonePercentage.setText(String.format(Locale.US, "DONE (%d/%d)", doneCount, totalTasks));
+            tvNotDonePercentage.setText(String.format(Locale.US, "PENDING (%d/%d)", notDoneCount, totalTasks));
+        } else {
+            // --- Calculate Fractions ---
+            doneFraction = (float) doneCount / totalTasks;
+
+            // --- Update Text Views in Pie Chart Summary (Simplified output) ---
+            tvDonePercentage.setText(String.format(Locale.US, "DONE (%d/%d)", doneCount, totalTasks));
+            tvNotDonePercentage.setText(String.format(Locale.US, "PENDING (%d/%d)", notDoneCount, totalTasks));
+        }
+
+        // 3. Update the Custom Pie Chart View
+        if (taskPieChartView != null) {
+            taskPieChartView.setTaskPercentages(doneFraction);
+        }
     }
 
     private void showTaskListDialog(String title, List<Task> tasks) {
@@ -446,7 +490,7 @@ public class HomeFragment extends Fragment implements CalendarDialogFragment.OnD
         }
 
         @Override
-        public void onBindViewHolder(@NonNull SimpleTaskViewHolder holder, int position) {
+        public void onBindViewHolder(@NonNull SimpleTaskAdapter.SimpleTaskViewHolder holder, int position) {
             Task task = tasks.get(position);
             holder.tvTaskTitle.setText(task.getTitle());
 

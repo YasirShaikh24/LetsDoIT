@@ -20,4 +20,10 @@
     <color name="teal_700">#00A3CC</color>
     <color name="black">#000000</color>
 
-    <color name="status_pending">#FFC107</color> <color name="status_in_progress">#2196F3</color> <color name="status_completed">#4CAF50</color> </resources>
+    <color name="status_pending">#FFC107</color>
+    <color name="status_in_progress">#2196F3</color>
+    <color name="status_completed">#4CAF50</color>
+
+    <color name="chart_done">#00D4FF</color>
+    <color name="chart_not_done">#D32F2F</color>
+</resources>
