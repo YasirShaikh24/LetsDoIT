@@ -27,6 +27,8 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.core.content.ContextCompat;
 
+import android.widget.ImageView;
+
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
@@ -56,12 +58,11 @@ public class HomeFragment extends Fragment implements CalendarDialogFragment.OnD
     private CardView cardDone, cardNotDone;
     private ProgressBar progressBar;
     private LinearLayout llDashboardContent;
-    private FloatingActionButton fabCalendar;
+    private ImageView fabCalendar;
+    private CardView cardFabCalendar;
 
-    // NEW Views for Pie Chart Summary
     private TextView tvCalendarBanner;
     private TextView tvDonePercentage, tvNotDonePercentage;
-    // Changed to use the new Custom View
     private TaskPieChartView taskPieChartView;
 
     private FirebaseFirestore db;
@@ -74,7 +75,6 @@ public class HomeFragment extends Fragment implements CalendarDialogFragment.OnD
 
     private long selectedDateMillis = -1;
 
-    // A flag to ensure the animation only runs once per app-open lifecycle
     private static boolean hasAnimatedOnStart = false;
 
 
@@ -109,12 +109,10 @@ public class HomeFragment extends Fragment implements CalendarDialogFragment.OnD
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_home, container, false);
 
-        // Initialize views
         tvWelcomeName = view.findViewById(R.id.tv_welcome_name);
         tvDateIndicator = view.findViewById(R.id.tv_date_indicator);
         tvTotalTasksCount = view.findViewById(R.id.tv_total_tasks_count);
 
-        // These counts are inside the scroll-down cards:
         tvDoneCount = view.findViewById(R.id.tv_done_count);
         tvNotDoneCount = view.findViewById(R.id.tv_not_done_count);
 
@@ -123,16 +121,14 @@ public class HomeFragment extends Fragment implements CalendarDialogFragment.OnD
         progressBar = view.findViewById(R.id.progress_bar);
         llDashboardContent = view.findViewById(R.id.ll_dashboard_content);
         fabCalendar = view.findViewById(R.id.fab_calendar);
+        cardFabCalendar = view.findViewById(R.id.card_fab_calendar);
         tvCalendarBanner = view.findViewById(R.id.tv_calendar_banner);
 
-        // Initialize new Pie Chart related views
         tvDonePercentage = view.findViewById(R.id.tv_done_percentage);
         tvNotDonePercentage = view.findViewById(R.id.tv_not_done_percentage);
 
-        // Find the custom pie chart view
         taskPieChartView = view.findViewById(R.id.pie_chart_view);
 
-        // Set welcome name (display role or name)
         if (displayName != null && !displayName.isEmpty()) {
             tvWelcomeName.setText(displayName);
         } else if ("admin".equalsIgnoreCase(loggedInUserRole)) {
@@ -141,23 +137,18 @@ public class HomeFragment extends Fragment implements CalendarDialogFragment.OnD
             tvWelcomeName.setText("User");
         }
 
-        // Setup Date Selector
         updateDateIndicator();
 
-        // Click on date indicator in header to reset to today
         tvDateIndicator.setOnClickListener(v -> {
             if (selectedDateMillis != -1) {
-                // Reset to today
                 selectedDateMillis = -1;
                 updateDateIndicator();
                 loadTasksForDate();
             }
         });
 
-        // Floating Calendar Button
         fabCalendar.setOnClickListener(v -> showCalendarDialog());
 
-        // Set click listeners for the Done/Not Done cards
         cardDone.setOnClickListener(v -> showTaskListDialog("Done Tasks", doneTasks));
         cardNotDone.setOnClickListener(v -> showTaskListDialog("Pending Tasks", notDoneTasks));
 
@@ -169,71 +160,69 @@ public class HomeFragment extends Fragment implements CalendarDialogFragment.OnD
             return;
         }
 
-        // 1. Initial State: Scale down FAB and hide Banner
-        fabCalendar.setScaleX(0f);
-        fabCalendar.setScaleY(0f);
-        fabCalendar.setVisibility(View.VISIBLE);
+        // Initial state: Hide both FAB card and banner
+        cardFabCalendar.setScaleX(0f);
+        cardFabCalendar.setScaleY(0f);
+        cardFabCalendar.setVisibility(View.VISIBLE);
         tvCalendarBanner.setVisibility(View.GONE);
 
-        // Calculate the translation distance (approximate offset from FAB to Banner center)
-        // FAB margin is 24dp. Banner margin is 32dp bottom, 108dp end.
-        // Let's use a simple upward translation (negative Y)
-        final float initialTranslationY = tvCalendarBanner.getTranslationY();
-        tvCalendarBanner.setTranslationY(initialTranslationY + 100); // Start position below final position
+        // Position banner directly above the calendar button
+        final float initialTranslationY = 0f;
+        tvCalendarBanner.setTranslationY(0f);
+        tvCalendarBanner.setAlpha(0f);
 
-        // 2. Animate FAB entrance (to 1.3x size)
+        // Step 1: Animate FAB entrance (scale up to 1.3x)
         new Handler(Looper.getMainLooper()).postDelayed(() -> {
-            fabCalendar.animate()
+            cardFabCalendar.animate()
                     .scaleX(1.3f)
                     .scaleY(1.3f)
                     .setDuration(500)
                     .setListener(new AnimatorListenerAdapter() {
                         @Override
                         public void onAnimationEnd(Animator animation) {
-                            // 3. Start Banner animation (upward motion)
+                            // Step 2: Show banner and animate from above
                             tvCalendarBanner.setVisibility(View.VISIBLE);
-                            tvCalendarBanner.setAlpha(0f);
+                            tvCalendarBanner.setTranslationY(-100f); // Start from above
+                            tvCalendarBanner.setAlpha(1f);
 
                             tvCalendarBanner.animate()
-                                    .translationY(initialTranslationY)
-                                    .alpha(1f)
-                                    .setDuration(500)
+                                    .translationY(0f) // Move to normal position
+                                    .setDuration(600)
                                     .setStartDelay(0)
                                     .setListener(null)
                                     .start();
 
-                            // 4. FAB scales back and animation resets (2 seconds total time for the sequence)
+                            // Step 3: FAB scales back to normal
                             new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                                fabCalendar.animate()
+                                cardFabCalendar.animate()
                                         .scaleX(1f)
                                         .scaleY(1f)
                                         .setDuration(500)
                                         .setListener(null)
                                         .start();
 
-                                // 5. Banner fades out and hides
+                                // Step 4: Banner continues moving up and fades out
                                 tvCalendarBanner.animate()
                                         .alpha(0f)
-                                        .translationY(initialTranslationY + 100)
+                                        .translationY(-150f) // Continue upward
                                         .setDuration(500)
                                         .setStartDelay(500)
                                         .setListener(new AnimatorListenerAdapter() {
                                             @Override
                                             public void onAnimationEnd(Animator animation) {
                                                 tvCalendarBanner.setVisibility(View.GONE);
-                                                // Reset translation for next time, though should only happen once
-                                                tvCalendarBanner.setTranslationY(initialTranslationY);
+                                                tvCalendarBanner.setTranslationY(0f);
                                             }
                                         })
                                         .start();
 
-                            }, 1000); // 1.0 seconds after the banner starts appearing
+                            }, 1000);
 
                         }
                     })
                     .start();
             hasAnimatedOnStart = true;
-        }, 500); // Initial delay
+        }, 500);
     }
 
     private void showCalendarDialog() {
@@ -407,7 +396,6 @@ public class HomeFragment extends Fragment implements CalendarDialogFragment.OnD
         return calendar.getTimeInMillis();
     }
 
-    // UPDATED: Simplifies text output and sends percentage to custom view
     private void updateDashboard() {
         if (getContext() == null) return;
 
@@ -415,29 +403,21 @@ public class HomeFragment extends Fragment implements CalendarDialogFragment.OnD
         int doneCount = doneTasks.size();
         int notDoneCount = notDoneTasks.size();
 
-        // 1. Update the Total Assigned Count (Top of the main card)
         tvTotalTasksCount.setText(String.valueOf(totalTasks));
-
-        // 2. Update the counts in the scroll-down cards
         tvDoneCount.setText(String.valueOf(doneCount));
         tvNotDoneCount.setText(String.valueOf(notDoneCount));
 
         float doneFraction = 0f;
 
         if (totalTasks == 0) {
-            // Simplified text output: "DONE (0/0)" and "PENDING (0/0)"
-            tvDonePercentage.setText(String.format(Locale.US, "DONE (%d/%d)", doneCount, totalTasks));
-            tvNotDonePercentage.setText(String.format(Locale.US, "PENDING (%d/%d)", notDoneCount, totalTasks));
+            tvDonePercentage.setText(String.format(Locale.US, "DONE %d", doneCount));
+            tvNotDonePercentage.setText(String.format(Locale.US, "PENDING %d", notDoneCount));
         } else {
-            // --- Calculate Fractions ---
             doneFraction = (float) doneCount / totalTasks;
-
-            // --- Update Text Views in Pie Chart Summary (Simplified output) ---
-            tvDonePercentage.setText(String.format(Locale.US, "DONE (%d/%d)", doneCount, totalTasks));
-            tvNotDonePercentage.setText(String.format(Locale.US, "PENDING (%d/%d)", notDoneCount, totalTasks));
+            tvDonePercentage.setText(String.format(Locale.US, "DONE %d", doneCount));
+            tvNotDonePercentage.setText(String.format(Locale.US, "PENDING %d", notDoneCount));
         }
 
-        // 3. Update the Custom Pie Chart View
         if (taskPieChartView != null) {
             taskPieChartView.setTaskPercentages(doneFraction);
         }
@@ -518,10 +498,9 @@ public class HomeFragment extends Fragment implements CalendarDialogFragment.OnD
         }
     }
 
-    // Method to show/hide FAB based on fragment visibility
     public void setFabVisibility(boolean visible) {
-        if (fabCalendar != null) {
-            fabCalendar.setVisibility(visible ? View.VISIBLE : View.GONE);
+        if (cardFabCalendar != null) {
+            cardFabCalendar.setVisibility(visible ? View.VISIBLE : View.GONE);
         }
     }
 
@@ -531,10 +510,8 @@ public class HomeFragment extends Fragment implements CalendarDialogFragment.OnD
         if (loggedInUserEmail != null) {
             loadTasksForDate();
         }
-        // Show FAB when on home fragment
-        if (fabCalendar != null) {
-            fabCalendar.setVisibility(View.VISIBLE);
-            // Trigger the animation only once per application lifecycle
+        if (cardFabCalendar != null) {
+            cardFabCalendar.setVisibility(View.VISIBLE);
             animateFabOnLoad();
         }
     }
@@ -542,9 +519,8 @@ public class HomeFragment extends Fragment implements CalendarDialogFragment.OnD
     @Override
     public void onPause() {
         super.onPause();
-        // Hide FAB when leaving home fragment
-        if (fabCalendar != null) {
-            fabCalendar.setVisibility(View.GONE);
+        if (cardFabCalendar != null) {
+            cardFabCalendar.setVisibility(View.GONE);
         }
     }
 }
