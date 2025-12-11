@@ -213,35 +213,56 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
     }
 
     /**
-     * MODIFIED: Returns the task status based on the "One Completes, All Complete" rule,
-     * considering the selected date for historical/permanent tasks.
+     * MODIFIED: Returns the task status for the current user/date, respecting the task type's
+     * completion rules (global for Permanent, personal for Additional).
      */
     private String getTaskStatusOnDate(Task task, long filterDateMillis) {
 
-        // 1. Check if ANY user has completed the task globally
-        if (task.getUserStatus().containsValue("Completed")) {
-            long globalCompletionTime = task.getUserCompletedDate(loggedInUserEmail); // Retrieves the completion time of the first completer (see Task.java)
+        // FIX: Define filterDayStart from the input parameter filterDateMillis
+        long filterDayStart = getDayStartMillis(filterDateMillis);
 
-            if (task.getTaskType().equalsIgnoreCase("permanent")) {
-                long filterDayEnd = getDayStartMillis(filterDateMillis) + (24 * 60 * 60 * 1000L) - 1;
+        boolean isPermanent = task.getTaskType() != null && task.getTaskType().equalsIgnoreCase("permanent");
 
-                if (globalCompletionTime > 0 && globalCompletionTime <= filterDayEnd) {
+        // Determine the status and the corresponding completion time to check for the filter date.
+        String statusToFilter;
+        long timeToFilter;
+
+        if ("admin".equals(loggedInUserRole)) {
+            // Admin sees the global status and global completion time
+            statusToFilter = task.getUserStatus().containsValue("Completed") ? "Completed" : "Pending";
+            // Task.java's getCompletedDateMillis is the most reliable global/fallback time field
+            timeToFilter = task.getCompletedDateMillis();
+        } else {
+            // Regular user sees their specific status and completion time
+            statusToFilter = task.getUserStatus(loggedInUserEmail);
+            timeToFilter = task.getUserCompletedDate(loggedInUserEmail);
+        }
+
+        // 1. Check if the task is completed from the required perspective
+        if (statusToFilter.equalsIgnoreCase("Completed")) {
+            if (isPermanent) {
+                // For Permanent tasks, apply the historical date check
+                long filterDayEnd = filterDayStart + (24 * 60 * 60 * 1000L) - 1;
+
+                if (timeToFilter > 0 && timeToFilter <= filterDayEnd) {
                     return "Completed";
                 }
-                return "Pending"; // Otherwise, it's considered Not Done for the day
+                // If globally completed, but after the filter date, it's considered pending for this date.
+                return "Pending";
             }
 
-            // For additional task (or if logic flow reaches here), if globally completed, return completed.
             return "Completed";
         }
 
-        // 2. If not globally completed, default is always Pending (Not Done)
+        // 2. If not completed based on task type rules, default is always Pending (Not Done)
         return "Pending";
     }
 
 
     private void applyFilter() {
+        // MODIFIED: Admin must use date filtering in the View Task screen to ensure tasks show on the correct day.
         List<Task> dateFilteredList = applyDateFilter(taskList);
+
         List<Task> searchFilteredList = applySearchFilter(dateFilteredList, currentSearchQuery);
 
         if (!searchFilteredList.isEmpty()) {
@@ -270,12 +291,12 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
             taskForDisplay.setUserAiCount(originalTask.getUserAiCount());
             taskForDisplay.setUserCompletedDate(originalTask.getUserCompletedDate());
 
-            // Set the task's display status based on the global rule
+            // Set the task's display status based on the global/personal rule
             long filterDateMillis = selectedDateMillis == -1 ? System.currentTimeMillis() : selectedDateMillis;
             String displayStatus = getTaskStatusOnDate(originalTask, filterDateMillis);
             taskForDisplay.setStatus(displayStatus); // This is what the adapter uses for coloring/text
 
-            String taskStatus = taskForDisplay.getStatus() != null ? taskForDisplay.getStatus().toLowerCase() : "pending";
+            String taskStatus = taskForDisplay.getStatus() != null ? displayStatus.toLowerCase() : "pending";
 
             // Filter logic: "done" = completed, "not done" = pending
             if (currentFilter.equals("done")) {
@@ -368,7 +389,8 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
                     }
                 }
 
-                if (isDayActive && task.getTimestamp() < filterDayStart + (24 * 60 * 60 * 1000L)) {
+                // FIX 1 (Permanent): Only check if the day is active.
+                if (isDayActive) {
                     dateFilteredList.add(task);
                 }
             } else if (taskType.equals("additional")) {
@@ -386,6 +408,7 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
                     long startDayStart = getDayStartMillis(startDateMillis);
                     long endDayStart = getDayStartMillis(endDateMillis);
 
+                    // FIX 2 (Additional): Use the safe, inclusive start-to-end check.
                     if (filterDayStart >= startDayStart && filterDayStart <= endDayStart) {
                         dateFilteredList.add(task);
                     }
@@ -510,10 +533,25 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
                             Task task = document.toObject(Task.class);
                             task.setId(document.getId());
 
+                            // MODIFIED: Visibility logic based on Task Type
+                            boolean shouldDisplay = false;
+                            String taskType = task.getTaskType() != null ? task.getTaskType().toLowerCase() : "permanent";
                             List<String> assignedTo = task.getAssignedTo();
-                            if (assignedTo != null && assignedTo.contains(loggedInUserEmail)) {
+
+                            if (taskType.equals("permanent")) {
+                                // User sees all Permanent tasks
+                                shouldDisplay = true;
+                            } else if (taskType.equals("additional")) {
+                                // User sees Additional tasks only if explicitly assigned
+                                if (assignedTo != null && assignedTo.contains(loggedInUserEmail)) {
+                                    shouldDisplay = true;
+                                }
+                            }
+
+                            if (shouldDisplay) {
                                 taskList.add(task);
                             }
+                            // END MODIFIED BLOCK
                         } catch (Exception e) {
                             Log.e(TAG, "Error parsing task: " + document.getId(), e);
                         }
@@ -556,6 +594,7 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
                         long endDateMillis = dateFormat.parse(endDateStr).getTime();
                         long endDayStart = getDayStartMillis(endDateMillis);
 
+                        // Note: Task.java getUserStatus now handles the task type aware completion check
                         if (todayStart > endDayStart && !task.getUserStatus(loggedInUserEmail).equalsIgnoreCase("Completed")) {
                             isTaskEditable = false;
                         }
@@ -616,8 +655,8 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
         tvDialogTitle.setText(task.getTitle());
         tvDialogDescription.setText(task.getDescription());
 
-        // Use global status
-        String taskStatus = task.getStatus();
+        // Use global/user-specific status (Task.java now handles the logic)
+        String taskStatus = task.getUserStatus(loggedInUserEmail);
         String statusDisplay = taskStatus.equalsIgnoreCase("Completed") ? "DONE" : "NOT DONE";
         tvDialogStatus.setText("Status: " + statusDisplay);
 
@@ -648,8 +687,8 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
         }
 
         if (task.isRequireAiCount()) {
-            // Use global AI count (from the user who completed it)
-            String aiCountValue = task.getAiCountValue();
+            // Use global/user-specific AI count (Task.java now handles the logic)
+            String aiCountValue = task.getUserAiCount(loggedInUserEmail);
             tvDialogAiCount.setText("AI Count: " + (aiCountValue != null && !aiCountValue.isEmpty() ? aiCountValue : "N/A (Required)"));
             tvDialogAiCount.setVisibility(View.VISIBLE);
         } else {
@@ -723,6 +762,7 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
 
         // --- AI Count Section Setup ---
         if (task.isRequireAiCount()) {
+            llAiCountSection.setVisibility(View.VISIBLE);
             if (currentUserAiCount != null && !currentUserAiCount.isEmpty()) {
                 etAiCount.setText(currentUserAiCount);
                 tvAiCountLabel.setText("AI Count (You can edit)");
@@ -758,6 +798,8 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
             } else {
                 llAiCountSection.setVisibility(View.GONE);
             }
+        } else {
+            llAiCountSection.setVisibility(View.GONE);
         }
 
         btnSubmit.setOnClickListener(v -> {
@@ -820,7 +862,8 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
         Map<String, String> userAiCountMap = task.getUserAiCount();
         userAiCountMap.put(loggedInUserEmail, aiCountValue);
 
-        // 2. Prepare Firestore document update
+        // 2. Prepare Firestore document update. Note: The fallback fields (status, completedDateMillis, aiCountValue)
+        // are updated with the CURRENT user's submission, but the Task.java getters handle reading the correct (global/personal) status.
         Map<String, Object> update = new HashMap<>();
         update.put("userStatus", userStatusMap);
         update.put("userCompletedDate", userCompletedDateMap);

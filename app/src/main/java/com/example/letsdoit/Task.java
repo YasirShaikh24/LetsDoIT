@@ -111,12 +111,17 @@ public class Task {
 
     public String getUserStatus(String userEmail) {
         // Implementation of the "One Completes, All Complete" display rule:
-        // Check if ANY assigned user has completed the task globally.
-        if (userStatus != null && userStatus.containsValue("Completed")) {
-            return "Completed";
+
+        // This rule only applies to Permanent Tasks. Additional Tasks require individual completion.
+        if (this.getTaskType().equalsIgnoreCase("Permanent")) {
+            // Check if ANY assigned user has completed the Permanent task globally.
+            if (userStatus != null && userStatus.containsValue("Completed")) {
+                return "Completed";
+            }
         }
 
-        // Otherwise, return the specific user's status (or default to Pending if entry not found)
+        // Otherwise (for Additional or if Permanent task is not globally completed),
+        // return the specific user's status (or default to Pending if entry not found)
         if (userStatus != null && userStatus.containsKey(userEmail)) {
             return userStatus.get(userEmail);
         }
@@ -132,11 +137,11 @@ public class Task {
     }
 
     public String getUserAiCount(String userEmail) {
-        // When checking AI count, return the AI count of the FIRST user who completed the task
-        // OR the AI count of the current user if they are the one who completed it.
+        // For Permanent tasks, returns the AI count of the first user who completed the task globally.
+        // For Additional tasks, returns the current user's AI count.
 
-        // Find the AI count of the user who marked it complete
-        if (userStatus != null && userStatus.containsValue("Completed")) {
+        if (this.getTaskType().equalsIgnoreCase("Permanent") && userStatus != null && userStatus.containsValue("Completed")) {
+            // Find the AI count of the user who marked it complete
             for (Map.Entry<String, String> entry : userStatus.entrySet()) {
                 if (entry.getValue().equalsIgnoreCase("Completed")) {
                     String completedUserEmail = entry.getKey();
@@ -147,7 +152,8 @@ public class Task {
             }
         }
 
-        // If no one has completed it, return the current user's draft AI count (if they had one)
+        // If no one has completed it (for Permanent), or if it's an Additional task,
+        // return the current user's draft AI count (if they had one)
         if (userAiCount != null && userAiCount.containsKey(userEmail)) {
             return userAiCount.get(userEmail);
         }
@@ -162,8 +168,10 @@ public class Task {
     }
 
     public long getUserCompletedDate(String userEmail) {
-        // Returns the completion date of the first user who completed the task
-        if (userStatus != null && userStatus.containsValue("Completed")) {
+        // For Permanent tasks, returns the completion date of the first user who completed the task globally.
+        // For Additional tasks, returns the current user's completion date.
+
+        if (this.getTaskType().equalsIgnoreCase("Permanent") && userStatus != null && userStatus.containsValue("Completed")) {
             for (Map.Entry<String, String> entry : userStatus.entrySet()) {
                 if (entry.getValue().equalsIgnoreCase("Completed")) {
                     String completedUserEmail = entry.getKey();
@@ -175,6 +183,8 @@ public class Task {
             }
         }
 
+        // For Additional tasks, or if Permanent task is not globally completed,
+        // return the current user's specific completion date.
         if (userCompletedDate != null && userCompletedDate.containsKey(userEmail)) {
             Long date = userCompletedDate.get(userEmail);
             return date != null ? date : 0L;
@@ -249,7 +259,8 @@ public class Task {
     }
 
     public String getStatus() {
-        // Check for global completion
+        // Check for global completion. This is kept for compatibility,
+        // but now relies on the combined status of all users for Permanent tasks.
         if (userStatus != null && userStatus.containsValue("Completed")) {
             return "Completed";
         }
@@ -319,7 +330,7 @@ public class Task {
 
     public String getAiCountValue() {
         // Return the AI count of the user who marked it complete
-        if (userStatus != null && userStatus.containsValue("Completed")) {
+        if (this.getTaskType().equalsIgnoreCase("Permanent") && userStatus != null && userStatus.containsValue("Completed")) {
             for (Map.Entry<String, String> entry : userStatus.entrySet()) {
                 if (entry.getValue().equalsIgnoreCase("Completed")) {
                     String completedUserEmail = entry.getKey();
@@ -346,7 +357,7 @@ public class Task {
 
     public long getCompletedDateMillis() {
         // Return the completion date of the first user who completed the task
-        if (userStatus != null && userStatus.containsValue("Completed")) {
+        if (this.getTaskType().equalsIgnoreCase("Permanent") && userStatus != null && userStatus.containsValue("Completed")) {
             for (Map.Entry<String, String> entry : userStatus.entrySet()) {
                 if (entry.getValue().equalsIgnoreCase("Completed")) {
                     String completedUserEmail = entry.getKey();

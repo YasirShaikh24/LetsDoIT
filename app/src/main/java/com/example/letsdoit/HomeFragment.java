@@ -1,26 +1,18 @@
-// src/main/java/com/example/letsdoit/HomeFragment.java
 package com.example.letsdoit;
 
-import android.animation.Animator;
-import android.animation.AnimatorListenerAdapter;
-import android.animation.ObjectAnimator;
 import android.app.Dialog;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.view.animation.AccelerateDecelerateInterpolator;
-import android.view.animation.OvershootInterpolator;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
-import android.widget.RelativeLayout;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -45,492 +37,352 @@ public class HomeFragment extends Fragment implements CalendarDialogFragment.OnD
     private static final String ARG_USER_EMAIL = "user_email";
     private static final String ARG_USER_ROLE = "user_role";
     private static final String ARG_DISPLAY_NAME = "display_name";
-    private static final String TAG = "HomeFragment";
 
-    private String welcomeMessage;
-    private String loggedInUserEmail;
-    private String loggedInUserRole;
-    private String displayName;
+    private String loggedInUserEmail, loggedInUserRole, displayName;
 
-    private RelativeLayout headerSection;
     private TextView tvWelcomeName, tvDateIndicator;
     private TextView tvTotalTasksCount, tvDoneCount, tvNotDoneCount;
-    private CardView cardTotalTasks, cardDone, cardNotDone, cardPieChart;
+    private TextView tvDonePercentage, tvNotDonePercentage;
+    private CardView cardTotalTasks, cardDone, cardNotDone, cardPieChart, cardFabCalendar;
     private ProgressBar progressBar;
     private LinearLayout llDashboardContent;
     private ImageView fabCalendar;
-    private CardView cardFabCalendar;
-
-    // REMOVED: private TextView tvCalendarBanner;
-    private TextView tvDonePercentage, tvNotDonePercentage;
     private TaskPieChartView taskPieChartView;
 
     private FirebaseFirestore db;
-    private List<Task> allTasks;
-    private List<Task> doneTasks;
-    private List<Task> notDoneTasks;
+    private List<Task> allTasks = new ArrayList<>();
+    private List<Task> doneTasks = new ArrayList<>();
+    private List<Task> notDoneTasks = new ArrayList<>();
 
     private final SimpleDateFormat dateFormat = new SimpleDateFormat("MMM dd, yyyy", Locale.US);
-    private final SimpleDateFormat dayOfWeekFormat = new SimpleDateFormat("EEEE", Locale.US);
+    private final SimpleDateFormat dayFormat = new SimpleDateFormat("EEE", Locale.US);
 
     private long selectedDateMillis = -1;
+    private static boolean hasAnimated = false;
 
-    private static boolean hasAnimatedOnStart = false;
-
-    public static HomeFragment newInstance(String welcomeMessage, String email, String role, String displayName) {
-        HomeFragment fragment = new HomeFragment();
+    public static HomeFragment newInstance(String msg, String email, String role, String name) {
+        HomeFragment f = new HomeFragment();
         Bundle args = new Bundle();
-        args.putString(ARG_WELCOME_MESSAGE, welcomeMessage);
+        args.putString(ARG_WELCOME_MESSAGE, msg);
         args.putString(ARG_USER_EMAIL, email);
         args.putString(ARG_USER_ROLE, role);
-        args.putString(ARG_DISPLAY_NAME, displayName);
-        fragment.setArguments(args);
-        return fragment;
+        args.putString(ARG_DISPLAY_NAME, name);
+        f.setArguments(args);
+        return f;
     }
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
         if (getArguments() != null) {
-            welcomeMessage = getArguments().getString(ARG_WELCOME_MESSAGE);
             loggedInUserEmail = getArguments().getString(ARG_USER_EMAIL);
-            loggedInUserRole = getArguments().getString(LoginActivity.EXTRA_USER_ROLE);
+            loggedInUserRole = getArguments().getString(ARG_USER_ROLE);
             displayName = getArguments().getString(ARG_DISPLAY_NAME);
         }
+
         db = FirebaseFirestore.getInstance();
-        allTasks = new ArrayList<>();
-        doneTasks = new ArrayList<>();
-        notDoneTasks = new ArrayList<>();
     }
 
     @Nullable
     @Override
-    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        View view = inflater.inflate(R.layout.fragment_home, container, false);
+    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup parent, @Nullable Bundle savedInstanceState) {
+        View v = inflater.inflate(R.layout.fragment_home, parent, false);
 
-        headerSection = view.findViewById(R.id.header_section);
-        tvWelcomeName = view.findViewById(R.id.tv_welcome_name);
-        tvDateIndicator = view.findViewById(R.id.tv_date_indicator);
-        tvTotalTasksCount = view.findViewById(R.id.tv_total_tasks_count);
-        tvDoneCount = view.findViewById(R.id.tv_done_count);
-        tvNotDoneCount = view.findViewById(R.id.tv_not_done_count);
+        tvWelcomeName = v.findViewById(R.id.tv_welcome_name);
+        tvDateIndicator = v.findViewById(R.id.tv_date_indicator);
+        tvTotalTasksCount = v.findViewById(R.id.tv_total_tasks_count);
+        tvDoneCount = v.findViewById(R.id.tv_done_count);
+        tvNotDoneCount = v.findViewById(R.id.tv_not_done_count);
 
-        cardTotalTasks = view.findViewById(R.id.card_total_tasks);
-        cardDone = view.findViewById(R.id.card_done);
-        cardNotDone = view.findViewById(R.id.card_not_done);
-        cardPieChart = view.findViewById(R.id.card_pie_chart);
-        progressBar = view.findViewById(R.id.progress_bar);
-        llDashboardContent = view.findViewById(R.id.ll_dashboard_content);
-        fabCalendar = view.findViewById(R.id.fab_calendar);
-        cardFabCalendar = view.findViewById(R.id.card_fab_calendar);
-        // REMOVED: tvCalendarBanner = view.findViewById(R.id.tv_calendar_banner);
+        cardTotalTasks = v.findViewById(R.id.card_total_tasks);
+        cardDone = v.findViewById(R.id.card_done);
+        cardNotDone = v.findViewById(R.id.card_not_done);
+        cardPieChart = v.findViewById(R.id.card_pie_chart);
+        cardFabCalendar = v.findViewById(R.id.card_fab_calendar);
 
-        tvDonePercentage = view.findViewById(R.id.tv_done_percentage);
-        tvNotDonePercentage = view.findViewById(R.id.tv_not_done_percentage);
-        taskPieChartView = view.findViewById(R.id.pie_chart_view);
+        progressBar = v.findViewById(R.id.progress_bar);
+        llDashboardContent = v.findViewById(R.id.ll_dashboard_content);
 
-        if (displayName != null && !displayName.isEmpty()) {
-            tvWelcomeName.setText(displayName);
-        } else if ("admin".equalsIgnoreCase(loggedInUserRole)) {
-            tvWelcomeName.setText("Admin");
-        } else {
-            tvWelcomeName.setText("User");
-        }
+        fabCalendar = v.findViewById(R.id.fab_calendar);
+        tvDonePercentage = v.findViewById(R.id.tv_done_percentage);
+        tvNotDonePercentage = v.findViewById(R.id.tv_not_done_percentage);
+        taskPieChartView = v.findViewById(R.id.pie_chart_view);
 
-        updateDateIndicator();
+        tvWelcomeName.setText(displayName != null ? displayName : "User");
 
-        tvDateIndicator.setOnClickListener(v -> {
-            if (selectedDateMillis != -1) {
-                selectedDateMillis = -1;
-                updateDateIndicator();
-                loadTasksForDate();
-            }
+        tvDateIndicator.setOnClickListener(vv -> {
+            selectedDateMillis = -1;
+            updateDateLabel();
+            loadTasks();
         });
 
-        fabCalendar.setOnClickListener(v -> showCalendarDialog());
+        fabCalendar.setOnClickListener(vv -> showCalendarDialog());
 
-        cardDone.setOnClickListener(v -> showTaskListDialog("Done Tasks", doneTasks));
-        cardNotDone.setOnClickListener(v -> showTaskListDialog("Pending Tasks", notDoneTasks));
+        cardDone.setOnClickListener(vv -> showList("Done Tasks", doneTasks));
+        cardNotDone.setOnClickListener(vv -> showList("Pending Tasks", notDoneTasks));
 
-        return view;
-    }
+        llDashboardContent.setVisibility(View.INVISIBLE);
 
-    private void animateCardsOnLoad() {
-        if (hasAnimatedOnStart) {
-            return;
-        }
-
-        // Set initial alpha and translation
-        cardTotalTasks.setAlpha(0f);
-        cardTotalTasks.setTranslationY(100f);
-
-        cardPieChart.setAlpha(0f);
-        cardPieChart.setTranslationY(100f);
-
-        cardDone.setAlpha(0f);
-        cardDone.setTranslationY(100f);
-
-        cardNotDone.setAlpha(0f);
-        cardNotDone.setTranslationY(100f);
-
-        // Animate cards sequentially
-        new Handler(Looper.getMainLooper()).postDelayed(() -> {
-            // Animate total tasks card
-            cardTotalTasks.animate()
-                    .alpha(1f)
-                    .translationY(0f)
-                    .setDuration(600)
-                    .setInterpolator(new AccelerateDecelerateInterpolator())
-                    .start();
-
-            // Animate pie chart card
-            new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                cardPieChart.animate()
-                        .alpha(1f)
-                        .translationY(0f)
-                        .setDuration(600)
-                        .setInterpolator(new AccelerateDecelerateInterpolator())
-                        .start();
-            }, 150);
-
-            // Animate action cards
-            new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                cardDone.animate()
-                        .alpha(1f)
-                        .translationY(0f)
-                        .setDuration(600)
-                        .setInterpolator(new AccelerateDecelerateInterpolator())
-                        .start();
-
-                cardNotDone.animate()
-                        .alpha(1f)
-                        .translationY(0f)
-                        .setDuration(600)
-                        .setInterpolator(new AccelerateDecelerateInterpolator())
-                        .start();
-            }, 300);
-
-        }, 200);
-
-        hasAnimatedOnStart = true;
-    }
-
-    // REMOVED: private void animateFabOnLoad() { ... }
-
-    private void showCalendarDialog() {
-        CalendarDialogFragment dialogFragment = CalendarDialogFragment.newInstance(
-                selectedDateMillis != -1 ? selectedDateMillis : null);
-        dialogFragment.setOnDateSelectedListener(this);
-        dialogFragment.show(getParentFragmentManager(), "CalendarDialog");
+        return v;
     }
 
     @Override
-    public void onDateSelected(long dateInMillis, String formattedDate) {
-        long todayStart = getDayStartMillis(System.currentTimeMillis());
-        long selectedDayStart = getDayStartMillis(dateInMillis);
+    public void onViewCreated(@NonNull View v, @Nullable Bundle saved) {
+        super.onViewCreated(v, saved);
 
-        if (selectedDayStart == todayStart) {
-            selectedDateMillis = -1;
-        } else {
-            selectedDateMillis = dateInMillis;
-        }
-
-        updateDateIndicator();
-        loadTasksForDate();
+        selectedDateMillis = -1;
+        updateDateLabel();
+        loadTasks();
     }
 
-    private void updateDateIndicator() {
-        if (tvDateIndicator == null) return;
-
-        if (selectedDateMillis == -1) {
-            tvDateIndicator.setText("Today");
-        } else {
-            String formattedDate = dateFormat.format(new Date(selectedDateMillis));
-            tvDateIndicator.setText(formattedDate);
-        }
+    private void showCalendarDialog() {
+        CalendarDialogFragment d = CalendarDialogFragment.newInstance(
+                selectedDateMillis != -1 ? selectedDateMillis : null);
+        d.setOnDateSelectedListener(this);
+        d.show(getParentFragmentManager(), "CalendarDialog");
     }
 
-    private void loadTasksForDate() {
+    @Override
+    public void onDateSelected(long ms, String f) {
+        selectedDateMillis = ms == getDayStartMillis(System.currentTimeMillis()) ? -1 : ms;
+        updateDateLabel();
+        loadTasks();
+    }
+
+    private void updateDateLabel() {
+        tvDateIndicator.setText(selectedDateMillis == -1
+                ? "Today"
+                : dateFormat.format(new Date(selectedDateMillis)));
+    }
+
+    private void loadTasks() {
+
         progressBar.setVisibility(View.VISIBLE);
-        llDashboardContent.setVisibility(View.GONE);
+        llDashboardContent.setVisibility(View.INVISIBLE);
 
-        long filterDateMillis = selectedDateMillis == -1 ? System.currentTimeMillis() : selectedDateMillis;
-        long filterDayStart = getDayStartMillis(filterDateMillis);
-        String filterDayOfWeek = dayOfWeekFormat.format(new Date(filterDateMillis)).substring(0, 3);
+        long filterDate = selectedDateMillis == -1 ? System.currentTimeMillis() : selectedDateMillis;
+        long dayStart = getDayStartMillis(filterDate);
+        String dayShort = dayFormat.format(new Date(filterDate)).toLowerCase();
 
-        db.collection("tasks")
-                .get()
-                .addOnSuccessListener(queryDocumentSnapshots -> {
-                    allTasks.clear();
-                    doneTasks.clear();
-                    notDoneTasks.clear();
+        db.collection("tasks").get().addOnSuccessListener(snap -> {
 
-                    for (QueryDocumentSnapshot document : queryDocumentSnapshots) {
-                        try {
-                            Task task = document.toObject(Task.class);
-                            task.setId(document.getId());
+            allTasks.clear();
+            doneTasks.clear();
+            notDoneTasks.clear();
 
-                            boolean isAssignedToUser = false;
-                            if ("user".equals(loggedInUserRole)) {
-                                List<String> assignedTo = task.getAssignedTo();
-                                if (assignedTo != null && assignedTo.contains(loggedInUserEmail)) {
-                                    isAssignedToUser = true;
-                                }
-                            } else {
-                                isAssignedToUser = true;
-                            }
+            for (QueryDocumentSnapshot doc : snap) {
+                try {
+                    Task t = doc.toObject(Task.class);
+                    t.setId(doc.getId());
 
-                            if (!isAssignedToUser) {
-                                continue;
-                            }
+                    String type = t.getTaskType() != null ? t.getTaskType().toLowerCase() : "permanent";
 
-                            boolean isForFilterDate = isTaskActiveOnDate(task, filterDayStart, filterDayOfWeek);
-
-                            if (!isForFilterDate) {
-                                continue;
-                            }
-
-                            allTasks.add(task);
-
-                            String taskStatus = getTaskStatusForDate(task, filterDayStart);
-
-                            if (taskStatus.equalsIgnoreCase("Completed")) {
-                                doneTasks.add(task);
-                            } else {
-                                notDoneTasks.add(task);
-                            }
-
-                        } catch (Exception e) {
-                            Log.e(TAG, "Error parsing task: " + document.getId(), e);
+                    if (!"admin".equalsIgnoreCase(loggedInUserRole)) {
+                        if (type.equals("additional")) {
+                            List<String> assigned = t.getAssignedTo();
+                            if (assigned == null || !assigned.contains(loggedInUserEmail)) continue;
                         }
                     }
 
-                    updateDashboard();
-                    progressBar.setVisibility(View.GONE);
-                    llDashboardContent.setVisibility(View.VISIBLE);
+                    if (!isTaskActive(t, dayShort, dayStart)) continue;
 
-                    if (!hasAnimatedOnStart) {
-                        animateCardsOnLoad();
-                    }
-                })
-                .addOnFailureListener(e -> {
-                    Log.e(TAG, "Error loading tasks", e);
-                    progressBar.setVisibility(View.GONE);
-                    llDashboardContent.setVisibility(View.VISIBLE);
-                    Toast.makeText(getContext(), "Failed to load tasks for this date.", Toast.LENGTH_SHORT).show();
-                });
+                    allTasks.add(t);
+
+                    if (getStatus(t, dayStart).equals("Completed")) doneTasks.add(t);
+                    else notDoneTasks.add(t);
+
+                } catch (Exception ignored) {}
+            }
+
+            updateDashboard();
+
+            progressBar.setVisibility(View.GONE);
+            llDashboardContent.setVisibility(View.VISIBLE);
+
+            if (!hasAnimated) animateCards();
+        });
     }
 
-    private boolean isTaskActiveOnDate(Task task, long filterDayStart, String filterDayOfWeek) {
-        String taskType = task.getTaskType() != null ? task.getTaskType().toLowerCase() : "permanent";
+    private boolean isTaskActive(Task t, String dayShort, long dayStart) {
 
-        if (taskType.equals("permanent")) {
-            List<String> selectedDays = task.getSelectedDays();
-            boolean isDayActive = false;
-            if (selectedDays != null) {
-                for (String day : selectedDays) {
-                    if (day.equalsIgnoreCase(filterDayOfWeek)) {
-                        isDayActive = true;
-                        break;
-                    }
+        String type = t.getTaskType() != null ? t.getTaskType().toLowerCase() : "permanent";
+
+        if (type.equals("permanent")) {
+            List<String> days = t.getSelectedDays();
+            if (days != null) {
+                for (String d : days) {
+                    if (d.trim().toLowerCase().equals(dayShort)) return true;
                 }
             }
-
-            if (isDayActive && task.getTimestamp() < filterDayStart + (24 * 60 * 60 * 1000L)) {
-                return true;
-            }
-        } else if (taskType.equals("additional")) {
-            try {
-                String startDateStr = task.getStartDate();
-                String endDateStr = task.getEndDate();
-
-                if (startDateStr != null && !startDateStr.isEmpty() &&
-                        endDateStr != null && !endDateStr.isEmpty()) {
-
-                    long startDateMillis = dateFormat.parse(startDateStr).getTime();
-                    long endDateMillis = dateFormat.parse(endDateStr).getTime();
-                    long startDayStart = getDayStartMillis(startDateMillis);
-                    long endDayStart = getDayStartMillis(endDateMillis);
-
-                    if (filterDayStart >= startDayStart && filterDayStart <= endDayStart) {
-                        return true;
-                    }
-                }
-            } catch (Exception e) {
-                Log.e(TAG, "Error parsing task dates: " + e.getMessage());
-            }
+            return false;
         }
-        return false;
+
+        try {
+            String s = t.getStartDate();
+            String e = t.getEndDate();
+
+            boolean hasS = s != null && !s.isEmpty();
+            boolean hasE = e != null && !e.isEmpty();
+
+            long start = hasS ? getDayStartMillis(dateFormat.parse(s).getTime()) : dayStart;
+            long end = hasE ? getDayStartMillis(dateFormat.parse(e).getTime()) : dayStart;
+
+            return dayStart >= start && dayStart <= end;
+        }
+        catch (Exception ex) {
+            return false;
+        }
     }
 
-    private String getTaskStatusForDate(Task task, long filterDayStart) {
-        if (task.getUserStatus().containsValue("Completed")) {
-            long globalCompletionTime = task.getCompletedDateMillis();
+    private String getStatus(Task t, long dayStart) {
 
-            if (task.getTaskType().equalsIgnoreCase("permanent")) {
-                long filterDayEnd = filterDayStart + (24 * 60 * 60 * 1000L) - 1;
+        boolean global = t.getUserStatus().containsValue("Completed");
+        boolean isPerm = t.getTaskType().equalsIgnoreCase("permanent");
+        long completedAt = t.getCompletedDateMillis();
 
-                if (globalCompletionTime > 0 && globalCompletionTime <= filterDayEnd) {
-                    return "Completed";
-                }
+        if (global) {
+            if (isPerm) {
+                long dayEnd = dayStart + 86400000L - 1;
+                if (completedAt > 0 && completedAt <= dayEnd) return "Completed";
                 return "Pending";
             }
-
             return "Completed";
         }
 
         return "Pending";
     }
 
-    private long getDayStartMillis(long dateMillis) {
-        Calendar calendar = Calendar.getInstance();
-        calendar.setTimeInMillis(dateMillis);
-        calendar.set(Calendar.HOUR_OF_DAY, 0);
-        calendar.set(Calendar.MINUTE, 0);
-        calendar.set(Calendar.SECOND, 0);
-        calendar.set(Calendar.MILLISECOND, 0);
-        return calendar.getTimeInMillis();
-    }
-
     private void updateDashboard() {
-        if (getContext() == null) return;
 
-        int totalTasks = allTasks.size();
-        int doneCount = doneTasks.size();
-        int notDoneCount = notDoneTasks.size();
+        int total = allTasks.size();
+        int done = doneTasks.size();
+        int pending = notDoneTasks.size();
 
-        // Animate counter updates
-        animateCounter(tvTotalTasksCount, totalTasks);
-        animateCounter(tvDoneCount, doneCount);
-        animateCounter(tvNotDoneCount, notDoneCount);
+        animate(tvTotalTasksCount, total);
+        animate(tvDoneCount, done);
+        animate(tvNotDoneCount, pending);
 
-        float doneFraction = 0f;
+        tvDonePercentage.setText("DONE " + done);
+        tvNotDonePercentage.setText("PENDING " + pending);
 
-        if (totalTasks == 0) {
-            tvDonePercentage.setText(String.format(Locale.US, "DONE %d", doneCount));
-            tvNotDonePercentage.setText(String.format(Locale.US, "PENDING %d", notDoneCount));
+        float frac = total == 0 ? 0 : (float) done / total;
+        taskPieChartView.setTaskPercentages(frac);
+    }
+
+    private void animate(TextView tv, int target) {
+        android.animation.ValueAnimator a =
+                android.animation.ValueAnimator.ofInt(0, target);
+        a.setDuration(600);
+        a.addUpdateListener(v -> tv.setText(String.valueOf(v.getAnimatedValue())));
+        a.start();
+    }
+
+    private void animateCards() {
+        hasAnimated = true;
+
+        cardTotalTasks.setAlpha(0f); cardTotalTasks.setTranslationY(100f);
+        cardPieChart.setAlpha(0f); cardPieChart.setTranslationY(100f);
+        cardDone.setAlpha(0f); cardDone.setTranslationY(100f);
+        cardNotDone.setAlpha(0f); cardNotDone.setTranslationY(100f);
+
+        new Handler(Looper.getMainLooper()).postDelayed(() -> {
+
+            cardTotalTasks.animate().alpha(1f).translationY(0f).setDuration(500)
+                    .setInterpolator(new AccelerateDecelerateInterpolator()).start();
+
+            new Handler(Looper.getMainLooper()).postDelayed(() ->
+                    cardPieChart.animate().alpha(1f).translationY(0f).setDuration(500)
+                            .setInterpolator(new AccelerateDecelerateInterpolator()).start(), 120);
+
+            new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                cardDone.animate().alpha(1f).translationY(0f).setDuration(500)
+                        .setInterpolator(new AccelerateDecelerateInterpolator()).start();
+                cardNotDone.animate().alpha(1f).translationY(0f).setDuration(500)
+                        .setInterpolator(new AccelerateDecelerateInterpolator()).start();
+            }, 240);
+
+        }, 150);
+    }
+
+    private void showList(String title, List<Task> list) {
+
+        Dialog d = new Dialog(requireContext());
+        d.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        d.setContentView(R.layout.dialog_task_list);
+        d.getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+
+        TextView tv = d.findViewById(R.id.tv_dialog_title);
+        TextView empty = d.findViewById(R.id.tv_empty_state);
+        RecyclerView rv = d.findViewById(R.id.recycler_view_tasks);
+        TextView close = d.findViewById(R.id.btn_close);
+
+        tv.setText(title);
+
+        if (list.isEmpty()) {
+            empty.setVisibility(View.VISIBLE);
+            rv.setVisibility(View.GONE);
         } else {
-            doneFraction = (float) doneCount / totalTasks;
-            // The percentage text below the chart actually displays the count, not a percentage symbol
-            tvDonePercentage.setText(String.format(Locale.US, "DONE %d", doneCount));
-            tvNotDonePercentage.setText(String.format(Locale.US, "PENDING %d", notDoneCount));
+            empty.setVisibility(View.GONE);
+            rv.setVisibility(View.VISIBLE);
+            rv.setLayoutManager(new LinearLayoutManager(getContext()));
+            rv.setAdapter(new TaskAdapter(list));
         }
 
-        if (taskPieChartView != null) {
-            taskPieChartView.setTaskPercentages(doneFraction);
-        }
+        close.setOnClickListener(v12 -> d.dismiss());
+        d.show();
     }
 
-    private void animateCounter(TextView textView, int targetValue) {
-        android.animation.ValueAnimator animator = android.animation.ValueAnimator.ofInt(0, targetValue);
-        animator.setDuration(800);
-        animator.addUpdateListener(animation -> {
-            textView.setText(String.valueOf(animation.getAnimatedValue()));
-        });
-        animator.start();
+    private long getDayStartMillis(long ms) {
+        Calendar c = Calendar.getInstance();
+        c.setTimeInMillis(ms);
+        c.set(Calendar.HOUR_OF_DAY, 0);
+        c.set(Calendar.MINUTE, 0);
+        c.set(Calendar.SECOND, 0);
+        c.set(Calendar.MILLISECOND, 0);
+        return c.getTimeInMillis();
     }
 
-    private void showTaskListDialog(String title, List<Task> tasks) {
-        Dialog dialog = new Dialog(requireContext());
-        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
-        dialog.setContentView(R.layout.dialog_task_list);
-        dialog.getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+    private static class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.Holder> {
 
-        TextView tvDialogTitle = dialog.findViewById(R.id.tv_dialog_title);
-        TextView tvEmptyState = dialog.findViewById(R.id.tv_empty_state);
-        RecyclerView recyclerView = dialog.findViewById(R.id.recycler_view_tasks);
-        TextView btnClose = dialog.findViewById(R.id.btn_close);
+        List<Task> list;
 
-        tvDialogTitle.setText(title);
-
-        if (tasks.isEmpty()) {
-            tvEmptyState.setVisibility(View.VISIBLE);
-            recyclerView.setVisibility(View.GONE);
-            tvEmptyState.setText("No tasks found");
-        } else {
-            tvEmptyState.setVisibility(View.GONE);
-            recyclerView.setVisibility(View.VISIBLE);
-
-            SimpleTaskAdapter adapter = new SimpleTaskAdapter(tasks);
-            recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
-            recyclerView.setAdapter(adapter);
-        }
-
-        btnClose.setOnClickListener(v -> dialog.dismiss());
-
-        dialog.show();
-    }
-
-    private static class SimpleTaskAdapter extends RecyclerView.Adapter<SimpleTaskAdapter.SimpleTaskViewHolder> {
-
-        private List<Task> tasks;
-
-        public SimpleTaskAdapter(List<Task> tasks) {
-            this.tasks = tasks;
+        TaskAdapter(List<Task> list) {
+            this.list = list;
         }
 
         @NonNull
         @Override
-        public SimpleTaskViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_simple_task, parent, false);
-            return new SimpleTaskViewHolder(view);
+        public Holder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            View v = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_simple_task, parent, false);
+            return new Holder(v);
         }
 
         @Override
-        public void onBindViewHolder(@NonNull SimpleTaskAdapter.SimpleTaskViewHolder holder, int position) {
-            Task task = tasks.get(position);
-            holder.tvTaskTitle.setText(task.getTitle());
-
-            if (task.getDescription() != null && !task.getDescription().isEmpty()) {
-                holder.tvTaskDescription.setVisibility(View.VISIBLE);
-                holder.tvTaskDescription.setText(task.getDescription());
+        public void onBindViewHolder(@NonNull Holder h, int pos) {
+            Task t = list.get(pos);
+            h.title.setText(t.getTitle());
+            if (t.getDescription() != null && !t.getDescription().isEmpty()) {
+                h.desc.setVisibility(View.VISIBLE);
+                h.desc.setText(t.getDescription());
             } else {
-                holder.tvTaskDescription.setVisibility(View.GONE);
+                h.desc.setVisibility(View.GONE);
             }
         }
 
         @Override
         public int getItemCount() {
-            return tasks.size();
+            return list.size();
         }
 
-        static class SimpleTaskViewHolder extends RecyclerView.ViewHolder {
-            TextView tvTaskTitle, tvTaskDescription;
+        static class Holder extends RecyclerView.ViewHolder {
+            TextView title, desc;
 
-            public SimpleTaskViewHolder(@NonNull View itemView) {
-                super(itemView);
-                tvTaskTitle = itemView.findViewById(R.id.tv_task_title);
-                tvTaskDescription = itemView.findViewById(R.id.tv_task_description);
+            Holder(@NonNull View v) {
+                super(v);
+                title = v.findViewById(R.id.tv_task_title);
+                desc = v.findViewById(R.id.tv_task_description);
             }
-        }
-    }
-
-    public void setFabVisibility(boolean visible) {
-        if (cardFabCalendar != null) {
-            cardFabCalendar.setVisibility(visible ? View.VISIBLE : View.GONE);
-        }
-    }
-
-    @Override
-    public void onResume() {
-        super.onResume();
-        if (loggedInUserEmail != null) {
-            loadTasksForDate();
-        }
-        if (cardFabCalendar != null) {
-            cardFabCalendar.setVisibility(View.VISIBLE);
-            // REMOVED: if (!hasAnimatedOnStart) { animateFabOnLoad(); }
-            if (!hasAnimatedOnStart) {
-                animateCardsOnLoad();
-            }
-        }
-    }
-
-    @Override
-    public void onPause() {
-        super.onPause();
-        if (cardFabCalendar != null) {
-            cardFabCalendar.setVisibility(View.GONE);
         }
     }
 }
