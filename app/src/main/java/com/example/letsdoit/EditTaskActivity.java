@@ -63,6 +63,9 @@ public class EditTaskActivity extends AppCompatActivity {
         // Uses fragment_add_activity.xml which now has CheckBoxes
         setContentView(R.layout.fragment_add_activity);
 
+        // FIX: Initialize views immediately after setting content view
+        initViews();
+
         taskId = getIntent().getStringExtra(ViewActivityFragment.EXTRA_TASK_ID);
         if (taskId == null) {
             Toast.makeText(this, "Error: Invalid Task ID.", Toast.LENGTH_SHORT).show();
@@ -241,7 +244,11 @@ public class EditTaskActivity extends AppCompatActivity {
             };
 
             for (CheckBox cb : checkBoxes) {
-                String fullDayName = getFullDayName(cb.getText().toString());
+                // IMPORTANT: The getFullDayName method is defined locally in this class
+                // The argument to getFullDayName should be the abbreviated text of the CheckBox.
+                // Since the CheckBox's text property is the abbreviation (M, T, W, Th, F, Sa, Su)
+                String dayAbbr = cb.getText().toString();
+                String fullDayName = getFullDayName(dayAbbr);
                 cb.setChecked(selectedDays.contains(fullDayName));
             }
         }
