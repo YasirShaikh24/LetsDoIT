@@ -33,4 +33,6 @@
 
     <color name="chart_done">#4AFFB8</color>
     <color name="chart_not_done">#FF6B9D</color>
+
+    <color name="nav_ripple">#30FFFFFF</color>
 </resources>

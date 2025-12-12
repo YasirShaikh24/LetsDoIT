@@ -14,9 +14,7 @@
         <item name="colorSurface">@color/white</item>
         <item name="colorSurfaceVariant">@color/background_input</item>
 
-        <!-- CHANGED: Status bar to black -->
         <item name="android:statusBarColor">@color/black</item>
-        <!-- CHANGED: Light status bar icons to false for better visibility on black -->
         <item name="android:windowLightStatusBar" tools:targetApi="m">false</item>
 
         <item name="android:navigationBarColor">@color/primary_purple</item>
@@ -76,5 +74,17 @@
         <item name="android:textSize">12sp</item>
         <item name="android:paddingHorizontal">2dp</item>
         <item name="android:layout_marginHorizontal">2dp</item>
+    </style>
+
+    <!-- Navigation Text Styles -->
+    <style name="NavTextActive">
+        <item name="android:textSize">11sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+    </style>
+
+    <style name="NavTextInactive">
+        <item name="android:textSize">10sp</item>
+        <item name="android:textStyle">normal</item>
     </style>
 </resources>

@@ -165,8 +165,8 @@ public class MainActivity extends AppCompatActivity {
      */
     private void scheduleNotifications() {
         // Always reschedule to ensure time is updated
-        notificationHelper.scheduleDailyNotification(19, 0); // 7:00 PM
-        Log.d(TAG, "Daily notifications scheduled at 7:00 PM");
+        notificationHelper.scheduleDailyNotification(22, 0); // 7:00 PM
+        Log.d(TAG, "Daily notifications scheduled at 10:00 PM");
     }
 
     /**

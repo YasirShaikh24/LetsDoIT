@@ -8,8 +8,6 @@ import android.graphics.RectF;
 import android.util.AttributeSet;
 import android.view.View;
 
-import androidx.core.content.ContextCompat;
-
 public class TaskPieChartView extends View {
 
     private Paint donePaint;
@@ -35,9 +33,9 @@ public class TaskPieChartView extends View {
     }
 
     private void init(Context context) {
-        // Premium colors
-        int doneColor = Color.parseColor("#4AFFB8"); // Mint green
-        int notDoneColor = Color.parseColor("#FF6B9D"); // Pink
+        // UPDATED: Lighter, softer colors matching UI
+        int doneColor = Color.parseColor("#A8E6CF"); // Light mint green
+        int notDoneColor = Color.parseColor("#FFB6C1"); // Light pink
 
         donePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         donePaint.setColor(doneColor);
@@ -47,17 +45,17 @@ public class TaskPieChartView extends View {
         notDonePaint.setColor(notDoneColor);
         notDonePaint.setStyle(Paint.Style.FILL);
 
-        // Text paint with shadow
+        // UPDATED: Text paint with BLACK color
         textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        textPaint.setColor(Color.WHITE);
+        textPaint.setColor(Color.BLACK);
         textPaint.setTextSize(56f);
         textPaint.setTextAlign(Paint.Align.CENTER);
         textPaint.setFakeBoldText(true);
-        textPaint.setShadowLayer(8f, 0f, 4f, Color.parseColor("#40000000"));
+        textPaint.setShadowLayer(4f, 0f, 2f, Color.parseColor("#30000000"));
 
         shadowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        shadowPaint.setColor(Color.parseColor("#20000000"));
-        shadowPaint.setMaskFilter(new android.graphics.BlurMaskFilter(12f, android.graphics.BlurMaskFilter.Blur.NORMAL));
+        shadowPaint.setColor(Color.parseColor("#15000000"));
+        shadowPaint.setMaskFilter(new android.graphics.BlurMaskFilter(10f, android.graphics.BlurMaskFilter.Blur.NORMAL));
 
         rectF = new RectF();
 
@@ -77,23 +75,19 @@ public class TaskPieChartView extends View {
         float centerX = getWidth() / 2f;
         float centerY = getHeight() / 2f;
 
-        // Add padding for shadow
         int padding = 12;
         rectF.set(padding, padding, size - padding, size - padding);
 
         float notDoneFraction = 1.0f - donePercentage;
 
-        // Draw shadow circle
-        canvas.drawCircle(centerX, centerY + 4, (size - padding * 2) / 2f, shadowPaint);
+        canvas.drawCircle(centerX, centerY + 3, (size - padding * 2) / 2f, shadowPaint);
 
-        // Draw Not Done slice (background)
         float notDoneAngle = notDoneFraction * 360f;
         float notDoneStartAngle = -90f + (donePercentage * 360f);
         if (notDoneFraction > 0) {
             canvas.drawArc(rectF, notDoneStartAngle, notDoneAngle, true, notDonePaint);
         }
 
-        // Draw Done slice
         float doneAngle = donePercentage * 360f;
         float doneStartAngle = -90f;
         if (donePercentage > 0) {
@@ -102,7 +96,6 @@ public class TaskPieChartView extends View {
 
         float radius = (size - padding * 2) / 2.0f;
 
-        // Draw Done Percentage
         if (donePercentage > 0.08f) {
             float textRadius = radius * 0.55f;
             float textAngle = doneStartAngle + (doneAngle / 2.0f);
@@ -113,7 +106,6 @@ public class TaskPieChartView extends View {
             canvas.drawText(doneText, x, y - (textPaint.descent() + textPaint.ascent()) / 2, textPaint);
         }
 
-        // Draw Not Done Percentage
         if (notDoneFraction > 0.08f) {
             float textRadius = radius * 0.55f;
             float textAngle = notDoneStartAngle + (notDoneAngle / 2.0f);

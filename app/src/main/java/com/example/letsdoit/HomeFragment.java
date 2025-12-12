@@ -9,7 +9,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
-import android.view.animation.AccelerateDecelerateInterpolator;
+import android.view.animation.DecelerateInterpolator;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
@@ -116,7 +116,6 @@ public class HomeFragment extends Fragment implements CalendarDialogFragment.OnD
             selectedDateMillis = -1;
             updateDateLabel();
             loadTasks();
-            // ADDED: Sync with MainActivity
             syncDateWithActivity();
         });
 
@@ -125,7 +124,9 @@ public class HomeFragment extends Fragment implements CalendarDialogFragment.OnD
         cardDone.setOnClickListener(vv -> showList("Done Tasks", doneTasks));
         cardNotDone.setOnClickListener(vv -> showList("Pending Tasks", notDoneTasks));
 
-        llDashboardContent.setVisibility(View.INVISIBLE);
+        // FIXED: Set content to VISIBLE initially to prevent blinking
+        llDashboardContent.setVisibility(View.VISIBLE);
+        llDashboardContent.setAlpha(0f);
 
         return v;
     }
@@ -134,7 +135,6 @@ public class HomeFragment extends Fragment implements CalendarDialogFragment.OnD
     public void onViewCreated(@NonNull View v, @Nullable Bundle saved) {
         super.onViewCreated(v, saved);
 
-        // ADDED: Get initial date from MainActivity if available
         if (getActivity() instanceof MainActivity) {
             long activityDate = ((MainActivity) getActivity()).getCurrentSelectedDateMillis();
             if (activityDate != -1) {
@@ -146,19 +146,16 @@ public class HomeFragment extends Fragment implements CalendarDialogFragment.OnD
         loadTasks();
     }
 
-    // ADDED: Method to set selected date (called from MainActivity)
     public void setSelectedDateMillis(long dateMillis) {
         this.selectedDateMillis = dateMillis;
     }
 
-    // ADDED: Method to update date from MainActivity
     public void updateDateFromActivity(long dateMillis) {
         this.selectedDateMillis = dateMillis;
         updateDateLabel();
         loadTasks();
     }
 
-    // ADDED: Method to sync date back to MainActivity
     private void syncDateWithActivity() {
         if (getActivity() instanceof MainActivity) {
             ((MainActivity) getActivity()).updateSelectedDate(selectedDateMillis);
@@ -177,7 +174,6 @@ public class HomeFragment extends Fragment implements CalendarDialogFragment.OnD
         selectedDateMillis = ms == getDayStartMillis(System.currentTimeMillis()) ? -1 : ms;
         updateDateLabel();
         loadTasks();
-        // ADDED: Sync with MainActivity
         syncDateWithActivity();
     }
 
@@ -188,9 +184,8 @@ public class HomeFragment extends Fragment implements CalendarDialogFragment.OnD
     }
 
     private void loadTasks() {
-
         progressBar.setVisibility(View.VISIBLE);
-        llDashboardContent.setVisibility(View.INVISIBLE);
+        llDashboardContent.setAlpha(0f);
 
         long filterDate = selectedDateMillis == -1 ? System.currentTimeMillis() : selectedDateMillis;
         long dayStart = getDayStartMillis(filterDate);
@@ -229,7 +224,13 @@ public class HomeFragment extends Fragment implements CalendarDialogFragment.OnD
             updateDashboard();
 
             progressBar.setVisibility(View.GONE);
-            llDashboardContent.setVisibility(View.VISIBLE);
+
+            // SMOOTH FADE IN - NO BLINKING
+            llDashboardContent.animate()
+                    .alpha(1f)
+                    .setDuration(400)
+                    .setInterpolator(new DecelerateInterpolator())
+                    .start();
 
             if (!hasAnimated) animateCards();
         });
@@ -270,8 +271,8 @@ public class HomeFragment extends Fragment implements CalendarDialogFragment.OnD
 
         boolean global = t.getUserStatus().containsValue("Completed");
         boolean isPerm = t.getTaskType().equalsIgnoreCase("permanent");
-        long completedAt = t.getCompletedDateMillis(); // Global completed date for Permanent, or single user's for Additional (via Task.java logic)
-        String aiCount = t.getAiCountValue();          // Global AI count for Permanent, or single user's for Additional (via Task.java logic)
+        long completedAt = t.getCompletedDateMillis();
+        String aiCount = t.getAiCountValue();
 
         String effectiveStatus = "Pending";
 
@@ -282,19 +283,16 @@ public class HomeFragment extends Fragment implements CalendarDialogFragment.OnD
                     effectiveStatus = "Completed";
                 }
             } else {
-                // For Additional tasks: HomeFragment only loads assigned tasks for users.
                 if ("admin".equalsIgnoreCase(loggedInUserRole)) {
                     effectiveStatus = "Completed";
                 } else if (t.getUserStatus(loggedInUserEmail).equalsIgnoreCase("Completed")) {
                     effectiveStatus = "Completed";
-                    // For user on additional task, we must rely on their specific AI count/date
                     aiCount = t.getUserAiCount(loggedInUserEmail);
                     completedAt = t.getUserCompletedDate(loggedInUserEmail);
                 }
             }
         }
 
-        // CRITICAL FIX: If AI Count is required but missing, demote status to Pending
         if (effectiveStatus.equals("Completed") && t.isRequireAiCount() && (aiCount == null || aiCount.isEmpty())) {
             return "Pending";
         }
@@ -322,7 +320,8 @@ public class HomeFragment extends Fragment implements CalendarDialogFragment.OnD
     private void animate(TextView tv, int target) {
         android.animation.ValueAnimator a =
                 android.animation.ValueAnimator.ofInt(0, target);
-        a.setDuration(600);
+        a.setDuration(800);
+        a.setInterpolator(new DecelerateInterpolator());
         a.addUpdateListener(v -> tv.setText(String.valueOf(v.getAnimatedValue())));
         a.start();
     }
@@ -330,28 +329,28 @@ public class HomeFragment extends Fragment implements CalendarDialogFragment.OnD
     private void animateCards() {
         hasAnimated = true;
 
-        cardTotalTasks.setAlpha(0f); cardTotalTasks.setTranslationY(100f);
-        cardPieChart.setAlpha(0f); cardPieChart.setTranslationY(100f);
-        cardDone.setAlpha(0f); cardDone.setTranslationY(100f);
-        cardNotDone.setAlpha(0f); cardNotDone.setTranslationY(100f);
+        cardTotalTasks.setAlpha(0f); cardTotalTasks.setTranslationY(50f);
+        cardPieChart.setAlpha(0f); cardPieChart.setTranslationY(50f);
+        cardDone.setAlpha(0f); cardDone.setTranslationY(50f);
+        cardNotDone.setAlpha(0f); cardNotDone.setTranslationY(50f);
 
         new Handler(Looper.getMainLooper()).postDelayed(() -> {
 
-            cardTotalTasks.animate().alpha(1f).translationY(0f).setDuration(500)
-                    .setInterpolator(new AccelerateDecelerateInterpolator()).start();
+            cardTotalTasks.animate().alpha(1f).translationY(0f).setDuration(400)
+                    .setInterpolator(new DecelerateInterpolator()).start();
 
             new Handler(Looper.getMainLooper()).postDelayed(() ->
-                    cardPieChart.animate().alpha(1f).translationY(0f).setDuration(500)
-                            .setInterpolator(new AccelerateDecelerateInterpolator()).start(), 120);
+                    cardPieChart.animate().alpha(1f).translationY(0f).setDuration(400)
+                            .setInterpolator(new DecelerateInterpolator()).start(), 100);
 
             new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                cardDone.animate().alpha(1f).translationY(0f).setDuration(500)
-                        .setInterpolator(new AccelerateDecelerateInterpolator()).start();
-                cardNotDone.animate().alpha(1f).translationY(0f).setDuration(500)
-                        .setInterpolator(new AccelerateDecelerateInterpolator()).start();
-            }, 240);
+                cardDone.animate().alpha(1f).translationY(0f).setDuration(400)
+                        .setInterpolator(new DecelerateInterpolator()).start();
+                cardNotDone.animate().alpha(1f).translationY(0f).setDuration(400)
+                        .setInterpolator(new DecelerateInterpolator()).start();
+            }, 200);
 
-        }, 150);
+        }, 100);
     }
 
     private void showList(String title, List<Task> list) {
