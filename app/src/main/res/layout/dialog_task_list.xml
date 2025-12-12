@@ -6,7 +6,6 @@
     android:orientation="vertical"
     android:background="@android:color/white">
 
-    <!-- Header -->
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -36,7 +35,6 @@
             android:background="?attr/selectableItemBackgroundBorderless"/>
     </RelativeLayout>
 
-    <!-- Content Area -->
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"

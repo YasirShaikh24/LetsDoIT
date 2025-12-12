@@ -23,7 +23,6 @@
             android:textStyle="bold"
             android:textColor="@color/text_primary"/>
 
-        <!-- MODIFIED: Changed to a Button with text "Back" -->
         <Button
             android:id="@+id/btn_back_to_profile"
             android:layout_width="wrap_content"
@@ -31,7 +30,7 @@
             android:text="Back"
             android:textSize="14sp"
             android:textStyle="bold"
-            android:textColor="#FFFFFF"
+            android:textColor="@color/white"
             android:background="@drawable/button_primary_background"
             android:paddingStart="16dp"
             android:paddingEnd="16dp" />

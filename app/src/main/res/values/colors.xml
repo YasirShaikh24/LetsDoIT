@@ -1,17 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="primary_purple">#5B4CFF</color>
+    <color name="primary_purple">#00798C</color>
     <color name="primary_blue">#00D4FF</color>
-    <color name="primary_gradient_start">#00D4FF</color>
-    <color name="primary_gradient_center">#7B68EE</color>
-    <color name="primary_gradient_end">#6B5CE7</color>
+    <color name="primary_gradient_start">#00BCD4</color>
+    <color name="primary_gradient_center">#00798C</color>
+    <color name="primary_gradient_end">#004D40</color>
 
-    <!-- Dark Header Gradient Colors -->
     <color name="dark_gradient_start">#1a1a2e</color>
     <color name="dark_gradient_middle">#16213e</color>
     <color name="dark_gradient_end">#0f3460</color>
 
-    <!-- Light Card Gradient Colors -->
     <color name="light_gradient_start">#FFFFFF</color>
     <color name="light_gradient_end">#F8F9FF</color>
 
@@ -20,11 +18,11 @@
     <color name="text_hint">#999999</color>
 
     <color name="white">#FFFFFF</color>
-    <color name="background_input">#F5F5F5</color>
+    <color name="background_input">#F8F8F8</color>
 
-    <color name="purple_200">#BBDEFB</color>
-    <color name="purple_500">#5B4CFF</color>
-    <color name="purple_700">#4A3DD1</color>
+    <color name="purple_200">#B2EBF2</color>
+    <color name="purple_500">#00798C</color>
+    <color name="purple_700">#004D40</color>
     <color name="teal_200">#00D4FF</color>
     <color name="teal_700">#00A3CC</color>
     <color name="black">#000000</color>
@@ -33,7 +31,6 @@
     <color name="status_in_progress">#2196F3</color>
     <color name="status_completed">#4CAF50</color>
 
-    <!-- NEW: Premium Pie Chart Colors -->
     <color name="chart_done">#4AFFB8</color>
     <color name="chart_not_done">#FF6B9D</color>
 </resources>
