@@ -42,13 +42,16 @@ public class MemberAdapter extends RecyclerView.Adapter<MemberAdapter.MemberView
     public void onBindViewHolder(@NonNull MemberViewHolder holder, int position) {
         User user = memberList.get(position);
 
-        // Serial Number is position + 1
-        holder.tvSerialNumber.setText(String.valueOf(position + 1) + ".");
+        // UI UPDATE: Set Serial Number/Badge Text
+        holder.tvSerialNumberBadge.setText(String.valueOf(position + 1));
+
+        // UI UPDATE: Display Name (New field)
+        holder.tvMemberDisplayName.setText(user.getDisplayName() != null ? user.getDisplayName() : "User " + String.valueOf(position + 1));
 
         // Display Email
         holder.tvMemberEmail.setText(user.getEmail() != null ? user.getEmail() : "N/A");
 
-        // Display Password
+        // Display Password (UNMASKED - using actual password from user object)
         holder.tvMemberPassword.setText(user.getPassword() != null ? user.getPassword() : "N/A");
 
         // Attach listener to the delete button
@@ -58,7 +61,7 @@ public class MemberAdapter extends RecyclerView.Adapter<MemberAdapter.MemberView
             }
         });
 
-        // Attach listener to the new edit button (NEW)
+        // Attach listener to the new edit button
         holder.btnEditMember.setOnClickListener(v -> {
             if (listener != null) {
                 listener.onMemberEditClick(user);
@@ -72,16 +75,19 @@ public class MemberAdapter extends RecyclerView.Adapter<MemberAdapter.MemberView
     }
 
     static class MemberViewHolder extends RecyclerView.ViewHolder {
-        TextView tvSerialNumber, tvMemberEmail, tvMemberPassword;
-        ImageButton btnDeleteMember, btnEditMember; // ADDED btnEditMember
+        TextView tvSerialNumberBadge, tvMemberDisplayName, tvMemberEmail, tvMemberPassword;
+        ImageButton btnDeleteMember, btnEditMember;
 
         public MemberViewHolder(@NonNull View itemView) {
             super(itemView);
-            tvSerialNumber = itemView.findViewById(R.id.tv_serial_number);
+            // Updated IDs for new layout
+            tvSerialNumberBadge = itemView.findViewById(R.id.tv_serial_number_badge);
+            tvMemberDisplayName = itemView.findViewById(R.id.tv_member_display_name);
             tvMemberEmail = itemView.findViewById(R.id.tv_member_email);
             tvMemberPassword = itemView.findViewById(R.id.tv_member_password);
+
             btnDeleteMember = itemView.findViewById(R.id.btn_delete_member);
-            btnEditMember = itemView.findViewById(R.id.btn_edit_member); // Initialize new button
+            btnEditMember = itemView.findViewById(R.id.btn_edit_member);
         }
     }
 }

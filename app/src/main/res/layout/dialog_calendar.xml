@@ -3,19 +3,55 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:background="@color/white"
-    android:padding="16dp">
+    android:background="@color/white">
 
-    <TextView
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Select Date"
-        android:textSize="20sp"
-        android:textStyle="bold"
-        android:textColor="@color/text_primary"
-        android:layout_marginBottom="8dp"/>
+        android:orientation="vertical"
+        android:background="@color/primary_purple"
+        android:paddingHorizontal="24dp"
+        android:paddingTop="24dp"
+        android:paddingBottom="16dp">
 
-    <TextView
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="2025"
+            android:textSize="18sp"
+            android:textColor="@android:color/white"
+            android:alpha="0.8"
+            android:layout_marginBottom="4dp"/>
+
+        <TextView
+            android:id="@+id/tv_dialog_header_date"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Sat, 13 Dec"
+            android:textSize="32sp"
+            android:textStyle="bold"
+            android:textColor="@android:color/white"/>
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingHorizontal="24dp"
+        android:paddingTop="16dp"
+        android:paddingBottom="8dp"
+        android:background="@android:color/white">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Select Date"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:textColor="@color/text_primary"
+            android:layout_marginBottom="8dp"
+            android:visibility="gone"/> <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Tap a date to view task status on that specific day."
@@ -23,9 +59,13 @@
         android:textColor="@color/text_secondary"
         android:layout_marginBottom="16dp"/>
 
+    </LinearLayout>
+
     <CalendarView
         android:id="@+id/calendar_view"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"/>
+        android:layout_height="wrap_content"
+        android:paddingHorizontal="8dp"
+        android:paddingVertical="16dp"/>
 
 </LinearLayout>

@@ -5,10 +5,12 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.widget.Button; // Changed import from ImageButton to Button
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
@@ -21,6 +23,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 
@@ -32,11 +35,16 @@ public class ViewMembersActivity extends AppCompatActivity implements MemberAdap
 
     private RecyclerView recyclerView;
     private MemberAdapter memberAdapter;
-    private List<User> memberList;
+    private List<User> memberList; // Master list of all members
+    private List<User> filteredMemberList; // List displayed to the user
     private FirebaseFirestore db;
     private ProgressBar progressBar;
     private TextView tvEmptyState;
-    private Button btnBackToProfile; // CHANGED: Type is now Button
+    private Button btnBackToProfile;
+
+    // Search fields
+    private TextInputEditText etSearchQuery;
+    private String currentSearchQuery = "";
 
     private static final String TAG = "ViewMembersActivity";
 
@@ -45,10 +53,9 @@ public class ViewMembersActivity extends AppCompatActivity implements MemberAdap
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_view_members);
 
-        // Hide the default ActionBar (Toolbar) back button
         if (getSupportActionBar() != null) {
             getSupportActionBar().setDisplayHomeAsUpEnabled(false);
-            getSupportActionBar().setTitle("Team Members");
+            getSupportActionBar().setTitle("Account Directory");
         }
 
         db = FirebaseFirestore.getInstance();
@@ -56,34 +63,80 @@ public class ViewMembersActivity extends AppCompatActivity implements MemberAdap
         recyclerView = findViewById(R.id.recycler_view_members);
         progressBar = findViewById(R.id.progress_bar);
         tvEmptyState = findViewById(R.id.tv_empty_state);
-        btnBackToProfile = findViewById(R.id.btn_back_to_profile); // CHANGED: Find the Button
+        btnBackToProfile = findViewById(R.id.btn_back_to_profile);
+        etSearchQuery = findViewById(R.id.et_search_query); // Initialize search field
 
-        // Set click listener for the custom back button to go back to Profile Fragment (via MainActivity)
         btnBackToProfile.setOnClickListener(v -> finish());
 
         memberList = new ArrayList<>();
-        memberAdapter = new MemberAdapter(memberList, this);
+        filteredMemberList = new ArrayList<>();
+        memberAdapter = new MemberAdapter(filteredMemberList, this);
         LinearLayoutManager layoutManager = new LinearLayoutManager(this);
         recyclerView.setLayoutManager(layoutManager);
 
         recyclerView.setAdapter(memberAdapter);
 
+        setupSearch(); // Setup search functionality
         loadMembers();
     }
 
-    // Since we are using a custom button, we override this to do nothing or rely on the system's default behavior
+    private void setupSearch() {
+        etSearchQuery.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                currentSearchQuery = s.toString().trim().toLowerCase();
+                applyFilter();
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {}
+        });
+    }
+
+    private void applyFilter() {
+        filteredMemberList.clear();
+
+        if (currentSearchQuery.isEmpty()) {
+            filteredMemberList.addAll(memberList);
+        } else {
+            for (User user : memberList) {
+                String displayName = user.getDisplayName() != null ? user.getDisplayName().toLowerCase() : "";
+                String email = user.getEmail() != null ? user.getEmail().toLowerCase() : "";
+
+                if (displayName.contains(currentSearchQuery) || email.contains(currentSearchQuery)) {
+                    filteredMemberList.add(user);
+                }
+            }
+        }
+        memberAdapter.notifyDataSetChanged();
+        updateEmptyState();
+    }
+
+    private void updateEmptyState() {
+        if (filteredMemberList.isEmpty()) {
+            tvEmptyState.setText("No members found matching the search criteria.");
+            tvEmptyState.setVisibility(View.VISIBLE);
+            recyclerView.setVisibility(View.GONE);
+        } else {
+            tvEmptyState.setVisibility(View.GONE);
+            recyclerView.setVisibility(View.VISIBLE);
+        }
+    }
+
+
     @Override
     public boolean onSupportNavigateUp() {
         return false;
     }
 
-    // Implementation of the single deletion listener
     @Override
     public void onMemberDeleteClick(User user) {
         showDeleteConfirmationDialog(user);
     }
 
-    // Implementation of the single edit listener (NEW)
     @Override
     public void onMemberEditClick(User user) {
         showEditMemberDialog(user);
@@ -103,9 +156,7 @@ public class ViewMembersActivity extends AppCompatActivity implements MemberAdap
                     for (QueryDocumentSnapshot document : queryDocumentSnapshots) {
                         try {
                             User user = document.toObject(User.class);
-                            // Only add users, not admins (Admins are stored separately, but this is a double-check)
                             if (user != null && "user".equalsIgnoreCase(user.getRole())) {
-                                // Store the Firestore Document ID
                                 user.setDocumentId(document.getId());
                                 memberList.add(user);
                             }
@@ -114,16 +165,11 @@ public class ViewMembersActivity extends AppCompatActivity implements MemberAdap
                         }
                     }
 
-                    // Removed loadAdmins() call, as main list should only show users
+                    // After loading the master list, apply the current filter (which might be empty)
+                    applyFilter();
 
                     progressBar.setVisibility(View.GONE);
 
-                    if (memberList.isEmpty()) {
-                        tvEmptyState.setText("No team members found.");
-                        tvEmptyState.setVisibility(View.VISIBLE);
-                    }
-                    recyclerView.setVisibility(memberList.isEmpty() ? View.GONE : View.VISIBLE);
-                    memberAdapter.notifyDataSetChanged(); // Ensure data refresh
                 })
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Error loading members", e);
@@ -142,7 +188,7 @@ public class ViewMembersActivity extends AppCompatActivity implements MemberAdap
 
         new AlertDialog.Builder(this)
                 .setTitle("Confirm Deletion")
-                .setMessage("Are you sure you want to permanently delete member " + userToDelete.getEmail() + "?")
+                .setMessage("Are you sure you want to permanently delete member " + userToDelete.getDisplayName() + "?")
                 .setPositiveButton("DELETE", (dialog, which) -> deleteSingleMember(userToDelete))
                 .setNegativeButton("Cancel", null)
                 .show();
@@ -158,15 +204,10 @@ public class ViewMembersActivity extends AppCompatActivity implements MemberAdap
                 .addOnSuccessListener(aVoid -> {
                     Toast.makeText(this, "Member deleted successfully.", Toast.LENGTH_LONG).show();
 
-                    // Manually remove from list and notify adapter for instant UI update
+                    // Remove from master list and trigger filter refresh
                     memberList.remove(user);
-                    memberAdapter.notifyDataSetChanged();
+                    applyFilter();
 
-                    if (memberList.isEmpty()) {
-                        tvEmptyState.setText("No members found.");
-                        tvEmptyState.setVisibility(View.VISIBLE);
-                        recyclerView.setVisibility(View.GONE);
-                    }
                 })
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Error deleting member: ", e);
@@ -174,13 +215,11 @@ public class ViewMembersActivity extends AppCompatActivity implements MemberAdap
                 });
     }
 
-    // NEW: Show edit dialog with improved UI
+    // Show edit dialog with improved UI
     private void showEditMemberDialog(User userToEdit) {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("Edit Member Credentials");
 
-        // Use LayoutInflater to inflate a custom view for better styling (assuming you would add a dialog_edit_member.xml in a real scenario)
-        // For now, improving the programmatic UI:
         LinearLayout layout = new LinearLayout(this);
         layout.setOrientation(LinearLayout.VERTICAL);
         layout.setPadding(50, 20, 50, 10);
@@ -194,6 +233,7 @@ public class ViewMembersActivity extends AppCompatActivity implements MemberAdap
         final EditText etEmail = new EditText(this);
         etEmail.setText(userToEdit.getEmail());
         etEmail.setHint("Email Address");
+        etEmail.setInputType(android.text.InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
         etEmail.setBackgroundResource(R.drawable.radio_button_selector); // Use an existing drawable for a box look
         etEmail.setPadding(20, 20, 20, 20);
         etEmail.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
@@ -202,6 +242,7 @@ public class ViewMembersActivity extends AppCompatActivity implements MemberAdap
         final EditText etPassword = new EditText(this);
         etPassword.setText(userToEdit.getPassword());
         etPassword.setHint("Password");
+        etPassword.setInputType(android.text.InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD);
         etPassword.setBackgroundResource(R.drawable.radio_button_selector); // Use an existing drawable for a box look
         etPassword.setPadding(20, 20, 20, 20);
         etPassword.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
@@ -233,7 +274,7 @@ public class ViewMembersActivity extends AppCompatActivity implements MemberAdap
         builder.show();
     }
 
-    // NEW: Implement update logic
+    // Implement update logic
     private void updateMemberInFirestore(User originalUser, String newEmail, String newPassword) {
         String collectionPath = "admin".equals(originalUser.getRole()) ? "admins" : "users";
 
@@ -251,7 +292,9 @@ public class ViewMembersActivity extends AppCompatActivity implements MemberAdap
                     // Update local object for UI refresh
                     originalUser.setEmail(newEmail);
                     originalUser.setPassword(newPassword);
-                    memberAdapter.notifyDataSetChanged();
+
+                    // Trigger filter refresh to update RecyclerView
+                    applyFilter();
 
                     // Proceed to send SMS
                     sendUpdateNotificationSMS(originalUser, newEmail, newPassword);
@@ -262,7 +305,7 @@ public class ViewMembersActivity extends AppCompatActivity implements MemberAdap
                 });
     }
 
-    // NEW: Prepare and open SMS Intent
+    // Prepare and open SMS Intent
     private void sendUpdateNotificationSMS(User user, String newEmail, String newPassword) {
         String mobileNumber = user.getMobileNumber();
 

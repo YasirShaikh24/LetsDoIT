@@ -12,7 +12,7 @@ import android.widget.DatePicker;
 import android.widget.LinearLayout;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
-import android.widget.CheckBox; // <-- ADDED IMPORT
+import android.widget.CheckBox;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -28,10 +28,12 @@ import com.google.firebase.firestore.QueryDocumentSnapshot;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
-public class AddActivityFragment extends Fragment {
+// Implement OnDateSelectedListener
+public class AddActivityFragment extends Fragment implements CalendarDialogFragment.OnDateSelectedListener {
 
     private TextInputEditText etTitle, etDescription, etStartDate, etEndDate;
     private TextInputEditText etAssigneeDisplay;
@@ -60,6 +62,12 @@ public class AddActivityFragment extends Fragment {
 
     private static final String TAG = "AddActivityFragment";
     private final SimpleDateFormat dateFormat = new SimpleDateFormat("MMM dd, yyyy", Locale.US);
+
+    // TRACKS which date field is currently being edited
+    private enum DateField {
+        START_DATE, END_DATE
+    }
+    private DateField currentDateField;
 
     public static AddActivityFragment newInstance(String email, String role) {
         AddActivityFragment fragment = new AddActivityFragment();
@@ -112,8 +120,9 @@ public class AddActivityFragment extends Fragment {
         setupTaskTypeListener();
         setupWeekDaysListener();
 
-        etStartDate.setOnClickListener(v -> showDatePicker(etStartDate));
-        etEndDate.setOnClickListener(v -> showDatePicker(etEndDate));
+        // UPDATED: Use showCalendarDialog instead of showDatePicker
+        etStartDate.setOnClickListener(v -> showCalendarDialog(DateField.START_DATE));
+        etEndDate.setOnClickListener(v -> showCalendarDialog(DateField.END_DATE));
 
         llAssignUserSection = view.findViewById(R.id.ll_assign_user_section);
         etAssigneeDisplay = view.findViewById(R.id.et_assigned_to_display);
@@ -220,24 +229,37 @@ public class AddActivityFragment extends Fragment {
         }
     }
 
-    private void showDatePicker(final TextInputEditText dateEditText) {
-        final Calendar calendar = Calendar.getInstance();
+    // NEW: Open CalendarDialogFragment
+    private void showCalendarDialog(DateField field) {
+        currentDateField = field;
 
-        DatePickerDialog.OnDateSetListener dateSetListener = new DatePickerDialog.OnDateSetListener() {
-            @Override
-            public void onDateSet(DatePicker view, int year, int monthOfYear, int dayOfMonth) {
-                calendar.set(Calendar.YEAR, year);
-                calendar.set(Calendar.MONTH, monthOfYear);
-                calendar.set(Calendar.DAY_OF_MONTH, dayOfMonth);
-                dateEditText.setText(dateFormat.format(calendar.getTime()));
+        Long initialDateMillis = null;
+        String dateString = (field == DateField.START_DATE) ? etStartDate.getText().toString() : etEndDate.getText().toString();
+
+        try {
+            if (!dateString.isEmpty()) {
+                initialDateMillis = dateFormat.parse(dateString).getTime();
             }
-        };
+        } catch (Exception e) {
+            Log.e(TAG, "Error parsing date for dialog initial state: " + e.getMessage());
+        }
 
-        new DatePickerDialog(getContext(), dateSetListener,
-                calendar.get(Calendar.YEAR),
-                calendar.get(Calendar.MONTH),
-                calendar.get(Calendar.DAY_OF_MONTH)).show();
+        CalendarDialogFragment dialogFragment = CalendarDialogFragment.newInstance(initialDateMillis);
+        dialogFragment.setOnDateSelectedListener(this);
+        dialogFragment.show(getParentFragmentManager(), "CalendarDialog");
     }
+
+    // NEW: Implement the listener method from CalendarDialogFragment.OnDateSelectedListener
+    @Override
+    public void onDateSelected(long dateInMillis, String formattedDate) {
+        if (currentDateField == DateField.START_DATE) {
+            etStartDate.setText(formattedDate);
+        } else if (currentDateField == DateField.END_DATE) {
+            etEndDate.setText(formattedDate);
+        }
+        currentDateField = null; // Reset
+    }
+
 
     private void loadUsersForAssignment() {
         db.collection("users")

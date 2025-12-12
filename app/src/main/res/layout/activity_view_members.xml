@@ -4,22 +4,28 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="16dp"
-    android:background="@color/white">
+    android:background="@color/background_input"> <LinearLayout
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingHorizontal="24dp"
+    android:paddingTop="24dp"
+    android:paddingBottom="16dp"
+    android:background="@color/white"
+    android:elevation="4dp">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:layout_marginBottom="16dp">
+        android:layout_marginBottom="8dp">
 
         <TextView
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Team Members"
-            android:textSize="24sp"
+            android:text="Account Directory" android:textSize="30sp"
             android:textStyle="bold"
             android:textColor="@color/text_primary"/>
 
@@ -31,62 +37,43 @@
             android:textSize="14sp"
             android:textStyle="bold"
             android:textColor="@color/white"
-            android:background="@drawable/button_primary_background"
+            app:backgroundTint="@color/primary_purple"
             android:paddingStart="16dp"
-            android:paddingEnd="16dp"
-            app:backgroundTint="@color/primary_purple" /> </LinearLayout>
+            android:paddingEnd="16dp" />
 
-    <LinearLayout
-        android:id="@+id/ll_table_header"
+    </LinearLayout>
+
+    <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:paddingVertical="8dp"
-        android:paddingStart="16dp"
-        android:paddingEnd="16dp"
-        android:background="@color/background_input"
-        android:layout_marginBottom="8dp">
+        android:text="Manage user accounts, credentials, and actions."
+        android:textSize="14sp"
+        android:textColor="@color/text_secondary"
+        android:layout_marginBottom="16dp"/>
 
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="0.15"
-            android:text="S.N"
-            android:textSize="14sp"
-            android:textStyle="bold"
-            android:textColor="@color/text_primary"
-            android:textAlignment="viewStart"/>
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/til_search"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Search by name or email..."
+        app:boxCornerRadiusTopStart="12dp"
+        app:boxCornerRadiusTopEnd="12dp"
+        app:boxCornerRadiusBottomStart="12dp"
+        app:boxCornerRadiusBottomEnd="12dp"
+        app:boxBackgroundColor="@color/background_input"
+        app:startIconDrawable="@drawable/ic_search"
+        app:startIconTint="@color/text_secondary"
+        style="@style/Widget.MaterialComponents.TextInputLayout.FilledBox.Dense">
 
-        <TextView
-            android:layout_width="0dp"
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/et_search_query"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="0.4"
-            android:text="Email"
-            android:textSize="14sp"
-            android:textStyle="bold"
-            android:textColor="@color/text_primary"
-            android:textAlignment="viewStart"/>
+            android:inputType="textCapSentences"
+            android:textSize="15sp" />
+    </com.google.android.material.textfield.TextInputLayout>
 
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="0.3"
-            android:text="Password"
-            android:textSize="14sp"
-            android:textStyle="bold"
-            android:textColor="@color/text_primary"
-            android:textAlignment="viewStart"/>
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="0.15"
-            android:text="Actions"
-            android:textSize="14sp"
-            android:textStyle="bold"
-            android:textColor="@color/text_primary"
-            android:textAlignment="center"/>
-    </LinearLayout>
+</LinearLayout>
 
     <FrameLayout
         android:layout_width="match_parent"
@@ -97,7 +84,9 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:clipToPadding="false"
-            android:paddingBottom="8dp"/>
+            android:paddingHorizontal="16dp"
+            android:paddingTop="16dp"
+            android:paddingBottom="90dp" />
 
         <ProgressBar
             android:id="@+id/progress_bar"

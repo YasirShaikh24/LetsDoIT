@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/white"
@@ -15,25 +16,34 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Add New Member"
-            android:textSize="28sp"
+            android:textSize="32sp"
             android:textStyle="bold"
-            android:textColor="#333333"
+            android:textColor="@color/text_primary"
             android:layout_marginBottom="8dp" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Fill in the details to add a new team member"
+            android:text="Fill in contact and login details to create the new team member account."
             android:textSize="14sp"
-            android:textColor="#666666"
+            android:textColor="@color/text_secondary"
             android:layout_marginBottom="32dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Member Contact Details"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="@color/primary_purple"
+            android:layout_marginBottom="16dp" />
 
         <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Member Name"
+            android:hint="Full Name"
             android:layout_marginBottom="16dp"
-            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+            style="@style/CustomTextInputLayout">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/et_member_name"
@@ -45,9 +55,9 @@
         <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Mobile Number"
-            android:layout_marginBottom="16dp"
-            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+            android:hint="Mobile Number (e.g., +919876543210)"
+            android:layout_marginBottom="40dp"
+            style="@style/CustomTextInputLayout">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/et_mobile_number"
@@ -59,17 +69,27 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textSize="12sp"
-            android:textColor="#888888"
-            android:layout_marginBottom="24dp"
-            android:layout_marginTop="-8dp" />
+            android:text="Assigned Login Credentials"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="@color/primary_purple"
+            android:layout_marginBottom="8dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="These details will be saved as the official login for the user and sent via SMS invite."
+            android:textSize="13sp"
+            android:textColor="@color/text_secondary"
+            android:layout_marginBottom="16dp" />
+
 
         <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="Assigned Email (Work)"
             android:layout_marginBottom="16dp"
-            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+            style="@style/CustomTextInputLayout">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/et_assigned_email"
@@ -82,8 +102,9 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="Assigned Password"
-            android:layout_marginBottom="32dp"
-            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+            android:layout_marginBottom="40dp"
+            style="@style/CustomTextInputLayout"
+            app:passwordToggleEnabled="true">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/et_assigned_password"
@@ -97,21 +118,18 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Send SMS Invite"
-            android:textSize="16sp"
-            android:textColor="#FFFFFF"
-            android:background="@drawable/button_primary_background"
-            android:padding="16dp"
-            android:layout_marginBottom="12dp" />
+            android:paddingVertical="12dp"
+            android:layout_marginBottom="12dp"
+            style="@style/CustomPrimaryButton" />
 
         <Button
             android:id="@+id/btn_back"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Back"
-            android:textSize="16sp"
-            android:textColor="#FFFFFF"
-            android:background="@drawable/button_secondary_background"
-            android:padding="16dp" />
+            android:text="Back to Profile"
+            android:paddingVertical="12dp"
+            android:background="@null"
+            style="@style/CustomPrimaryButton"/>
 
     </LinearLayout>
 
