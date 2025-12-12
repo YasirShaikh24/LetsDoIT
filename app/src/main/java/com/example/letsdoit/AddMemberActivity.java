@@ -94,9 +94,10 @@ public class AddMemberActivity extends AppCompatActivity {
         addUserToFirestore(memberName, assignedEmail, formattedNumber, assignedPassword);
     }
 
-    // UPDATED: User constructor now takes password
+    // UPDATED: User constructor now takes mobile number
     private void addUserToFirestore(String memberName, String assignedEmail, String mobileNumber, String assignedPassword) {
-        User newUser = new User(assignedEmail, "user", memberName, assignedPassword);
+        // Use the updated User constructor
+        User newUser = new User(assignedEmail, "user", memberName, assignedPassword, mobileNumber);
 
         db.collection("users")
                 .add(newUser)

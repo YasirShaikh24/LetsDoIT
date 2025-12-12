@@ -33,11 +33,12 @@ public class LoginActivity extends AppCompatActivity {
     public static final String EXTRA_USER_EMAIL = "extra_user_email";
 
     // SharedPreferences Constants
-    private static final String PREFS_NAME = "LoginPrefs";
-    private static final String KEY_IS_LOGGED_IN = "isLoggedIn";
-    private static final String KEY_EMAIL = "email";
-    private static final String KEY_ROLE = "role";
+    public static final String PREFS_NAME = "LoginPrefs";
+    public static final String KEY_IS_LOGGED_IN = "isLoggedIn"; // CHANGED to public
+    public static final String KEY_EMAIL = "email";
+    public static final String KEY_ROLE = "role";
     private static final String KEY_DISPLAY_NAME = "displayName";
+    public static final String KEY_PASSWORD = "password"; // ADDED for admin password management
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -103,30 +104,24 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void verifyAdminLogin(String email, String password) {
-        // First check hardcoded admin credentials
+        // Check 1: If the user provides the hardcoded password, proceed with the original flow (for initial setup/robustness)
         if (password.equals(ADMIN_PASSWORD)) {
-            // Check if admin exists in database
+            // Original flow: check if record exists, update password if missing, or log in.
             db.collection("admins")
                     .whereEqualTo("email", email)
                     .get()
                     .addOnCompleteListener(task -> {
                         if (task.isSuccessful() && task.getResult() != null && !task.getResult().isEmpty()) {
-                            // Admin exists in database
                             DocumentSnapshot doc = task.getResult().getDocuments().get(0);
                             User admin = doc.toObject(User.class);
                             if (admin != null) {
                                 String dbPassword = admin.getPassword();
 
-                                // If password field exists in database, verify it
                                 if (dbPassword != null && !dbPassword.isEmpty()) {
-                                    if (dbPassword.equals(password)) {
-                                        onLoginSuccess(admin.getEmail(), admin.getRole(), admin.getDisplayName());
-                                    } else {
-                                        onLoginFailure("Invalid admin credentials");
-                                    }
+                                    // Log in via hardcoded pass and update DB if mismatch (or if missing)
+                                    updateAdminPassword(doc.getReference().getId(), password, admin);
                                 } else {
                                     // Password field missing in database, update it
-                                    Log.d(TAG, "Password field missing, updating admin document");
                                     updateAdminPassword(doc.getReference().getId(), password, admin);
                                 }
                             }
@@ -139,8 +134,33 @@ public class LoginActivity extends AppCompatActivity {
                         Log.e(TAG, "Error checking admin existence", e);
                         onLoginFailure("Database error: " + e.getMessage());
                     });
-        } else {
-            onLoginFailure("Invalid admin credentials");
+        }
+        // Check 2 (NEW FIX): If the hardcoded password check fails, check the database for the entered email and password.
+        else {
+            db.collection("admins")
+                    .whereEqualTo("email", email)
+                    .get()
+                    .addOnCompleteListener(task -> {
+                        if (task.isSuccessful() && task.getResult() != null && !task.getResult().isEmpty()) {
+                            DocumentSnapshot doc = task.getResult().getDocuments().get(0);
+                            User admin = doc.toObject(User.class);
+
+                            if (admin != null && admin.getPassword() != null && admin.getPassword().equals(password)) {
+                                // SUCCESS: Authenticated with the database-stored password (the new one)
+                                onLoginSuccess(admin.getEmail(), admin.getRole(), admin.getDisplayName(), password);
+                            } else {
+                                // The entered password does not match the hardcoded one OR the database one.
+                                onLoginFailure("Invalid admin credentials");
+                            }
+                        } else {
+                            // Email was not found in the DB
+                            onLoginFailure("Invalid admin credentials");
+                        }
+                    })
+                    .addOnFailureListener(e -> {
+                        Log.e(TAG, "Error checking admin existence", e);
+                        onLoginFailure("Database error: " + e.getMessage());
+                    });
         }
     }
 
@@ -150,12 +170,12 @@ public class LoginActivity extends AppCompatActivity {
                 .update("password", password)
                 .addOnSuccessListener(aVoid -> {
                     Log.d(TAG, "Admin password updated successfully");
-                    onLoginSuccess(admin.getEmail(), admin.getRole(), admin.getDisplayName());
+                    onLoginSuccess(admin.getEmail(), admin.getRole(), admin.getDisplayName(), password);
                 })
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Error updating admin password", e);
                     // Still allow login since hardcoded password matched
-                    onLoginSuccess(admin.getEmail(), admin.getRole(), admin.getDisplayName());
+                    onLoginSuccess(admin.getEmail(), admin.getRole(), admin.getDisplayName(), password);
                 });
     }
 
@@ -166,7 +186,7 @@ public class LoginActivity extends AppCompatActivity {
                 .add(newAdmin)
                 .addOnSuccessListener(documentReference -> {
                     Log.d(TAG, "Admin registered successfully");
-                    onLoginSuccess(newAdmin.getEmail(), newAdmin.getRole(), newAdmin.getDisplayName());
+                    onLoginSuccess(newAdmin.getEmail(), newAdmin.getRole(), newAdmin.getDisplayName(), password);
                 })
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Error registering admin", e);
@@ -190,7 +210,7 @@ public class LoginActivity extends AppCompatActivity {
                             String storedPassword = user.getPassword();
                             if (storedPassword != null && storedPassword.equals(password)) {
                                 // Credentials match - allow login
-                                onLoginSuccess(user.getEmail(), user.getRole(), user.getDisplayName());
+                                onLoginSuccess(user.getEmail(), user.getRole(), user.getDisplayName(), password);
                             } else {
                                 // Password doesn't match
                                 onLoginFailure("Invalid email or password");
@@ -209,13 +229,14 @@ public class LoginActivity extends AppCompatActivity {
                 });
     }
 
-    private void onLoginSuccess(String email, String role, String displayName) {
+    private void onLoginSuccess(String email, String role, String displayName, String password) {
         // SAVE LOGIN SESSION
         SharedPreferences.Editor editor = sharedPreferences.edit();
         editor.putBoolean(KEY_IS_LOGGED_IN, true);
         editor.putString(KEY_EMAIL, email);
         editor.putString(KEY_ROLE, role);
         editor.putString(KEY_DISPLAY_NAME, displayName);
+        editor.putString(KEY_PASSWORD, password); // SAVE PASSWORD
         editor.apply();
 
         Toast.makeText(this, "Login successful!", Toast.LENGTH_SHORT).show();

@@ -44,6 +44,14 @@
         <item name="android:textColor">@color/white</item>
     </style>
 
+    <style name="RectangularProfileButton" parent="Widget.Material3.Button">
+        <item name="cornerRadius">0dp</item>
+        <item name="android:paddingTop">0dp</item>
+        <item name="android:paddingBottom">0dp</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+    </style>
+
     <style name="CustomOutlinedButton" parent="Widget.Material3.Button.OutlinedButton">
         <item name="cornerRadius">28dp</item>
         <item name="android:textSize">16sp</item>
@@ -76,7 +84,6 @@
         <item name="android:layout_marginHorizontal">2dp</item>
     </style>
 
-    <!-- Navigation Text Styles -->
     <style name="NavTextActive">
         <item name="android:textSize">11sp</item>
         <item name="android:textStyle">bold</item>

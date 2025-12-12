@@ -1,33 +1,52 @@
-// src/main/java/com/example/letsdoit/ProfileActivityFragment.java
 package com.example.letsdoit;
 
+import android.app.Dialog;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.net.Uri;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.Window;
 import android.widget.Button;
+import android.widget.EditText;
+import android.widget.ImageButton;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.Fragment;
+
+import com.google.android.material.textfield.TextInputEditText;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
+import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.DocumentSnapshot;
+
+import java.util.Map;
+import java.util.regex.Pattern;
 
 public class ProfileActivityFragment extends Fragment {
 
-    private TextView tvUserEmail, tvDisplayName; // tvUserRole removed
+    private TextView tvDisplayName, tvUserEmail;
     private Button btnLogout, btnAddMember, btnViewMembers;
+    private ImageButton btnAdminEdit; // NEW: Button for admin self-edit
 
     private String loggedInUserEmail;
     private String loggedInUserRole;
     private String displayName;
 
-    // SharedPreferences Constants (Must match LoginActivity)
+    private FirebaseFirestore db;
+
     private static final String PREFS_NAME = "LoginPrefs";
     private static final String KEY_IS_LOGGED_IN = "isLoggedIn";
+    private static final String TAG = "ProfileFragment";
 
     public static ProfileActivityFragment newInstance(String email, String role, String displayName) {
         ProfileActivityFragment fragment = new ProfileActivityFragment();
@@ -48,88 +67,173 @@ public class ProfileActivityFragment extends Fragment {
             loggedInUserRole = getArguments().getString(LoginActivity.EXTRA_USER_ROLE);
             displayName = getArguments().getString(LoginActivity.EXTRA_DISPLAY_NAME);
         }
+
+        db = FirebaseFirestore.getInstance();
     }
 
     @Nullable
     @Override
-    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
+                             @Nullable Bundle savedInstanceState) {
+
         View view = inflater.inflate(R.layout.fragment_profile_activity, container, false);
 
         tvDisplayName = view.findViewById(R.id.tv_display_name);
         tvUserEmail = view.findViewById(R.id.tv_user_email);
-        // tvUserRole removed from here
 
         btnLogout = view.findViewById(R.id.btn_logout);
         btnAddMember = view.findViewById(R.id.btn_add_member);
         btnViewMembers = view.findViewById(R.id.btn_view_members);
+        btnAdminEdit = view.findViewById(R.id.btn_admin_edit); // Initialize new button
 
-        // Logic to set admin name to "Mohsin Mir" by default
-        if ("admin".equals(loggedInUserRole)) {
-            if (displayName == null || displayName.isEmpty() || displayName.equalsIgnoreCase("Admin")) {
+        // Set display name (Admin gets "Mohsin Mir" by default)
+        if ("admin".equalsIgnoreCase(loggedInUserRole)) {
+            if (displayName == null || displayName.trim().isEmpty() || displayName.equalsIgnoreCase("Admin")) {
                 displayName = "Mohsin Mir";
             }
         }
 
-        if (displayName != null && !displayName.isEmpty()) {
-            tvDisplayName.setText(displayName.toUpperCase());
-        } else {
-            tvDisplayName.setText("USER");
-        }
+        tvDisplayName.setText(displayName != null ? displayName.toUpperCase() : "USER");
+        tvUserEmail.setText(loggedInUserEmail != null ? loggedInUserEmail : "No email");
 
-        if (loggedInUserEmail != null) {
-            tvUserEmail.setText(loggedInUserEmail);
-        }
-
-        // Role display logic removed
-
-        // Show "View Members" and "Add Members" button only for admin
-        if ("admin".equals(loggedInUserRole)) {
-            // 1. View Members
+        // Show admin buttons only for admin
+        if ("admin".equalsIgnoreCase(loggedInUserRole)) {
             btnViewMembers.setVisibility(View.VISIBLE);
-            btnViewMembers.setOnClickListener(v -> openViewMembersActivity());
-
-            // 2. Add Member
             btnAddMember.setVisibility(View.VISIBLE);
-            btnAddMember.setOnClickListener(v -> openAddMemberActivity());
+            btnAdminEdit.setVisibility(View.VISIBLE); // Show Admin self-edit button
 
+            btnViewMembers.setOnClickListener(v -> startActivity(new Intent(getActivity(), ViewMembersActivity.class)));
+            btnAddMember.setOnClickListener(v -> startActivity(new Intent(getActivity(), AddMemberActivity.class)));
+            btnAdminEdit.setOnClickListener(v -> fetchAdminDetailsAndShowDialog()); // NEW listener
         } else {
-            btnAddMember.setVisibility(View.GONE);
-            btnViewMembers.setVisibility(View.GONE);
+            btnAdminEdit.setVisibility(View.GONE); // Hide for regular users
         }
 
-        // 3. Logout (always visible)
+        // Logout button
         btnLogout.setOnClickListener(v -> logout());
 
         return view;
     }
 
-    private void openAddMemberActivity() {
-        Intent intent = new Intent(getActivity(), AddMemberActivity.class);
-        startActivity(intent);
-    }
-
-    private void openViewMembersActivity() {
-        Intent intent = new Intent(getActivity(), ViewMembersActivity.class);
-        startActivity(intent);
-    }
-
     private void logout() {
-        // Clear SharedPreferences to end the session
-        if (getActivity() != null) {
-            SharedPreferences sharedPreferences = getActivity().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-            SharedPreferences.Editor editor = sharedPreferences.edit();
-            editor.putBoolean(KEY_IS_LOGGED_IN, false);
-            editor.apply();
-        }
+        SharedPreferences prefs = requireActivity().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        prefs.edit().putBoolean(KEY_IS_LOGGED_IN, false).apply();
 
         Toast.makeText(getContext(), "Logged out successfully", Toast.LENGTH_SHORT).show();
 
         Intent intent = new Intent(getActivity(), LoginActivity.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
         startActivity(intent);
+        requireActivity().finish();
+    }
 
-        if (getActivity() != null) {
-            getActivity().finish();
-        }
+    // NEW: Fetch admin details to edit
+    private void fetchAdminDetailsAndShowDialog() {
+        db.collection("admins")
+                .whereEqualTo("email", loggedInUserEmail)
+                .limit(1)
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    if (!queryDocumentSnapshots.isEmpty()) {
+                        DocumentSnapshot doc = queryDocumentSnapshots.getDocuments().get(0);
+                        User adminUser = doc.toObject(User.class);
+                        adminUser.setDocumentId(doc.getId()); // Store document ID for update
+                        showAdminEditDialog(adminUser);
+                    } else {
+                        Toast.makeText(getContext(), "Admin record not found.", Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Failed to fetch admin details: " + e.getMessage());
+                    Toast.makeText(getContext(), "Failed to load admin data.", Toast.LENGTH_SHORT).show();
+                });
+    }
+
+    // UPDATED: Show Admin self-edit dialog to include email
+    private void showAdminEditDialog(User adminUser) {
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(requireContext());
+        builder.setTitle("Edit Admin Credentials");
+
+        LinearLayout layout = new LinearLayout(requireContext());
+        layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setPadding(50, 20, 50, 10);
+
+        TextView tvInfo = new TextView(requireContext());
+        tvInfo.setText("Current Display Name: " + adminUser.getDisplayName() + "\nRole: Administrator");
+        tvInfo.setPadding(0, 0, 0, 30);
+        layout.addView(tvInfo);
+
+        final EditText etEmail = new EditText(requireContext());
+        etEmail.setText(adminUser.getEmail());
+        etEmail.setHint("New Email Address");
+        etEmail.setInputType(android.text.InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
+        etEmail.setBackgroundResource(R.drawable.radio_button_selector);
+        etEmail.setPadding(20, 20, 20, 20);
+        etEmail.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+        ((LinearLayout.LayoutParams)etEmail.getLayoutParams()).setMargins(0, 0, 0, 20);
+        layout.addView(etEmail);
+
+        final EditText etPassword = new EditText(requireContext());
+        etPassword.setText(adminUser.getPassword());
+        etPassword.setHint("New Password");
+        etPassword.setInputType(android.text.InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD);
+        etPassword.setBackgroundResource(R.drawable.radio_button_selector);
+        etPassword.setPadding(20, 20, 20, 20);
+        etPassword.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+        ((LinearLayout.LayoutParams)etPassword.getLayoutParams()).setMargins(0, 0, 0, 20);
+        layout.addView(etPassword);
+
+        builder.setView(layout);
+
+        builder.setPositiveButton("Update Credentials", (d, which) -> {
+            String newEmail = etEmail.getText().toString().trim();
+            String newPassword = etPassword.getText().toString().trim();
+
+            if (newEmail.isEmpty() || newPassword.isEmpty()) {
+                Toast.makeText(getContext(), "Email and Password cannot be empty.", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            boolean emailChanged = !newEmail.equals(adminUser.getEmail());
+            boolean passwordChanged = !newPassword.equals(adminUser.getPassword());
+
+            if (emailChanged || passwordChanged) {
+                updateAdminCredentialsInFirestore(adminUser.getDocumentId(), newEmail, newPassword, emailChanged);
+            } else {
+                Toast.makeText(getContext(), "No changes detected.", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        builder.setNegativeButton("Cancel", (d, which) -> d.cancel());
+        builder.show();
+    }
+
+    // UPDATED: Update Admin Email and Password in Firestore and LOGOUT
+    private void updateAdminCredentialsInFirestore(String documentId, String newEmail, String newPassword, boolean emailChanged) {
+        Map<String, Object> updates = new java.util.HashMap<>();
+        updates.put("email", newEmail);
+        updates.put("password", newPassword);
+
+        db.collection("admins").document(documentId)
+                .update(updates)
+                .addOnSuccessListener(aVoid -> {
+                    // --- LOGOUT SEQUENCE (for admin self-change) ---
+                    SharedPreferences prefs = requireActivity().getSharedPreferences(LoginActivity.PREFS_NAME, Context.MODE_PRIVATE);
+                    prefs.edit().putBoolean(LoginActivity.KEY_IS_LOGGED_IN, false).apply();
+
+                    Toast.makeText(getContext(), "Credentials updated. Please log in with the new details.", Toast.LENGTH_LONG).show();
+
+                    // Navigate to LoginActivity
+                    Intent intent = new Intent(getActivity(), LoginActivity.class);
+                    intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
+                    startActivity(intent);
+                    requireActivity().finish();
+                    // --- END LOGOUT SEQUENCE ---
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error updating admin credentials: " + e.getMessage());
+                    Toast.makeText(getContext(), "Failed to update credentials.", Toast.LENGTH_SHORT).show();
+                });
     }
 }

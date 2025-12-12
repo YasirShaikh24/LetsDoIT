@@ -14,9 +14,10 @@ import java.util.List;
 
 public class MemberAdapter extends RecyclerView.Adapter<MemberAdapter.MemberViewHolder> {
 
-    // NEW INTERFACE: Simplified for single item deletion
+    // MODIFIED INTERFACE: Added onMemberEditClick
     public interface MemberDeleteListener {
         void onMemberDeleteClick(User user);
+        void onMemberEditClick(User user);
     }
 
     private List<User> memberList;
@@ -50,10 +51,17 @@ public class MemberAdapter extends RecyclerView.Adapter<MemberAdapter.MemberView
         // Display Password
         holder.tvMemberPassword.setText(user.getPassword() != null ? user.getPassword() : "N/A");
 
-        // Attach listener to the new delete button
+        // Attach listener to the delete button
         holder.btnDeleteMember.setOnClickListener(v -> {
             if (listener != null) {
                 listener.onMemberDeleteClick(user);
+            }
+        });
+
+        // Attach listener to the new edit button (NEW)
+        holder.btnEditMember.setOnClickListener(v -> {
+            if (listener != null) {
+                listener.onMemberEditClick(user);
             }
         });
     }
@@ -65,7 +73,7 @@ public class MemberAdapter extends RecyclerView.Adapter<MemberAdapter.MemberView
 
     static class MemberViewHolder extends RecyclerView.ViewHolder {
         TextView tvSerialNumber, tvMemberEmail, tvMemberPassword;
-        ImageButton btnDeleteMember;
+        ImageButton btnDeleteMember, btnEditMember; // ADDED btnEditMember
 
         public MemberViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -73,6 +81,7 @@ public class MemberAdapter extends RecyclerView.Adapter<MemberAdapter.MemberView
             tvMemberEmail = itemView.findViewById(R.id.tv_member_email);
             tvMemberPassword = itemView.findViewById(R.id.tv_member_password);
             btnDeleteMember = itemView.findViewById(R.id.btn_delete_member);
+            btnEditMember = itemView.findViewById(R.id.btn_edit_member); // Initialize new button
         }
     }
 }

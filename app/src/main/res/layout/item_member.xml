@@ -18,7 +18,6 @@
         android:paddingEnd="8dp"
         android:gravity="center_vertical">
 
-        <!-- Serial Number -->
         <TextView
             android:id="@+id/tv_serial_number"
             android:layout_width="0dp"
@@ -30,11 +29,10 @@
             android:textStyle="bold"
             android:textAlignment="viewStart"/>
 
-        <!-- Email Details -->
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_weight="0.45"
+            android:layout_weight="0.4"
             android:orientation="vertical"
             android:layout_marginEnd="8dp">
 
@@ -55,7 +53,6 @@
                 android:textColor="@color/text_primary"/>
         </LinearLayout>
 
-        <!-- Password Details -->
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -80,7 +77,18 @@
                 android:textColor="@color/text_primary"/>
         </LinearLayout>
 
-        <!-- Delete Button -->
+        <ImageButton
+            android:id="@+id/btn_edit_member"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_edit"
+            android:contentDescription="Edit Member"
+            android:scaleType="centerInside"
+            app:tint="@color/primary_purple"
+            android:layout_weight="0.05"
+            android:layout_marginEnd="4dp"/>
+
         <ImageButton
             android:id="@+id/btn_delete_member"
             android:layout_width="32dp"
@@ -90,7 +98,7 @@
             android:contentDescription="Delete Member"
             android:scaleType="centerInside"
             app:tint="#D32F2F"
-            android:layout_weight="0.1"/>
+            android:layout_weight="0.05"/>
 
     </LinearLayout>
 </androidx.cardview.widget.CardView>

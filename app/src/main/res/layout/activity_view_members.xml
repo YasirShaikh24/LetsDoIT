@@ -33,9 +33,8 @@
             android:textColor="@color/white"
             android:background="@drawable/button_primary_background"
             android:paddingStart="16dp"
-            android:paddingEnd="16dp" />
-
-    </LinearLayout>
+            android:paddingEnd="16dp"
+            app:backgroundTint="@color/primary_purple" /> </LinearLayout>
 
     <LinearLayout
         android:id="@+id/ll_table_header"
@@ -61,7 +60,7 @@
         <TextView
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_weight="0.45"
+            android:layout_weight="0.4"
             android:text="Email"
             android:textSize="14sp"
             android:textStyle="bold"
@@ -81,8 +80,8 @@
         <TextView
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_weight="0.1"
-            android:text="Del"
+            android:layout_weight="0.15"
+            android:text="Actions"
             android:textSize="14sp"
             android:textStyle="bold"
             android:textColor="@color/text_primary"
