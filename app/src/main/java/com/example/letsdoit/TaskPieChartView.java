@@ -1,4 +1,3 @@
-// src/main/java/com/example/letsdoit/TaskPieChartView.java
 package com.example.letsdoit;
 
 import android.content.Context;
@@ -16,8 +15,9 @@ public class TaskPieChartView extends View {
     private Paint donePaint;
     private Paint notDonePaint;
     private Paint textPaint;
+    private Paint shadowPaint;
     private RectF rectF;
-    private float donePercentage = 0f; // 0.0 to 1.0
+    private float donePercentage = 0f;
 
     public TaskPieChartView(Context context) {
         super(context);
@@ -35,8 +35,9 @@ public class TaskPieChartView extends View {
     }
 
     private void init(Context context) {
-        int doneColor = ContextCompat.getColor(context, R.color.chart_done);
-        int notDoneColor = ContextCompat.getColor(context, R.color.chart_not_done);
+        // Premium colors
+        int doneColor = Color.parseColor("#4AFFB8"); // Mint green
+        int notDoneColor = Color.parseColor("#FF6B9D"); // Pink
 
         donePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         donePaint.setColor(doneColor);
@@ -46,13 +47,21 @@ public class TaskPieChartView extends View {
         notDonePaint.setColor(notDoneColor);
         notDonePaint.setStyle(Paint.Style.FILL);
 
+        // Text paint with shadow
         textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         textPaint.setColor(Color.WHITE);
-        textPaint.setTextSize(50f); // Increased text size
+        textPaint.setTextSize(56f);
         textPaint.setTextAlign(Paint.Align.CENTER);
         textPaint.setFakeBoldText(true);
+        textPaint.setShadowLayer(8f, 0f, 4f, Color.parseColor("#40000000"));
+
+        shadowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        shadowPaint.setColor(Color.parseColor("#20000000"));
+        shadowPaint.setMaskFilter(new android.graphics.BlurMaskFilter(12f, android.graphics.BlurMaskFilter.Blur.NORMAL));
 
         rectF = new RectF();
+
+        setLayerType(LAYER_TYPE_SOFTWARE, null);
     }
 
     public void setTaskPercentages(float doneFraction) {
@@ -65,14 +74,24 @@ public class TaskPieChartView extends View {
         super.onDraw(canvas);
 
         int size = Math.min(getWidth(), getHeight());
-        rectF.set(0, 0, size, size);
+        float centerX = getWidth() / 2f;
+        float centerY = getHeight() / 2f;
+
+        // Add padding for shadow
+        int padding = 12;
+        rectF.set(padding, padding, size - padding, size - padding);
 
         float notDoneFraction = 1.0f - donePercentage;
+
+        // Draw shadow circle
+        canvas.drawCircle(centerX, centerY + 4, (size - padding * 2) / 2f, shadowPaint);
 
         // Draw Not Done slice (background)
         float notDoneAngle = notDoneFraction * 360f;
         float notDoneStartAngle = -90f + (donePercentage * 360f);
-        canvas.drawArc(rectF, notDoneStartAngle, notDoneAngle, true, notDonePaint);
+        if (notDoneFraction > 0) {
+            canvas.drawArc(rectF, notDoneStartAngle, notDoneAngle, true, notDonePaint);
+        }
 
         // Draw Done slice
         float doneAngle = donePercentage * 360f;
@@ -81,13 +100,11 @@ public class TaskPieChartView extends View {
             canvas.drawArc(rectF, doneStartAngle, doneAngle, true, donePaint);
         }
 
-        float centerX = rectF.centerX();
-        float centerY = rectF.centerY();
-        float radius = size / 2.0f;
+        float radius = (size - padding * 2) / 2.0f;
 
-        // Draw Done Percentage in center of done slice
-        if (donePercentage > 0.05f) { // Only show if slice is big enough
-            float textRadius = radius * 0.5f;
+        // Draw Done Percentage
+        if (donePercentage > 0.08f) {
+            float textRadius = radius * 0.55f;
             float textAngle = doneStartAngle + (doneAngle / 2.0f);
             float x = centerX + (float) (textRadius * Math.cos(Math.toRadians(textAngle)));
             float y = centerY + (float) (textRadius * Math.sin(Math.toRadians(textAngle)));
@@ -96,9 +113,9 @@ public class TaskPieChartView extends View {
             canvas.drawText(doneText, x, y - (textPaint.descent() + textPaint.ascent()) / 2, textPaint);
         }
 
-        // Draw Not Done Percentage in center of not done slice
-        if (notDoneFraction > 0.05f) { // Only show if slice is big enough
-            float textRadius = radius * 0.5f;
+        // Draw Not Done Percentage
+        if (notDoneFraction > 0.08f) {
+            float textRadius = radius * 0.55f;
             float textAngle = notDoneStartAngle + (notDoneAngle / 2.0f);
             float x = centerX + (float) (textRadius * Math.cos(Math.toRadians(textAngle)));
             float y = centerY + (float) (textRadius * Math.sin(Math.toRadians(textAngle)));

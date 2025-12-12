@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- res/drawable/card_gradient_purple.xml -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <gradient
+        android:type="linear"
+        android:angle="135"
+        android:startColor="#F3E5FF"
+        android:centerColor="#E1BEE7"
+        android:endColor="#CE93D8"/>
+    <corners android:radius="24dp"/>
+</shape>
