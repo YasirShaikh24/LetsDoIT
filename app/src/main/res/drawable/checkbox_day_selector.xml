@@ -1,24 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- res/drawable/checkbox_day_selector.xml -->
-<!-- This changes the background color based on checkbox state -->
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- When checkbox is CHECKED - Green background with rounded corners -->
     <item android:state_checked="true">
         <shape android:shape="rectangle">
-            <solid android:color="#4CAF50"/> <!-- Green color -->
-            <corners android:radius="8dp"/>
-            <stroke android:width="2dp" android:color="#4CAF50"/>
-        </shape>
+            <solid android:color="@color/primary_purple"/> <corners android:radius="8dp"/>
+            <stroke android:width="2dp" android:color="@color/primary_purple"/> </shape>
     </item>
 
-    <!-- When checkbox is NOT CHECKED - White background with gray border -->
     <item android:state_checked="false">
         <shape android:shape="rectangle">
-            <solid android:color="#FFFFFF"/> <!-- White background -->
-            <corners android:radius="8dp"/>
-            <stroke android:width="2dp" android:color="#CCCCCC"/> <!-- Gray border -->
-        </shape>
+            <solid android:color="#FFFFFF"/> <corners android:radius="8dp"/>
+            <stroke android:width="2dp" android:color="#CCCCCC"/> </shape>
     </item>
 
 </selector>

@@ -29,54 +29,8 @@
             android:text="📅 Thursday"
             android:textSize="14sp"
             android:textColor="@color/primary_purple"
-            android:layout_marginBottom="12dp"
-            android:fontFamily="sans-serif-medium"/>
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Description:"
-            android:textSize="14sp"
-            android:textStyle="bold"
-            android:textColor="@color/text_secondary"
-            android:layout_marginBottom="4dp"/>
-
-        <TextView
-            android:id="@+id/tv_dialog_description"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Task description goes here"
-            android:textSize="14sp"
-            android:textColor="@color/text_primary"
-            android:background="@color/background_input"
-            android:padding="12dp"
-            android:layout_marginBottom="16dp"/>
-
-        <TextView
-            android:id="@+id/tv_dialog_dates"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Dates: Start - End"
-            android:textSize="13sp"
-            android:textColor="@color/text_secondary"
-            android:layout_marginBottom="8dp"
-            android:visibility="gone"/>
-
-        <TextView
-            android:id="@+id/tv_dialog_remarks"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Remarks: Additional notes"
-            android:textSize="13sp"
-            android:textColor="@color/text_secondary"
             android:layout_marginBottom="16dp"
-            android:visibility="gone"/>
-
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="#DDDDDD"
-            android:layout_marginBottom="16dp"/>
+            android:fontFamily="sans-serif-medium"/>
 
         <LinearLayout
             android:id="@+id/ll_ai_count_section"
@@ -84,7 +38,7 @@
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:visibility="gone"
-            android:layout_marginBottom="20dp">
+            android:layout_marginBottom="24dp">
 
             <TextView
                 android:id="@+id/tv_ai_count_label"
@@ -133,7 +87,7 @@
                 android:id="@+id/rb_dialog_not_done"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="❌ Not Done"
+                android:text="⧗ Not Done"
                 android:textSize="16sp"
                 android:padding="12dp"
                 android:layout_marginBottom="8dp"
@@ -147,7 +101,7 @@
                 android:id="@+id/rb_dialog_done"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="✅ Done"
+                android:text="✔ Done"
                 android:textSize="16sp"
                 android:padding="12dp"
                 android:background="@drawable/radio_button_selector"
@@ -156,34 +110,77 @@
                 android:drawablePadding="8dp"/>
         </RadioGroup>
 
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Description:"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:textColor="@color/text_secondary"
+            android:layout_marginBottom="4dp"
+            android:visibility="gone"/>
+
+        <TextView
+            android:id="@+id/tv_dialog_description"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Task description goes here"
+            android:textSize="14sp"
+            android:textColor="@color/text_primary"
+            android:background="@color/background_input"
+            android:padding="12dp"
+            android:layout_marginBottom="16dp"
+            android:visibility="gone"/>
+
+        <TextView
+            android:id="@+id/tv_dialog_dates"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Dates: Start - End"
+            android:textSize="13sp"
+            android:textColor="@color/text_secondary"
+            android:layout_marginBottom="8dp"
+            android:visibility="gone"/>
+
+        <TextView
+            android:id="@+id/tv_dialog_remarks"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Remarks: Additional notes"
+            android:textSize="13sp"
+            android:textColor="@color/text_secondary"
+            android:layout_marginBottom="16dp"
+            android:visibility="gone"/>
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:gravity="end">
+            android:gravity="end"
+            android:layout_marginTop="16dp">
 
             <Button
                 android:id="@+id/btn_cancel"
+                style="@style/CustomOutlinedButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginEnd="12dp"
-                android:background="@drawable/button_secondary_background"
-                android:paddingStart="24dp"
-                android:paddingEnd="24dp"
                 android:text="Cancel"
-                android:textColor="@color/background_input"
-                android:textSize="14sp" />
+                android:textSize="14sp"
+                app:backgroundTint="@android:color/white"
+                android:paddingStart="24dp"
+                android:paddingEnd="24dp" />
 
             <Button
                 android:id="@+id/btn_submit"
+                style="@style/CustomPrimaryButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Submit"
                 android:textSize="14sp"
-                android:background="@drawable/button_primary_background"
-                android:textColor="@color/white"
                 android:paddingStart="32dp"
-                android:paddingEnd="32dp"/>
+                android:paddingEnd="32dp"
+                app:backgroundTint="@color/primary_purple" />
         </LinearLayout>
 
     </LinearLayout>

@@ -29,6 +29,8 @@
         app:itemTextAppearanceActive="@style/NavTextActive"
         app:itemTextAppearanceInactive="@style/NavTextInactive"
         app:labelVisibilityMode="labeled"
-        app:itemRippleColor="@color/nav_ripple" />
+
+        app:itemActiveIndicatorStyle="@style/CustomActiveIndicator"
+        />
 
 </RelativeLayout>

@@ -1,3 +1,4 @@
+// src/main/java/com/example/letsdoit/ViewActivityFragment.java
 package com.example.letsdoit;
 
 import android.app.Dialog;
@@ -789,12 +790,15 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
         }
 
         String remarks = task.getRemarks();
+        // The remarks view is kept in the XML but is not populated here, as per user's preference to prioritize UI space.
+        /*
         if (remarks != null && !remarks.isEmpty()) {
             tvDialogRemarks.setText("Remarks: " + remarks);
             tvDialogRemarks.setVisibility(View.VISIBLE);
         } else {
             tvDialogRemarks.setVisibility(View.GONE);
         }
+        */
 
         // Get current user's actual status and AI count for form initialization
         String currentUserStatus = task.getUserStatus(loggedInUserEmail).toLowerCase();
@@ -802,7 +806,7 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
 
         // --- AI Count Section Setup ---
         if (task.isRequireAiCount()) {
-            llAiCountSection.setVisibility(View.VISIBLE);
+            // Visibility is controlled by XML layout and listener.
             if (currentUserAiCount != null && !currentUserAiCount.isEmpty()) {
                 etAiCount.setText(currentUserAiCount);
                 tvAiCountLabel.setText("AI Count (You can edit)");
@@ -853,7 +857,8 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
             String newStatusText = selectedRadioButton.getText().toString();
             String newStatus;
 
-            if (newStatusText.equalsIgnoreCase("✅ Done")) {
+            // UPDATED LOGIC: Check if the button text contains the word "Done"
+            if (newStatusText.contains("Done")) {
                 newStatus = "Completed";
             } else {
                 newStatus = "Pending"; // Corresponds to Not Done

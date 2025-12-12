@@ -84,6 +84,11 @@
         <item name="android:layout_marginHorizontal">2dp</item>
     </style>
 
+    <style name="CustomActiveIndicator" parent="Widget.Material3.BottomNavigationView.ActiveIndicator">
+        <item name="android:color">@color/purple_200</item>
+        <item name="android:elevation">4dp</item>
+    </style>
+
     <style name="NavTextActive">
         <item name="android:textSize">11sp</item>
         <item name="android:textStyle">bold</item>
