@@ -1,4 +1,3 @@
-// src/main/java/com/example/letsdoit/Task.java
 package com.example.letsdoit;
 
 import java.util.ArrayList;
@@ -146,7 +145,11 @@ public class Task {
                 if (entry.getValue().equalsIgnoreCase("Completed")) {
                     String completedUserEmail = entry.getKey();
                     if (userAiCount != null && userAiCount.containsKey(completedUserEmail)) {
-                        return userAiCount.get(completedUserEmail);
+                        String count = userAiCount.get(completedUserEmail);
+                        // CRITICAL FIX: Ensure we return the first NON-EMPTY AI count
+                        if (count != null && !count.isEmpty()) {
+                            return count;
+                        }
                     }
                 }
             }
@@ -329,13 +332,17 @@ public class Task {
     }
 
     public String getAiCountValue() {
-        // Return the AI count of the user who marked it complete
+        // Return the completion-associated AI count for Permanent tasks, or fallback for Additional
         if (this.getTaskType().equalsIgnoreCase("Permanent") && userStatus != null && userStatus.containsValue("Completed")) {
             for (Map.Entry<String, String> entry : userStatus.entrySet()) {
                 if (entry.getValue().equalsIgnoreCase("Completed")) {
                     String completedUserEmail = entry.getKey();
                     if (userAiCount != null && userAiCount.containsKey(completedUserEmail)) {
-                        return userAiCount.get(completedUserEmail);
+                        String count = userAiCount.get(completedUserEmail);
+                        // CRITICAL FIX: Ensure we return the first NON-EMPTY AI count
+                        if (count != null && !count.isEmpty()) {
+                            return count;
+                        }
                     }
                 }
             }

@@ -27,6 +27,9 @@ public class MainActivity extends AppCompatActivity {
 
     private NotificationHelper notificationHelper;
 
+    // ADDED: Store current selected date (shared across fragments)
+    private long currentSelectedDateMillis = -1;
+
     // Permission launcher for notifications
     private final ActivityResultLauncher<String> requestPermissionLauncher =
             registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
@@ -75,6 +78,10 @@ public class MainActivity extends AppCompatActivity {
 
             if (itemId == R.id.navigation_home) {
                 selectedFragment = HomeFragment.newInstance(welcomeMessage, loggedInUserEmail, loggedInUserRole, displayName);
+                // ADDED: Pass current selected date to HomeFragment
+                if (selectedFragment instanceof HomeFragment) {
+                    ((HomeFragment) selectedFragment).setSelectedDateMillis(currentSelectedDateMillis);
+                }
             } else if (itemId == R.id.navigation_add_activity) {
                 // Only admin can access this
                 if ("admin".equals(loggedInUserRole)) {
@@ -82,6 +89,10 @@ public class MainActivity extends AppCompatActivity {
                 }
             } else if (itemId == R.id.navigation_view_activity) {
                 selectedFragment = ViewActivityFragment.newInstance(loggedInUserEmail, loggedInUserRole);
+                // ADDED: Pass current selected date to ViewActivityFragment
+                if (selectedFragment instanceof ViewActivityFragment) {
+                    ((ViewActivityFragment) selectedFragment).setSelectedDateMillis(currentSelectedDateMillis);
+                }
             } else if (itemId == R.id.navigation_profile_activity) {
                 selectedFragment = ProfileActivityFragment.newInstance(loggedInUserEmail, loggedInUserRole, displayName);
             }
@@ -104,6 +115,24 @@ public class MainActivity extends AppCompatActivity {
 
         // Check if opened from notification
         handleNotificationIntent(getIntent());
+    }
+
+    // ADDED: Method to update selected date and sync fragments
+    public void updateSelectedDate(long dateMillis) {
+        this.currentSelectedDateMillis = dateMillis;
+
+        // Update currently visible fragment if it's HomeFragment or ViewActivityFragment
+        Fragment currentFragment = getSupportFragmentManager().findFragmentById(R.id.fragment_container);
+        if (currentFragment instanceof HomeFragment) {
+            ((HomeFragment) currentFragment).updateDateFromActivity(dateMillis);
+        } else if (currentFragment instanceof ViewActivityFragment) {
+            ((ViewActivityFragment) currentFragment).updateDateFromActivity(dateMillis);
+        }
+    }
+
+    // ADDED: Getter for current selected date
+    public long getCurrentSelectedDateMillis() {
+        return currentSelectedDateMillis;
     }
 
     /**

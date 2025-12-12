@@ -1,3 +1,4 @@
+// src/main/java/com/example/letsdoit/HomeFragment.java
 package com.example.letsdoit;
 
 import android.app.Dialog;
@@ -115,6 +116,8 @@ public class HomeFragment extends Fragment implements CalendarDialogFragment.OnD
             selectedDateMillis = -1;
             updateDateLabel();
             loadTasks();
+            // ADDED: Sync with MainActivity
+            syncDateWithActivity();
         });
 
         fabCalendar.setOnClickListener(vv -> showCalendarDialog());
@@ -131,9 +134,35 @@ public class HomeFragment extends Fragment implements CalendarDialogFragment.OnD
     public void onViewCreated(@NonNull View v, @Nullable Bundle saved) {
         super.onViewCreated(v, saved);
 
-        selectedDateMillis = -1;
+        // ADDED: Get initial date from MainActivity if available
+        if (getActivity() instanceof MainActivity) {
+            long activityDate = ((MainActivity) getActivity()).getCurrentSelectedDateMillis();
+            if (activityDate != -1) {
+                selectedDateMillis = activityDate;
+            }
+        }
+
         updateDateLabel();
         loadTasks();
+    }
+
+    // ADDED: Method to set selected date (called from MainActivity)
+    public void setSelectedDateMillis(long dateMillis) {
+        this.selectedDateMillis = dateMillis;
+    }
+
+    // ADDED: Method to update date from MainActivity
+    public void updateDateFromActivity(long dateMillis) {
+        this.selectedDateMillis = dateMillis;
+        updateDateLabel();
+        loadTasks();
+    }
+
+    // ADDED: Method to sync date back to MainActivity
+    private void syncDateWithActivity() {
+        if (getActivity() instanceof MainActivity) {
+            ((MainActivity) getActivity()).updateSelectedDate(selectedDateMillis);
+        }
     }
 
     private void showCalendarDialog() {
@@ -148,6 +177,8 @@ public class HomeFragment extends Fragment implements CalendarDialogFragment.OnD
         selectedDateMillis = ms == getDayStartMillis(System.currentTimeMillis()) ? -1 : ms;
         updateDateLabel();
         loadTasks();
+        // ADDED: Sync with MainActivity
+        syncDateWithActivity();
     }
 
     private void updateDateLabel() {
@@ -239,18 +270,36 @@ public class HomeFragment extends Fragment implements CalendarDialogFragment.OnD
 
         boolean global = t.getUserStatus().containsValue("Completed");
         boolean isPerm = t.getTaskType().equalsIgnoreCase("permanent");
-        long completedAt = t.getCompletedDateMillis();
+        long completedAt = t.getCompletedDateMillis(); // Global completed date for Permanent, or single user's for Additional (via Task.java logic)
+        String aiCount = t.getAiCountValue();          // Global AI count for Permanent, or single user's for Additional (via Task.java logic)
+
+        String effectiveStatus = "Pending";
 
         if (global) {
             if (isPerm) {
                 long dayEnd = dayStart + 86400000L - 1;
-                if (completedAt > 0 && completedAt <= dayEnd) return "Completed";
-                return "Pending";
+                if (completedAt > 0 && completedAt <= dayEnd) {
+                    effectiveStatus = "Completed";
+                }
+            } else {
+                // For Additional tasks: HomeFragment only loads assigned tasks for users.
+                if ("admin".equalsIgnoreCase(loggedInUserRole)) {
+                    effectiveStatus = "Completed";
+                } else if (t.getUserStatus(loggedInUserEmail).equalsIgnoreCase("Completed")) {
+                    effectiveStatus = "Completed";
+                    // For user on additional task, we must rely on their specific AI count/date
+                    aiCount = t.getUserAiCount(loggedInUserEmail);
+                    completedAt = t.getUserCompletedDate(loggedInUserEmail);
+                }
             }
-            return "Completed";
         }
 
-        return "Pending";
+        // CRITICAL FIX: If AI Count is required but missing, demote status to Pending
+        if (effectiveStatus.equals("Completed") && t.isRequireAiCount() && (aiCount == null || aiCount.isEmpty())) {
+            return "Pending";
+        }
+
+        return effectiveStatus;
     }
 
     private void updateDashboard() {

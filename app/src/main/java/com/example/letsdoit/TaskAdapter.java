@@ -1,4 +1,3 @@
-// src/main/java/com/example/letsdoit/TaskAdapter.java
 package com.example.letsdoit;
 
 import android.content.Context;
@@ -36,12 +35,20 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
     private String loggedInUserRole;
     private String loggedInUserEmail;
 
+    private Map<String, String> userDisplayNameMap = new java.util.HashMap<>();
+
+    // MODIFIED Constructor to accept user display names map (needs to be passed from ViewActivityFragment)
     public TaskAdapter(List<Task> taskList, Context context, TaskActionListener listener, String loggedInUserRole, String loggedInUserEmail) {
         this.taskList = taskList;
         this.context = context;
         this.listener = listener;
         this.loggedInUserRole = loggedInUserRole;
         this.loggedInUserEmail = loggedInUserEmail;
+    }
+
+    // NEW Setter to accept the user map (needed for admin view)
+    public void setUserDisplayNameMap(Map<String, String> map) {
+        this.userDisplayNameMap = map;
     }
 
     @NonNull
@@ -63,16 +70,53 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
         // Hide priority stub
         holder.tvPriority.setVisibility(View.GONE);
 
-        // --- 2. Status (Global Status Logic: Done/Not Done) ---
-        // Status is determined by checking if ANY user has completed the task
+        // --- AI Count Logic Setup ---
+        String aiCountValueForDisplay;
+        String completedUserEmail = null;
+
+        if ("admin".equals(loggedInUserRole) && task.getTaskType().equalsIgnoreCase("Permanent")) {
+            // Admin on Permanent task: Find the first user with a completed status and their AI count
+            aiCountValueForDisplay = "";
+            if (task.getUserStatus().containsValue("Completed")) {
+                for (Map.Entry<String, String> entry : task.getUserStatus().entrySet()) {
+                    if (entry.getValue().equalsIgnoreCase("Completed")) {
+                        completedUserEmail = entry.getKey();
+                        String count = task.getUserAiCount().get(completedUserEmail);
+                        if (count != null && !count.isEmpty()) {
+                            aiCountValueForDisplay = count;
+                            break;
+                        }
+                    }
+                }
+            }
+        } else if ("admin".equals(loggedInUserRole) && task.getTaskType().equalsIgnoreCase("Additional")) {
+            // Admin on Additional task: Use the global fallback fields (set by last updating user)
+            aiCountValueForDisplay = task.getAiCountValue();
+            // Since Additional task is typically 1:1, we assume the completing user's email is the first one assigned if completed
+            if (task.getUserStatus().containsValue("Completed") && task.getAssignedTo() != null && !task.getAssignedTo().isEmpty()) {
+                completedUserEmail = task.getAssignedTo().get(0);
+            }
+        } else {
+            // User: Use their own AI count
+            aiCountValueForDisplay = task.getUserAiCount(loggedInUserEmail);
+        }
+
+        boolean isAiCountMissing = task.isRequireAiCount() && (aiCountValueForDisplay == null || aiCountValueForDisplay.isEmpty());
+        // -----------------------------
+
+
+        // --- 2. Status (Display Status from Filter Logic) ---
+        // CRITICAL FIX: The task status must reflect the final state after AI check.
         String taskStatus = task.getStatus() != null ? task.getStatus().toLowerCase() : "pending";
         int statusColor;
         String statusDisplay;
 
-        if (taskStatus.equals("completed")) {
+        // Apply the AI Count rule for UI override (must match ViewActivityFragment.getTaskStatusOnDate())
+        if (taskStatus.equals("completed") && !isAiCountMissing) {
             statusColor = Color.parseColor("#66BB6A"); // Green
             statusDisplay = "DONE";
         } else {
+            // Task is effectively "pending" (Not Done) based on the current context/date/AI Count check
             statusColor = Color.parseColor("#FFA726"); // Orange/Yellow
             statusDisplay = "NOT DONE";
         }
@@ -81,23 +125,28 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
         holder.tvStatus.setBackgroundTintList(android.content.res.ColorStateList.valueOf(statusColor));
         holder.tvStatus.setVisibility(View.VISIBLE);
 
-        // Hide admin stats layout (This was an unnecessary stub for a removed layout)
-        // holder.llStatusStats.setVisibility(View.GONE);
-
-
         // --- 3. AI Count Section ---
         if (task.isRequireAiCount()) {
             holder.cardAiCount.setVisibility(View.VISIBLE);
 
-            // Use the globally resolved AI count (which pulls from the user who completed it)
-            String aiCountValue = task.getAiCountValue();
+            if (aiCountValueForDisplay != null && !aiCountValueForDisplay.isEmpty()) {
+                // MODIFIED: Custom display for Admin when AI count is present
+                if ("admin".equals(loggedInUserRole) && completedUserEmail != null) {
+                    String displayName = userDisplayNameMap.getOrDefault(completedUserEmail, "a team member");
+                    holder.tvAiCount.setText("🔢 AI Count: " + aiCountValueForDisplay + " (by " + displayName + ")");
+                } else {
+                    holder.tvAiCount.setText("🔢 AI Count: " + aiCountValueForDisplay);
+                }
 
-            if (aiCountValue != null && !aiCountValue.isEmpty()) {
-                holder.tvAiCount.setText("🔢 AI Count: " + aiCountValue);
                 holder.cardAiCount.setCardBackgroundColor(Color.parseColor("#E8F5E9"));
                 holder.tvAiCount.setTextColor(Color.parseColor("#2E7D32"));
             } else {
-                holder.tvAiCount.setText("🔢 AI Count: Required (Not submitted)");
+                // MODIFIED: Custom display for Admin when AI count is missing for completed task
+                if ("admin".equals(loggedInUserRole) && taskStatus.equals("completed")) {
+                    holder.tvAiCount.setText("🔢 AI Count: Required (Missing for completed task)");
+                } else {
+                    holder.tvAiCount.setText("🔢 AI Count: Required (Not submitted)");
+                }
                 holder.cardAiCount.setCardBackgroundColor(Color.parseColor("#FFF3E0"));
                 holder.tvAiCount.setTextColor(Color.parseColor("#E65100"));
             }
@@ -190,10 +239,6 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
         ImageButton btnEditTask, btnDeleteTask;
         LinearLayout llAdminActions;
 
-        // The following fields were removed because the corresponding views no longer exist in item_task.xml:
-        // LinearLayout llStatusStats;
-        // TextView tvAssignedStat, tvCompletedStat, tvInProgressStat, tvPendingStat;
-
         public TaskViewHolder(@NonNull View itemView) {
             super(itemView);
             cardView = itemView.findViewById(R.id.card_view);
@@ -212,8 +257,6 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
             llAdminActions = itemView.findViewById(R.id.ll_admin_actions);
             btnEditTask = itemView.findViewById(R.id.btn_edit_task);
             btnDeleteTask = itemView.findViewById(R.id.btn_delete_task);
-
-            // Removed references to the deleted admin stats views to fix the compilation error
         }
     }
 }
