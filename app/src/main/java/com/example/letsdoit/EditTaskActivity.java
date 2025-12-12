@@ -10,7 +10,7 @@ import android.widget.DatePicker;
 import android.widget.LinearLayout;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
-import android.widget.CheckBox; // <-- ADDED IMPORT
+import android.widget.CheckBox;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
@@ -34,9 +34,7 @@ public class EditTaskActivity extends AppCompatActivity {
     private TextInputEditText etAssigneeDisplay;
     private RadioGroup rgRequireAiCount;
     private RadioGroup rgTaskType;
-    // REMOVED: private RadioGroup rgWeekDays;
 
-    // ADDED: CheckBox declarations
     private CheckBox cbMonday, cbTuesday, cbWednesday, cbThursday, cbFriday, cbSaturday, cbSunday;
 
     private Button btnSaveTask;
@@ -60,10 +58,8 @@ public class EditTaskActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        // Uses fragment_add_activity.xml which now has CheckBoxes
         setContentView(R.layout.fragment_add_activity);
 
-        // FIX: Initialize views immediately after setting content view
         initViews();
 
         taskId = getIntent().getStringExtra(ViewActivityFragment.EXTRA_TASK_ID);
@@ -90,9 +86,7 @@ public class EditTaskActivity extends AppCompatActivity {
         etEndDate = findViewById(R.id.et_end_date);
 
         llWeekDaysSection = findViewById(R.id.ll_week_days_section);
-        // REMOVED: rgWeekDays = findViewById(R.id.rg_week_days);
 
-        // ADDED: Initialize CheckBoxes
         cbMonday = findViewById(R.id.cb_monday);
         cbTuesday = findViewById(R.id.cb_tuesday);
         cbWednesday = findViewById(R.id.cb_wednesday);
@@ -137,19 +131,16 @@ public class EditTaskActivity extends AppCompatActivity {
     }
 
     private void setupWeekDaysListener() {
-        // REPLACED: Logic to handle CheckBoxes
         CheckBox[] checkBoxes = new CheckBox[]{
                 cbMonday, cbTuesday, cbWednesday, cbThursday, cbFriday, cbSaturday, cbSunday
         };
 
         for (CheckBox cb : checkBoxes) {
-            // Set new click listener for CheckBox
             cb.setOnClickListener(v -> {
                 CheckBox clickedCb = (CheckBox) v;
                 String day = clickedCb.getText().toString();
                 String fullDayName = getFullDayName(day);
 
-                // CheckBox state is automatically toggled on click. Update the selectedDays list based on the new state.
                 if (clickedCb.isChecked()) {
                     if (!selectedDays.contains(fullDayName)) {
                         selectedDays.add(fullDayName);
@@ -165,7 +156,6 @@ public class EditTaskActivity extends AppCompatActivity {
 
     private void clearSelectedDays() {
         selectedDays.clear();
-        // REPLACED: Logic to clear CheckBoxes
         if (cbMonday != null) {
             cbMonday.setChecked(false);
             cbTuesday.setChecked(false);
@@ -238,15 +228,11 @@ public class EditTaskActivity extends AppCompatActivity {
             selectedDays.clear();
             selectedDays.addAll(task.getSelectedDays());
 
-            // REPLACED: Logic to apply the checked state to the CheckBoxes
             CheckBox[] checkBoxes = new CheckBox[]{
                     cbMonday, cbTuesday, cbWednesday, cbThursday, cbFriday, cbSaturday, cbSunday
             };
 
             for (CheckBox cb : checkBoxes) {
-                // IMPORTANT: The getFullDayName method is defined locally in this class
-                // The argument to getFullDayName should be the abbreviated text of the CheckBox.
-                // Since the CheckBox's text property is the abbreviation (M, T, W, Th, F, Sa, Su)
                 String dayAbbr = cb.getText().toString();
                 String fullDayName = getFullDayName(dayAbbr);
                 cb.setChecked(selectedDays.contains(fullDayName));
@@ -391,10 +377,11 @@ public class EditTaskActivity extends AppCompatActivity {
     }
 
     private void updateTask() {
-        String title = etTitle.getText().toString().trim();
-        String description = etDescription.getText().toString().trim();
-        String remarks = "";
-        String priority = "medium";
+        // Capture input values as final local variables
+        final String finalTitle = etTitle.getText().toString().trim();
+        final String finalDescription = etDescription.getText().toString().trim();
+        final String finalRemarks = "";
+        final String finalPriority = "medium";
 
         int selectedTaskTypeId = rgTaskType.getCheckedRadioButtonId();
         if (selectedTaskTypeId == -1) {
@@ -402,44 +389,129 @@ public class EditTaskActivity extends AppCompatActivity {
             return;
         }
         RadioButton selectedTaskTypeButton = findViewById(selectedTaskTypeId);
-        String taskType = selectedTaskTypeButton.getText().toString();
+        final String taskType = selectedTaskTypeButton.getText().toString();
 
-        String startDate = "";
-        String endDate = "";
-        List<String> finalSelectedDays = new ArrayList<>();
+        String tempStartDate = "";
+        String tempEndDate = "";
+        final List<String> finalSelectedDays;
+        final List<String> finalAssignedTo;
 
         if (taskType.equalsIgnoreCase("Additional")) {
-            startDate = etStartDate.getText().toString().trim();
-            endDate = etEndDate.getText().toString().trim();
+            tempStartDate = etStartDate.getText().toString().trim();
+            tempEndDate = etEndDate.getText().toString().trim();
+            finalSelectedDays = new ArrayList<>();
+            finalAssignedTo = selectedAssignees;
         } else {
-            finalSelectedDays.addAll(selectedDays);
-            if (finalSelectedDays.isEmpty()) {
-                Toast.makeText(this, "Please select at least one active day for the permanent task.", Toast.LENGTH_SHORT).show();
-                return;
-            }
+            finalSelectedDays = selectedDays;
             autoAssignAllUsers();
+            finalAssignedTo = selectedAssignees;
         }
 
-        if (title.isEmpty()) {
+        final String finalStartDate = tempStartDate;
+        final String finalEndDate = tempEndDate;
+
+        if (finalTitle.isEmpty()) {
             etTitle.setError("Title is required");
             return;
         }
 
-        if (selectedAssignees.isEmpty()) {
+        if (finalAssignedTo.isEmpty()) {
             Toast.makeText(this, "Please assign the task to at least one user.", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        int selectedAiCountId = rgRequireAiCount.getCheckedRadioButtonId();
-        boolean requireAiCount = (selectedAiCountId == R.id.rb_ai_count_yes);
+        final int selectedAiCountId = rgRequireAiCount.getCheckedRadioButtonId();
+        final boolean newRequireAiCount = (selectedAiCountId == R.id.rb_ai_count_yes);
+
+        if (taskType.equalsIgnoreCase("Permanent") && finalSelectedDays.isEmpty()) {
+            Toast.makeText(this, "Please select at least one active day for the permanent task.", Toast.LENGTH_SHORT).show();
+            return;
+        }
 
         btnSaveTask.setEnabled(false);
         btnSaveTask.setText("Updating...");
 
-        saveTaskUpdateToFirestore(title, description, priority, remarks, selectedAssignees, startDate, endDate, requireAiCount, taskType, finalSelectedDays);
+        // --- CORE LOGIC: READ ORIGINAL TASK DATA FOR STATUS CHECK AND RESET ---
+        db.collection("tasks").document(taskId).get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    Task originalTask = documentSnapshot.toObject(Task.class);
+                    if (originalTask != null) {
+
+                        // Initialize status variables (mutable inside this lambda block)
+                        String finalStatus = originalTask.getStatus();
+                        long finalCompletedDateMillis = originalTask.getCompletedDateMillis();
+                        String finalAiCountValue = originalTask.getAiCountValue();
+                        Map<String, String> finalUserStatus = new HashMap<>(originalTask.getUserStatus());
+                        Map<String, Long> finalUserCompletedDate = new HashMap<>(originalTask.getUserCompletedDate());
+                        Map<String, String> finalUserAiCount = new HashMap<>(originalTask.getUserAiCount());
+
+                        boolean wasCompleted = originalTask.getStatus() != null && originalTask.getStatus().equalsIgnoreCase("Completed");
+                        boolean wasAiCountNotRequired = !originalTask.isRequireAiCount();
+
+                        // Condition: The task was completed AND AI count was NOT required, BUT it is NOW required.
+                        if (wasCompleted && wasAiCountNotRequired && newRequireAiCount) {
+                            // Admin enabled AI Count Correction on a completed task -> RESET STATUS
+
+                            // Reset global fields
+                            finalStatus = "Pending";
+                            finalCompletedDateMillis = 0L;
+                            finalAiCountValue = "";
+
+                            // Reset all user-specific fields
+                            // Iterate over the users *currently* assigned to the task, or rely on the finalAssignedTo list
+                            // We use the original assignedTo to clear only relevant entries.
+                            for (String email : originalTask.getAssignedTo()) {
+                                finalUserStatus.put(email, "Pending");
+                                finalUserCompletedDate.put(email, 0L);
+                                finalUserAiCount.put(email, "");
+                            }
+                            // Add/update newly assigned users if any were added
+                            for (String email : finalAssignedTo) {
+                                if (!finalUserStatus.containsKey(email) || finalUserStatus.get(email) == null) {
+                                    finalUserStatus.put(email, "Pending");
+                                    finalUserCompletedDate.put(email, 0L);
+                                    finalUserAiCount.put(email, "");
+                                }
+                            }
+
+                            Toast.makeText(EditTaskActivity.this, "AI Count enabled. Task status reset to Pending for all users.", Toast.LENGTH_LONG).show();
+                        } else {
+                            // If the assignment list changed (which is captured by finalAssignedTo),
+                            // ensure new users are initialized to Pending.
+                            for (String email : finalAssignedTo) {
+                                if (!finalUserStatus.containsKey(email)) {
+                                    finalUserStatus.put(email, "Pending");
+                                    finalUserCompletedDate.put(email, 0L);
+                                    finalUserAiCount.put(email, "");
+                                }
+                            }
+                        }
+
+                        // Call the update method with the final, effectively-final local variables
+                        saveTaskUpdateToFirestore(
+                                finalTitle, finalDescription, finalPriority, finalRemarks, finalAssignedTo, finalStartDate, finalEndDate,
+                                newRequireAiCount, taskType, finalSelectedDays,
+                                finalStatus, finalCompletedDateMillis, finalAiCountValue,
+                                finalUserStatus, finalUserCompletedDate, finalUserAiCount
+                        );
+
+                    } else {
+                        onUpdateFailed("Task data not found for pre-check.");
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    onUpdateFailed("Error checking task status before update: " + e.getMessage());
+                });
     }
 
-    private void saveTaskUpdateToFirestore(String title, String description, String priority, String remarks, List<String> assignedTo, String startDate, String endDate, boolean requireAiCount, String taskType, List<String> selectedDays) {
+    private void onUpdateFailed(String message) {
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
+        btnSaveTask.setEnabled(true);
+        btnSaveTask.setText("Update Task");
+    }
+
+
+    private void saveTaskUpdateToFirestore(String title, String description, String priority, String remarks, List<String> assignedTo, String startDate, String endDate, boolean requireAiCount, String taskType, List<String> selectedDays, String status, long completedDateMillis, String aiCountValue, Map<String, String> userStatus, Map<String, Long> userCompletedDate, Map<String, String> userAiCount) {
         Map<String, Object> taskUpdates = new HashMap<>();
         taskUpdates.put("title", title);
         taskUpdates.put("description", description);
@@ -452,6 +524,14 @@ public class EditTaskActivity extends AppCompatActivity {
         taskUpdates.put("requireAiCount", requireAiCount);
         taskUpdates.put("taskType", taskType);
         taskUpdates.put("selectedDays", selectedDays);
+
+        // Status fields (potentially reset by Admin's AI Count flag change)
+        taskUpdates.put("status", status);
+        taskUpdates.put("completedDateMillis", completedDateMillis);
+        taskUpdates.put("aiCountValue", aiCountValue);
+        taskUpdates.put("userStatus", userStatus);
+        taskUpdates.put("userCompletedDate", userCompletedDate);
+        taskUpdates.put("userAiCount", userAiCount);
 
         db.collection("tasks").document(taskId)
                 .update(taskUpdates)
