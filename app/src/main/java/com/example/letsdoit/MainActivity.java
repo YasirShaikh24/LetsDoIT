@@ -1,22 +1,52 @@
 // src/main/java/com/example/letsdoit/MainActivity.java
 package com.example.letsdoit;
 
+import android.Manifest;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
+import android.util.Log;
+import android.widget.Toast;
+
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
+
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 
 public class MainActivity extends AppCompatActivity {
+
+    private static final String TAG = "MainActivity";
 
     private String welcomeMessage;
     private String loggedInUserEmail;
     private String loggedInUserRole;
     private String displayName;
 
+    private NotificationHelper notificationHelper;
+
+    // Permission launcher for notifications
+    private final ActivityResultLauncher<String> requestPermissionLauncher =
+            registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
+                if (isGranted) {
+                    Log.d(TAG, "Notification permission granted");
+                    scheduleNotifications();
+                    Toast.makeText(this, "Daily task reminders enabled at 7:55 AM", Toast.LENGTH_LONG).show();
+                } else {
+                    Log.d(TAG, "Notification permission denied");
+                    Toast.makeText(this, "You won't receive task reminders", Toast.LENGTH_SHORT).show();
+                }
+            });
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        // Initialize notification helper
+        notificationHelper = new NotificationHelper(this);
 
         // Retrieve user data passed from LoginActivity
         displayName = getIntent().getStringExtra(LoginActivity.EXTRA_DISPLAY_NAME);
@@ -44,7 +74,6 @@ public class MainActivity extends AppCompatActivity {
             int itemId = item.getItemId();
 
             if (itemId == R.id.navigation_home) {
-                // UPDATED: Pass all required parameters to HomeFragment
                 selectedFragment = HomeFragment.newInstance(welcomeMessage, loggedInUserEmail, loggedInUserRole, displayName);
             } else if (itemId == R.id.navigation_add_activity) {
                 // Only admin can access this
@@ -69,5 +98,60 @@ public class MainActivity extends AppCompatActivity {
         if (savedInstanceState == null) {
             bottomNav.setSelectedItemId(R.id.navigation_home);
         }
+
+        // Request notification permission (Android 13+)
+        requestNotificationPermission();
+
+        // Check if opened from notification
+        handleNotificationIntent(getIntent());
+    }
+
+    /**
+     * Request notification permission for Android 13 and above
+     */
+    private void requestNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+                    == PackageManager.PERMISSION_GRANTED) {
+                // Permission already granted
+                scheduleNotifications();
+            } else {
+                // Request permission
+                requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS);
+            }
+        } else {
+            // For Android 12 and below, no runtime permission needed
+            scheduleNotifications();
+        }
+    }
+
+    /**
+     * Schedule daily notifications at 7:55 AM
+     */
+    private void scheduleNotifications() {
+        if (!notificationHelper.areNotificationsEnabled()) {
+            notificationHelper.scheduleDailyNotification(7, 55);
+            Log.d(TAG, "Daily notifications scheduled at 7:55 AM");
+        }
+    }
+
+    /**
+     * Handle notification tap to open View Tasks screen
+     */
+    private void handleNotificationIntent(android.content.Intent intent) {
+        if (intent != null && intent.getBooleanExtra("open_view_tasks", false)) {
+            // Navigate to View Tasks fragment
+            BottomNavigationView bottomNav = findViewById(R.id.bottom_navigation);
+            if (bottomNav != null) {
+                bottomNav.setSelectedItemId(R.id.navigation_view_activity);
+            }
+        }
+    }
+
+    @Override
+    protected void onNewIntent(android.content.Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        handleNotificationIntent(intent);
     }
 }
