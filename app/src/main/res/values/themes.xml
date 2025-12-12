@@ -14,7 +14,9 @@
         <item name="colorSurface">@color/white</item>
         <item name="colorSurfaceVariant">@color/background_input</item>
 
-        <item name="android:statusBarColor">@color/primary_gradient_start</item>
+        <!-- CHANGED: Status bar to black -->
+        <item name="android:statusBarColor">@color/black</item>
+        <!-- CHANGED: Light status bar icons to false for better visibility on black -->
         <item name="android:windowLightStatusBar" tools:targetApi="m">false</item>
 
         <item name="android:navigationBarColor">@color/primary_purple</item>

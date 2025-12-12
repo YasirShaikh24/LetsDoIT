@@ -2,6 +2,8 @@
     <!-- Base application theme. -->
     <!-- CRITICAL CHANGE: We explicitly use the Light theme parent here too, overriding the system's Dark Mode preference. -->
     <style name="Base.Theme.LetsDoIT" parent="Theme.Material3.Light.NoActionBar">
-        <!-- Since we are forcing Light mode, no dark customizations are needed. -->
+        <!-- CHANGED: Status bar to black even in night mode -->
+        <item name="android:statusBarColor">@color/black</item>
+        <item name="android:windowLightStatusBar" tools:targetApi="m">false</item>
     </style>
 </resources>

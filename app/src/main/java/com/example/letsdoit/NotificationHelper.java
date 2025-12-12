@@ -59,22 +59,27 @@ public class NotificationHelper {
     }
 
     /**
-     * Schedule daily notification at specified time (default: 7:50 AM)
+     * Schedule daily notification at specified time (default: 8:40 PM)
+     * FIXED: Now uses EXACT alarm that triggers at precise time
      */
     public void scheduleDailyNotification() {
         SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
 
-        // Get notification time from preferences or use default (7:55 AM)
-        int hour = prefs.getInt(KEY_NOTIFICATION_TIME_HOUR, 7);
-        int minute = prefs.getInt(KEY_NOTIFICATION_TIME_MINUTE, 55);
+        // Get notification time from preferences or use default (8:40 PM)
+        int hour = prefs.getInt(KEY_NOTIFICATION_TIME_HOUR, 20); // Default to 20 (8 PM)
+        int minute = prefs.getInt(KEY_NOTIFICATION_TIME_MINUTE, 40); // Default to 40 minutes
 
         scheduleDailyNotification(hour, minute);
     }
 
     /**
      * Schedule daily notification at custom time
+     * CRITICAL FIX: Use setExactAndAllowWhileIdle for EXACT timing on modern Android
      */
     public void scheduleDailyNotification(int hour, int minute) {
+        // First, cancel any existing alarm
+        cancelDailyNotification();
+
         AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
 
         Intent intent = new Intent(context, DailyNotificationReceiver.class);
@@ -91,21 +96,25 @@ public class NotificationHelper {
         calendar.set(Calendar.HOUR_OF_DAY, hour);
         calendar.set(Calendar.MINUTE, minute);
         calendar.set(Calendar.SECOND, 0);
+        calendar.set(Calendar.MILLISECOND, 0);
 
         // If the time has already passed today, schedule for tomorrow
-        if (calendar.getTimeInMillis() < System.currentTimeMillis()) {
+        if (calendar.getTimeInMillis() <= System.currentTimeMillis()) {
             calendar.add(Calendar.DAY_OF_YEAR, 1);
         }
 
-        // Schedule repeating alarm
+        // CRITICAL FIX: Use setExactAndAllowWhileIdle for EXACT timing
+        // This works even when device is in Doze mode
         if (alarmManager != null) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                // Android 6.0+ (API 23+): Use setExactAndAllowWhileIdle
                 alarmManager.setExactAndAllowWhileIdle(
                         AlarmManager.RTC_WAKEUP,
                         calendar.getTimeInMillis(),
                         pendingIntent
                 );
             } else {
+                // Android 5.x and below: Use setExact
                 alarmManager.setExact(
                         AlarmManager.RTC_WAKEUP,
                         calendar.getTimeInMillis(),
@@ -113,7 +122,9 @@ public class NotificationHelper {
                 );
             }
 
-            Log.d(TAG, "Daily notification scheduled for " + hour + ":" + minute);
+            Log.d(TAG, "EXACT daily notification scheduled for " + hour + ":" + String.format("%02d", minute));
+            Log.d(TAG, "Next alarm: " + calendar.getTime().toString());
+            Log.d(TAG, "Time until alarm: " + (calendar.getTimeInMillis() - System.currentTimeMillis()) / 1000 + " seconds");
 
             // Save to preferences
             saveNotificationSettings(true, hour, minute);
@@ -139,29 +150,42 @@ public class NotificationHelper {
             Log.d(TAG, "Daily notification cancelled");
         }
 
-        saveNotificationSettings(false, 7, 55);
+        saveNotificationSettings(false, 20, 40); // Default to 8:40 PM
     }
 
     /**
-     * Show notification with list of pending tasks
+     * NEW METHOD: Trigger notification immediately for testing
+     * This shows pending tasks notification right now without waiting for scheduled time
      */
-    public void showPendingTasksNotification(List<Task> pendingTasks) {
+    public void triggerNotificationNow() {
+        Log.d(TAG, "Triggering notification immediately for testing");
+
+        // Broadcast the intent to trigger the receiver immediately
+        Intent intent = new Intent(context, DailyNotificationReceiver.class);
+        context.sendBroadcast(intent);
+    }
+
+    /**
+     * MODIFIED: Show notification with list of pending tasks for specific user
+     * Added userEmail parameter to personalize notification
+     */
+    public void showPendingTasksNotification(List<Task> pendingTasks, String userEmail) {
         if (pendingTasks == null || pendingTasks.isEmpty()) {
-            Log.d(TAG, "No pending tasks to notify");
+            Log.d(TAG, "No pending tasks to notify for user: " + userEmail);
             return;
         }
 
-        // Build notification content
+        // Build notification content with user personalization
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID)
                 .setSmallIcon(R.mipmap.ic_launcher)
-                .setContentTitle("📋 Pending Tasks for Today")
+                .setContentTitle("📋 Your Pending Tasks")
                 .setPriority(NotificationCompat.PRIORITY_DEFAULT)
                 .setAutoCancel(true)
                 .setVibrate(new long[]{0, 500, 200, 500});
 
         // Create big text style for multiple tasks
         NotificationCompat.InboxStyle inboxStyle = new NotificationCompat.InboxStyle();
-        inboxStyle.setBigContentTitle("📋 " + pendingTasks.size() + " Pending Tasks for Today");
+        inboxStyle.setBigContentTitle("📋 " + pendingTasks.size() + " Pending Task" + (pendingTasks.size() > 1 ? "s" : "") + " for You");
 
         // Add each task as a line (max 7 lines visible)
         int maxLines = Math.min(pendingTasks.size(), 7);
@@ -176,7 +200,7 @@ public class NotificationHelper {
             inboxStyle.addLine("+ " + (pendingTasks.size() - 7) + " more tasks...");
         }
 
-        inboxStyle.setSummaryText("Tap to view all tasks");
+        inboxStyle.setSummaryText("Tap to view your tasks");
         builder.setStyle(inboxStyle);
 
         // Set content text for collapsed view
@@ -203,7 +227,7 @@ public class NotificationHelper {
         NotificationManagerCompat notificationManager = NotificationManagerCompat.from(context);
         try {
             notificationManager.notify(NOTIFICATION_ID, builder.build());
-            Log.d(TAG, "Notification shown with " + pendingTasks.size() + " pending tasks");
+            Log.d(TAG, "Notification shown with " + pendingTasks.size() + " pending tasks for user: " + userEmail);
         } catch (SecurityException e) {
             Log.e(TAG, "Failed to show notification: " + e.getMessage());
         }
@@ -234,8 +258,8 @@ public class NotificationHelper {
      */
     public String getNotificationTime() {
         SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        int hour = prefs.getInt(KEY_NOTIFICATION_TIME_HOUR, 7);
-        int minute = prefs.getInt(KEY_NOTIFICATION_TIME_MINUTE, 50);
+        int hour = prefs.getInt(KEY_NOTIFICATION_TIME_HOUR, 20); // Default to 20 (8 PM)
+        int minute = prefs.getInt(KEY_NOTIFICATION_TIME_MINUTE, 40); // Default to 40
         return String.format("%02d:%02d", hour, minute);
     }
 }

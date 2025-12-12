@@ -33,7 +33,7 @@ public class MainActivity extends AppCompatActivity {
                 if (isGranted) {
                     Log.d(TAG, "Notification permission granted");
                     scheduleNotifications();
-                    Toast.makeText(this, "Daily task reminders enabled at 7:55 AM", Toast.LENGTH_LONG).show();
+                    Toast.makeText(this, "Daily task reminders enabled at 7:00 PM", Toast.LENGTH_LONG).show();
                 } else {
                     Log.d(TAG, "Notification permission denied");
                     Toast.makeText(this, "You won't receive task reminders", Toast.LENGTH_SHORT).show();
@@ -99,7 +99,7 @@ public class MainActivity extends AppCompatActivity {
             bottomNav.setSelectedItemId(R.id.navigation_home);
         }
 
-        // Request notification permission (Android 13+)
+        // Request notification permission (Android 13+) and schedule daily notification
         requestNotificationPermission();
 
         // Check if opened from notification
@@ -115,6 +115,11 @@ public class MainActivity extends AppCompatActivity {
                     == PackageManager.PERMISSION_GRANTED) {
                 // Permission already granted
                 scheduleNotifications();
+
+                // Log current notification status
+                if (notificationHelper.areNotificationsEnabled()) {
+                    Log.d(TAG, "Notifications already enabled at: " + notificationHelper.getNotificationTime());
+                }
             } else {
                 // Request permission
                 requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS);
@@ -126,13 +131,13 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
-     * Schedule daily notifications at 7:55 AM
+     * Schedule daily notifications at 7:00 PM
+     * UPDATED: Changed time to 7:00 PM (19:00)
      */
     private void scheduleNotifications() {
-        if (!notificationHelper.areNotificationsEnabled()) {
-            notificationHelper.scheduleDailyNotification(7, 55);
-            Log.d(TAG, "Daily notifications scheduled at 7:55 AM");
-        }
+        // Always reschedule to ensure time is updated
+        notificationHelper.scheduleDailyNotification(19, 0); // 7:00 PM
+        Log.d(TAG, "Daily notifications scheduled at 7:00 PM");
     }
 
     /**

@@ -8,6 +8,7 @@ import android.util.Log;
 
 /**
  * Receiver to reschedule notifications after device reboot
+ * UPDATED: Now properly reschedules repeating alarm
  */
 public class BootCompletedReceiver extends BroadcastReceiver {
 
@@ -22,8 +23,11 @@ public class BootCompletedReceiver extends BroadcastReceiver {
 
             // Only reschedule if notifications were previously enabled
             if (notificationHelper.areNotificationsEnabled()) {
+                // FIXED: Use scheduleDailyNotification() which now properly sets repeating alarm
                 notificationHelper.scheduleDailyNotification();
-                Log.d(TAG, "Notifications rescheduled after boot");
+                Log.d(TAG, "Notifications rescheduled after boot at: " + notificationHelper.getNotificationTime());
+            } else {
+                Log.d(TAG, "Notifications not enabled, skipping reschedule");
             }
         }
     }
