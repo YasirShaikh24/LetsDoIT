@@ -21,7 +21,8 @@
         android:layout_marginEnd="16dp"
         android:layout_marginBottom="16dp"
         android:background="@drawable/nav_background"
-        android:elevation="8dp"
+        android:elevation="12dp"
+        android:stateListAnimator="@animator/nav_button_elevation"
         app:menu="@menu/bottom_nav_menu"
         app:itemIconTint="@color/nav_item_color"
         app:itemTextColor="@color/nav_item_color"
@@ -29,8 +30,6 @@
         app:itemTextAppearanceActive="@style/NavTextActive"
         app:itemTextAppearanceInactive="@style/NavTextInactive"
         app:labelVisibilityMode="labeled"
-
-        app:itemActiveIndicatorStyle="@style/CustomActiveIndicator"
-        />
+        app:itemActiveIndicatorStyle="@style/CustomActiveIndicator" />
 
 </RelativeLayout>
