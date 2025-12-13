@@ -28,23 +28,28 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
-public class ViewMembersActivity extends AppCompatActivity implements MemberAdapter.MemberDeleteListener {
+public class ViewMembersActivity extends AppCompatActivity implements MemberAdapter.MemberActionListener {
 
     private RecyclerView recyclerView;
     private MemberAdapter memberAdapter;
-    private List<User> memberList; // Master list of all members
-    private List<User> filteredMemberList; // List displayed to the user
+    private List<User> memberList;
+    private List<User> filteredMemberList;
     private FirebaseFirestore db;
     private ProgressBar progressBar;
     private TextView tvEmptyState;
     private Button btnBackToProfile;
+    private Button btnDeleteSelected;
 
-    // Search fields
     private TextInputEditText etSearchQuery;
     private String currentSearchQuery = "";
+
+    private Set<String> selectedMemberIds = new HashSet<>();
+    private boolean isSelectionMode = false;
 
     private static final String TAG = "ViewMembersActivity";
 
@@ -64,19 +69,27 @@ public class ViewMembersActivity extends AppCompatActivity implements MemberAdap
         progressBar = findViewById(R.id.progress_bar);
         tvEmptyState = findViewById(R.id.tv_empty_state);
         btnBackToProfile = findViewById(R.id.btn_back_to_profile);
-        etSearchQuery = findViewById(R.id.et_search_query); // Initialize search field
+        btnDeleteSelected = findViewById(R.id.btn_delete_selected);
+        etSearchQuery = findViewById(R.id.et_search_query);
 
-        btnBackToProfile.setOnClickListener(v -> finish());
+        btnBackToProfile.setOnClickListener(v -> {
+            if (isSelectionMode) {
+                exitSelectionMode();
+            } else {
+                finish();
+            }
+        });
+
+        btnDeleteSelected.setOnClickListener(v -> showBulkDeleteConfirmation());
 
         memberList = new ArrayList<>();
         filteredMemberList = new ArrayList<>();
         memberAdapter = new MemberAdapter(filteredMemberList, this);
         LinearLayoutManager layoutManager = new LinearLayoutManager(this);
         recyclerView.setLayoutManager(layoutManager);
-
         recyclerView.setAdapter(memberAdapter);
 
-        setupSearch(); // Setup search functionality
+        setupSearch();
         loadMembers();
     }
 
@@ -126,7 +139,6 @@ public class ViewMembersActivity extends AppCompatActivity implements MemberAdap
         }
     }
 
-
     @Override
     public boolean onSupportNavigateUp() {
         return false;
@@ -142,12 +154,111 @@ public class ViewMembersActivity extends AppCompatActivity implements MemberAdap
         showEditMemberDialog(user);
     }
 
+    @Override
+    public void onMemberSelectClick(User user) {
+        if (!isSelectionMode) {
+            enterSelectionMode();
+        }
+
+        if (selectedMemberIds.contains(user.getDocumentId())) {
+            selectedMemberIds.remove(user.getDocumentId());
+        } else {
+            selectedMemberIds.add(user.getDocumentId());
+        }
+
+        if (selectedMemberIds.isEmpty()) {
+            exitSelectionMode();
+        } else {
+            updateDeleteButtonText();
+        }
+
+        memberAdapter.setSelectedIds(selectedMemberIds);
+        memberAdapter.notifyDataSetChanged();
+    }
+
+    private void enterSelectionMode() {
+        isSelectionMode = true;
+        btnDeleteSelected.setVisibility(View.VISIBLE);
+        btnBackToProfile.setText("Cancel");
+        memberAdapter.setSelectionMode(true);
+    }
+
+    private void exitSelectionMode() {
+        isSelectionMode = false;
+        selectedMemberIds.clear();
+        btnDeleteSelected.setVisibility(View.GONE);
+        btnBackToProfile.setText("Back");
+        memberAdapter.setSelectionMode(false);
+        memberAdapter.setSelectedIds(selectedMemberIds);
+        memberAdapter.notifyDataSetChanged();
+    }
+
+    private void updateDeleteButtonText() {
+        int count = selectedMemberIds.size();
+        btnDeleteSelected.setText("Delete (" + count + ")");
+    }
+
+    private void showBulkDeleteConfirmation() {
+        if (selectedMemberIds.isEmpty()) {
+            Toast.makeText(this, "No members selected", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        int count = selectedMemberIds.size();
+        new AlertDialog.Builder(this)
+                .setTitle("Delete Members")
+                .setMessage("Are you sure you want to permanently delete " + count + " member(s)?")
+                .setPositiveButton("DELETE", (dialog, which) -> deleteBulkMembers())
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void deleteBulkMembers() {
+        if (selectedMemberIds.isEmpty()) return;
+
+        progressBar.setVisibility(View.VISIBLE);
+
+        List<String> idsToDelete = new ArrayList<>(selectedMemberIds);
+        int totalToDelete = idsToDelete.size();
+        final int[] deletedCount = {0};
+        final int[] failedCount = {0};
+
+        for (String documentId : idsToDelete) {
+            db.collection("users")
+                    .document(documentId)
+                    .delete()
+                    .addOnSuccessListener(aVoid -> {
+                        deletedCount[0]++;
+                        checkBulkDeleteCompletion(deletedCount[0], failedCount[0], totalToDelete);
+                    })
+                    .addOnFailureListener(e -> {
+                        failedCount[0]++;
+                        Log.e(TAG, "Error deleting member: " + documentId, e);
+                        checkBulkDeleteCompletion(deletedCount[0], failedCount[0], totalToDelete);
+                    });
+        }
+    }
+
+    private void checkBulkDeleteCompletion(int deleted, int failed, int total) {
+        if (deleted + failed >= total) {
+            progressBar.setVisibility(View.GONE);
+
+            String message = deleted + " member(s) deleted successfully.";
+            if (failed > 0) {
+                message += " " + failed + " failed.";
+            }
+            Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+
+            exitSelectionMode();
+            loadMembers();
+        }
+    }
+
     private void loadMembers() {
         progressBar.setVisibility(View.VISIBLE);
         tvEmptyState.setVisibility(View.GONE);
         recyclerView.setVisibility(View.GONE);
 
-        // Load only documents from the "users" collection (regular members)
         db.collection("users")
                 .get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {
@@ -165,11 +276,8 @@ public class ViewMembersActivity extends AppCompatActivity implements MemberAdap
                         }
                     }
 
-                    // After loading the master list, apply the current filter (which might be empty)
                     applyFilter();
-
                     progressBar.setVisibility(View.GONE);
-
                 })
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Error loading members", e);
@@ -179,7 +287,6 @@ public class ViewMembersActivity extends AppCompatActivity implements MemberAdap
                 });
     }
 
-    // Show confirmation dialog before deletion
     private void showDeleteConfirmationDialog(User userToDelete) {
         if (userToDelete.getDocumentId() == null) {
             Toast.makeText(this, "Cannot delete member without ID.", Toast.LENGTH_SHORT).show();
@@ -194,7 +301,6 @@ public class ViewMembersActivity extends AppCompatActivity implements MemberAdap
                 .show();
     }
 
-    // Implement single permanent deletion
     private void deleteSingleMember(User user) {
         String collectionPath = "admin".equals(user.getRole()) ? "admins" : "users";
 
@@ -203,11 +309,8 @@ public class ViewMembersActivity extends AppCompatActivity implements MemberAdap
                 .delete()
                 .addOnSuccessListener(aVoid -> {
                     Toast.makeText(this, "Member deleted successfully.", Toast.LENGTH_LONG).show();
-
-                    // Remove from master list and trigger filter refresh
                     memberList.remove(user);
                     applyFilter();
-
                 })
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Error deleting member: ", e);
@@ -215,7 +318,6 @@ public class ViewMembersActivity extends AppCompatActivity implements MemberAdap
                 });
     }
 
-    // Show edit dialog with improved UI
     private void showEditMemberDialog(User userToEdit) {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("Edit Member Credentials");
@@ -234,7 +336,7 @@ public class ViewMembersActivity extends AppCompatActivity implements MemberAdap
         etEmail.setText(userToEdit.getEmail());
         etEmail.setHint("Email Address");
         etEmail.setInputType(android.text.InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
-        etEmail.setBackgroundResource(R.drawable.radio_button_selector); // Use an existing drawable for a box look
+        etEmail.setBackgroundResource(R.drawable.radio_button_selector);
         etEmail.setPadding(20, 20, 20, 20);
         etEmail.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
         ((LinearLayout.LayoutParams)etEmail.getLayoutParams()).setMargins(0, 0, 0, 20);
@@ -243,7 +345,7 @@ public class ViewMembersActivity extends AppCompatActivity implements MemberAdap
         etPassword.setText(userToEdit.getPassword());
         etPassword.setHint("Password");
         etPassword.setInputType(android.text.InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD);
-        etPassword.setBackgroundResource(R.drawable.radio_button_selector); // Use an existing drawable for a box look
+        etPassword.setBackgroundResource(R.drawable.radio_button_selector);
         etPassword.setPadding(20, 20, 20, 20);
         etPassword.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
         ((LinearLayout.LayoutParams)etPassword.getLayoutParams()).setMargins(0, 0, 0, 20);
@@ -253,7 +355,7 @@ public class ViewMembersActivity extends AppCompatActivity implements MemberAdap
 
         builder.setView(layout);
 
-        builder.setPositiveButton("Save Changes", (dialog, which) -> {
+        builder.setPositiveButton("Save Changes", (d, which) -> {
             String newEmail = etEmail.getText().toString().trim();
             String newPassword = etPassword.getText().toString().trim();
 
@@ -262,7 +364,6 @@ public class ViewMembersActivity extends AppCompatActivity implements MemberAdap
                 return;
             }
 
-            // Only update if something changed
             if (!newEmail.equals(userToEdit.getEmail()) || !newPassword.equals(userToEdit.getPassword())) {
                 updateMemberInFirestore(userToEdit, newEmail, newPassword);
             } else {
@@ -274,11 +375,9 @@ public class ViewMembersActivity extends AppCompatActivity implements MemberAdap
         builder.show();
     }
 
-    // Implement update logic
     private void updateMemberInFirestore(User originalUser, String newEmail, String newPassword) {
         String collectionPath = "admin".equals(originalUser.getRole()) ? "admins" : "users";
 
-        // Prepare update map
         Map<String, Object> updates = new java.util.HashMap<>();
         updates.put("email", newEmail);
         updates.put("password", newPassword);
@@ -289,14 +388,10 @@ public class ViewMembersActivity extends AppCompatActivity implements MemberAdap
                 .addOnSuccessListener(aVoid -> {
                     Toast.makeText(this, "Member updated successfully. Preparing SMS notification...", Toast.LENGTH_LONG).show();
 
-                    // Update local object for UI refresh
                     originalUser.setEmail(newEmail);
                     originalUser.setPassword(newPassword);
-
-                    // Trigger filter refresh to update RecyclerView
                     applyFilter();
 
-                    // Proceed to send SMS
                     sendUpdateNotificationSMS(originalUser, newEmail, newPassword);
                 })
                 .addOnFailureListener(e -> {
@@ -305,7 +400,6 @@ public class ViewMembersActivity extends AppCompatActivity implements MemberAdap
                 });
     }
 
-    // Prepare and open SMS Intent
     private void sendUpdateNotificationSMS(User user, String newEmail, String newPassword) {
         String mobileNumber = user.getMobileNumber();
 
@@ -314,7 +408,6 @@ public class ViewMembersActivity extends AppCompatActivity implements MemberAdap
             return;
         }
 
-        // Custom SMS message
         String message = "Hello " + user.getDisplayName() + ",\n\n" +
                 "Your Lets Do IT account credentials have been updated by your administrator.\n\n" +
                 "New Credentials:\n" +
@@ -332,6 +425,15 @@ public class ViewMembersActivity extends AppCompatActivity implements MemberAdap
         } catch (Exception e) {
             Log.e(TAG, "Error opening SMS intent", e);
             Toast.makeText(this, "Could not open messaging app. Please notify user manually.", Toast.LENGTH_LONG).show();
+        }
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (isSelectionMode) {
+            exitSelectionMode();
+        } else {
+            super.onBackPressed();
         }
     }
 }

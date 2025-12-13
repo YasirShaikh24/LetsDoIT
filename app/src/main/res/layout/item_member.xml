@@ -19,25 +19,46 @@
         <RelativeLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp"> <TextView
-            android:id="@+id/tv_serial_number_badge"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
-            android:text="1"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:textColor="@color/white"
-            android:background="@drawable/rounded_icon_background"
-            android:backgroundTint="@color/primary_purple"
-            android:gravity="center"
-            android:layout_alignParentStart="true"
-            android:layout_centerVertical="true" />
+            android:layout_marginBottom="8dp">
+
+            <FrameLayout
+                android:id="@+id/fl_icon_anchor"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:layout_alignParentStart="true"
+                android:layout_centerVertical="true">
+
+                <TextView
+                    android:id="@+id/tv_serial_number_badge"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:text="1"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/white"
+                    android:background="@drawable/rounded_icon_background"
+                    android:backgroundTint="@color/primary_purple"
+                    android:gravity="center"
+                    android:visibility="visible" />
+
+                <CheckBox
+                    android:id="@+id/checkbox_select"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:layout_gravity="center"
+                    android:visibility="gone"
+                    android:button="@null"
+                    android:background="@drawable/checkbox_circle_selector"
+                    android:scaleX="1.2"
+                    android:scaleY="1.2"/>
+            </FrameLayout>
+
 
             <TextView
                 android:id="@+id/tv_member_display_name"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_toEndOf="@id/tv_serial_number_badge"
+                android:layout_toEndOf="@id/fl_icon_anchor"
                 android:layout_marginStart="16dp"
                 android:text="User Name"
                 android:textSize="18sp"
@@ -83,69 +104,73 @@
             android:layout_width="match_parent"
             android:layout_height="1dp"
             android:background="@color/background_input"
-            android:layout_marginBottom="12dp" /> <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:weightSum="2">
+            android:layout_marginBottom="12dp" />
 
         <LinearLayout
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical"
-            android:padding="10dp" android:background="@drawable/rounded_tag_background"
-            android:backgroundTint="@color/background_input"
-            android:layout_marginEnd="8dp">
+            android:orientation="horizontal"
+            android:weightSum="2">
 
-            <TextView
-                android:layout_width="wrap_content"
+            <LinearLayout
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:text="EMAIL ADDRESS"
-                android:textSize="10sp"
-                android:textColor="@color/text_secondary"
-                android:textStyle="bold"
-                android:letterSpacing="0.05"
-                android:layout_marginBottom="4dp"/>
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:padding="10dp"
+                android:background="@drawable/rounded_tag_background"
+                android:backgroundTint="@color/background_input"
+                android:layout_marginEnd="8dp">
 
-            <TextView
-                android:id="@+id/tv_member_email"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="user@example.com"
-                android:textSize="14sp"
-                android:textColor="@color/text_primary"
-                android:textStyle="normal"/>
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="EMAIL ADDRESS"
+                    android:textSize="10sp"
+                    android:textColor="@color/text_secondary"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.05"
+                    android:layout_marginBottom="4dp"/>
+
+                <TextView
+                    android:id="@+id/tv_member_email"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="user@example.com"
+                    android:textSize="14sp"
+                    android:textColor="@color/text_primary"
+                    android:textStyle="normal"/>
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:padding="10dp"
+                android:background="@drawable/rounded_tag_background"
+                android:backgroundTint="@color/background_input"
+                android:layout_marginStart="8dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="PASSWORD"
+                    android:textSize="10sp"
+                    android:textColor="@color/text_secondary"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.05"
+                    android:layout_marginBottom="4dp"/>
+
+                <TextView
+                    android:id="@+id/tv_member_password"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="password123"
+                    android:textSize="14sp"
+                    android:textColor="@color/text_primary"
+                    android:textStyle="normal"/>
+            </LinearLayout>
         </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:orientation="vertical"
-            android:padding="10dp" android:background="@drawable/rounded_tag_background"
-            android:backgroundTint="@color/background_input"
-            android:layout_marginStart="8dp">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="PASSWORD"
-                android:textSize="10sp"
-                android:textColor="@color/text_secondary"
-                android:textStyle="bold"
-                android:letterSpacing="0.05"
-                android:layout_marginBottom="4dp"/>
-
-            <TextView
-                android:id="@+id/tv_member_password"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="password123"
-                android:textSize="14sp"
-                android:textColor="@color/text_primary"
-                android:textStyle="normal"/>
-        </LinearLayout>
-    </LinearLayout>
     </LinearLayout>
 </androidx.cardview.widget.CardView>

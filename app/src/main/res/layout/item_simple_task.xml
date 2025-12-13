@@ -5,24 +5,29 @@
     android:layout_height="wrap_content"
     android:layout_marginBottom="12dp"
     app:cardCornerRadius="12dp"
-    app:cardElevation="3dp">
+    app:cardElevation="3dp"
+    app:cardBackgroundColor="@android:color/white"
+
+    app:cardPreventCornerOverlap="true"
+    app:cardUseCompatPadding="true"
+    app:contentPadding="0dp"
+
+    >
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:padding="16dp"
-        android:background="@android:color/white">
-
-        <TextView
-            android:id="@+id/tv_task_title"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Task Title"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:textColor="@color/text_primary"
-            android:layout_marginBottom="6dp"/>
+        android:background="@drawable/card_border_black"> <TextView
+        android:id="@+id/tv_task_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Task Title"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:textColor="@color/text_primary"
+        android:layout_marginBottom="6dp"/>
 
         <TextView
             android:id="@+id/tv_task_description"
@@ -36,5 +41,4 @@
             android:visibility="gone"/>
 
     </LinearLayout>
-
 </androidx.cardview.widget.CardView>
