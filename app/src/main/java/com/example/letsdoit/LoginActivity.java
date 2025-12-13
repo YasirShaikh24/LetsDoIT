@@ -6,7 +6,9 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
 import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
@@ -15,30 +17,29 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.QueryDocumentSnapshot;
 
 public class LoginActivity extends AppCompatActivity {
 
-    private TextInputEditText etEmail, etPassword;
+    private TextInputEditText etFullname, etEmail, etPassword;
     private Button btnLogin;
+    private ImageButton btnBack;
     private FirebaseFirestore db;
     private SharedPreferences sharedPreferences;
 
     private static final String TAG = "LoginActivity";
     private static final String ADMIN_EMAIL = "mahimhussain444@gmail.com";
-    private static final String ADMIN_PASSWORD = "Mahim11"; // Admin password
+    private static final String ADMIN_PASSWORD = "Mahim11";
 
     public static final String EXTRA_DISPLAY_NAME = "extra_display_name";
     public static final String EXTRA_USER_ROLE = "extra_user_role";
     public static final String EXTRA_USER_EMAIL = "extra_user_email";
 
-    // SharedPreferences Constants
     public static final String PREFS_NAME = "LoginPrefs";
-    public static final String KEY_IS_LOGGED_IN = "isLoggedIn"; // CHANGED to public
+    public static final String KEY_IS_LOGGED_IN = "isLoggedIn";
     public static final String KEY_EMAIL = "email";
     public static final String KEY_ROLE = "role";
     private static final String KEY_DISPLAY_NAME = "displayName";
-    public static final String KEY_PASSWORD = "password"; // ADDED for admin password management
+    public static final String KEY_PASSWORD = "password";
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -46,14 +47,13 @@ public class LoginActivity extends AppCompatActivity {
 
         sharedPreferences = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
 
-        // CHECK FOR SAVED SESSION AND AUTO-LOGIN
+        // Check for saved session and auto-login
         if (sharedPreferences.getBoolean(KEY_IS_LOGGED_IN, false)) {
             String email = sharedPreferences.getString(KEY_EMAIL, null);
             String role = sharedPreferences.getString(KEY_ROLE, null);
             String displayName = sharedPreferences.getString(KEY_DISPLAY_NAME, null);
 
             if (email != null && role != null && displayName != null) {
-                // Bypass login and go directly to MainActivity
                 Intent intent = new Intent(LoginActivity.this, MainActivity.class);
                 intent.putExtra(EXTRA_DISPLAY_NAME, displayName);
                 intent.putExtra(EXTRA_USER_ROLE, role);
@@ -69,13 +69,20 @@ public class LoginActivity extends AppCompatActivity {
 
         db = FirebaseFirestore.getInstance();
 
+        etFullname = findViewById(R.id.et_fullname);
         etEmail = findViewById(R.id.et_email);
         etPassword = findViewById(R.id.et_password);
         btnLogin = findViewById(R.id.btn_login);
+        btnBack = findViewById(R.id.btn_back);
 
-        // Removed manual email pre-fill to allow for platform-level autofill (password manager)
+        // etFullname views are now hidden in XML (visibility="gone")
 
         btnLogin.setOnClickListener(v -> attemptLogin());
+
+        btnBack.setOnClickListener(v -> {
+            finish();
+            overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
+        });
     }
 
     private void attemptLogin() {
@@ -95,7 +102,6 @@ public class LoginActivity extends AppCompatActivity {
         btnLogin.setEnabled(false);
         btnLogin.setText("Logging in...");
 
-        // Check if admin first
         if (email.equals(ADMIN_EMAIL)) {
             verifyAdminLogin(email, password);
         } else {
@@ -104,9 +110,7 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void verifyAdminLogin(String email, String password) {
-        // Check 1: If the user provides the hardcoded password, proceed with the original flow (for initial setup/robustness)
         if (password.equals(ADMIN_PASSWORD)) {
-            // Original flow: check if record exists, update password if missing, or log in.
             db.collection("admins")
                     .whereEqualTo("email", email)
                     .get()
@@ -118,15 +122,12 @@ public class LoginActivity extends AppCompatActivity {
                                 String dbPassword = admin.getPassword();
 
                                 if (dbPassword != null && !dbPassword.isEmpty()) {
-                                    // Log in via hardcoded pass and update DB if mismatch (or if missing)
                                     updateAdminPassword(doc.getReference().getId(), password, admin);
                                 } else {
-                                    // Password field missing in database, update it
                                     updateAdminPassword(doc.getReference().getId(), password, admin);
                                 }
                             }
                         } else {
-                            // Admin doesn't exist in database, create admin account
                             registerAdminInDatabase(email, password);
                         }
                     })
@@ -134,9 +135,7 @@ public class LoginActivity extends AppCompatActivity {
                         Log.e(TAG, "Error checking admin existence", e);
                         onLoginFailure("Database error: " + e.getMessage());
                     });
-        }
-        // Check 2 (NEW FIX): If the hardcoded password check fails, check the database for the entered email and password.
-        else {
+        } else {
             db.collection("admins")
                     .whereEqualTo("email", email)
                     .get()
@@ -146,14 +145,11 @@ public class LoginActivity extends AppCompatActivity {
                             User admin = doc.toObject(User.class);
 
                             if (admin != null && admin.getPassword() != null && admin.getPassword().equals(password)) {
-                                // SUCCESS: Authenticated with the database-stored password (the new one)
                                 onLoginSuccess(admin.getEmail(), admin.getRole(), admin.getDisplayName(), password);
                             } else {
-                                // The entered password does not match the hardcoded one OR the database one.
                                 onLoginFailure("Invalid admin credentials");
                             }
                         } else {
-                            // Email was not found in the DB
                             onLoginFailure("Invalid admin credentials");
                         }
                     })
@@ -174,13 +170,12 @@ public class LoginActivity extends AppCompatActivity {
                 })
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Error updating admin password", e);
-                    // Still allow login since hardcoded password matched
                     onLoginSuccess(admin.getEmail(), admin.getRole(), admin.getDisplayName(), password);
                 });
     }
 
     private void registerAdminInDatabase(String email, String password) {
-        User newAdmin = new User(email, "admin", "Mohsin Mir", password); // Display name is "Mohsin Mir"
+        User newAdmin = new User(email, "admin", "Mohsin Mir", password);
 
         db.collection("admins")
                 .add(newAdmin)
@@ -195,31 +190,25 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void verifyUserLogin(String email, String password) {
-        // Query users collection for exact email match
         db.collection("users")
                 .whereEqualTo("email", email)
                 .get()
                 .addOnCompleteListener(task -> {
                     if (task.isSuccessful() && task.getResult() != null && !task.getResult().isEmpty()) {
-                        // User found with this email
                         DocumentSnapshot doc = task.getResult().getDocuments().get(0);
                         User user = doc.toObject(User.class);
 
                         if (user != null) {
-                            // Verify password matches exactly
                             String storedPassword = user.getPassword();
                             if (storedPassword != null && storedPassword.equals(password)) {
-                                // Credentials match - allow login
                                 onLoginSuccess(user.getEmail(), user.getRole(), user.getDisplayName(), password);
                             } else {
-                                // Password doesn't match
                                 onLoginFailure("Invalid email or password");
                             }
                         } else {
                             onLoginFailure("User data error");
                         }
                     } else {
-                        // No user found with this email
                         onLoginFailure("Invalid email or password. Contact admin to get access.");
                     }
                 })
@@ -230,13 +219,12 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void onLoginSuccess(String email, String role, String displayName, String password) {
-        // SAVE LOGIN SESSION
         SharedPreferences.Editor editor = sharedPreferences.edit();
         editor.putBoolean(KEY_IS_LOGGED_IN, true);
         editor.putString(KEY_EMAIL, email);
         editor.putString(KEY_ROLE, role);
         editor.putString(KEY_DISPLAY_NAME, displayName);
-        editor.putString(KEY_PASSWORD, password); // SAVE PASSWORD
+        editor.putString(KEY_PASSWORD, password);
         editor.apply();
 
         Toast.makeText(this, "Login successful!", Toast.LENGTH_SHORT).show();

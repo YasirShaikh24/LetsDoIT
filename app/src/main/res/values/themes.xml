@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- app/src/main/res/values/themes.xml -->
 <resources xmlns:tools="http://schemas.android.com/tools">
     <style name="Base.Theme.LetsDoIT" parent="Theme.Material3.Light.NoActionBar">
         <item name="colorPrimary">@color/primary_purple</item>
@@ -86,13 +85,11 @@
         <item name="android:layout_marginHorizontal">2dp</item>
     </style>
 
-    <!-- UPDATED: Pure white background for active indicator -->
     <style name="CustomActiveIndicator" parent="Widget.Material3.BottomNavigationView.ActiveIndicator">
         <item name="android:color">#FFFFFF</item>
         <item name="shapeAppearance">@style/CustomActiveIndicatorShape</item>
     </style>
 
-    <!-- NEW: Shape for active indicator -->
     <style name="CustomActiveIndicatorShape">
         <item name="cornerFamily">rounded</item>
         <item name="cornerSize">16dp</item>
@@ -107,5 +104,16 @@
     <style name="NavTextInactive">
         <item name="android:textSize">10sp</item>
         <item name="android:textStyle">normal</item>
+    </style>
+
+    <style name="LoginTextInputLayout" parent="Widget.Material3.TextInputLayout.OutlinedBox">
+        <item name="boxCornerRadiusTopStart">12dp</item>
+        <item name="boxCornerRadiusTopEnd">12dp</item>
+        <item name="boxCornerRadiusBottomStart">12dp</item>
+        <item name="boxCornerRadiusBottomEnd">12dp</item>
+        <item name="boxStrokeColor">@color/primary_purple</item>
+        <item name="boxStrokeWidth">2dp</item>
+        <item name="hintTextColor">@color/text_secondary</item>
+        <item name="android:textColorHint">@color/text_hint</item>
     </style>
 </resources>

@@ -1,4 +1,4 @@
-// src/main/java/com/example/letsdoit/MainActivity.java
+// main/java/com/example/letsdoit/MainActivity.java
 package com.example.letsdoit;
 
 import android.Manifest;
@@ -27,15 +27,14 @@ public class MainActivity extends AppCompatActivity {
 
     private NotificationHelper notificationHelper;
 
-    // ADDED: Store current selected date (shared across fragments)
     private long currentSelectedDateMillis = -1;
 
-    // Permission launcher for notifications
     private final ActivityResultLauncher<String> requestPermissionLauncher =
             registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
                 if (isGranted) {
                     Log.d(TAG, "Notification permission granted");
                     scheduleNotifications();
+                    // UPDATED time in Toast
                     Toast.makeText(this, "Daily task reminders enabled at 7:00 PM", Toast.LENGTH_LONG).show();
                 } else {
                     Log.d(TAG, "Notification permission denied");
@@ -48,15 +47,12 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        // Initialize notification helper
         notificationHelper = new NotificationHelper(this);
 
-        // Retrieve user data passed from LoginActivity
         displayName = getIntent().getStringExtra(LoginActivity.EXTRA_DISPLAY_NAME);
         loggedInUserEmail = getIntent().getStringExtra(LoginActivity.EXTRA_USER_EMAIL);
         loggedInUserRole = getIntent().getStringExtra(LoginActivity.EXTRA_USER_ROLE);
 
-        // Generate the personalized welcome message
         if ("admin".equals(loggedInUserRole)) {
             welcomeMessage = "Welcome Admin";
         } else if (displayName != null) {
@@ -67,7 +63,6 @@ public class MainActivity extends AppCompatActivity {
 
         BottomNavigationView bottomNav = findViewById(R.id.bottom_navigation);
 
-        // HIDE "Add Activity" navigation item for regular users
         if (!"admin".equals(loggedInUserRole)) {
             bottomNav.getMenu().removeItem(R.id.navigation_add_activity);
         }
@@ -78,18 +73,15 @@ public class MainActivity extends AppCompatActivity {
 
             if (itemId == R.id.navigation_home) {
                 selectedFragment = HomeFragment.newInstance(welcomeMessage, loggedInUserEmail, loggedInUserRole, displayName);
-                // ADDED: Pass current selected date to HomeFragment
                 if (selectedFragment instanceof HomeFragment) {
                     ((HomeFragment) selectedFragment).setSelectedDateMillis(currentSelectedDateMillis);
                 }
             } else if (itemId == R.id.navigation_add_activity) {
-                // Only admin can access this
                 if ("admin".equals(loggedInUserRole)) {
                     selectedFragment = AddActivityFragment.newInstance(loggedInUserEmail, loggedInUserRole);
                 }
             } else if (itemId == R.id.navigation_view_activity) {
                 selectedFragment = ViewActivityFragment.newInstance(loggedInUserEmail, loggedInUserRole);
-                // ADDED: Pass current selected date to ViewActivityFragment
                 if (selectedFragment instanceof ViewActivityFragment) {
                     ((ViewActivityFragment) selectedFragment).setSelectedDateMillis(currentSelectedDateMillis);
                 }
@@ -105,23 +97,18 @@ public class MainActivity extends AppCompatActivity {
             return true;
         });
 
-        // Set default fragment
         if (savedInstanceState == null) {
             bottomNav.setSelectedItemId(R.id.navigation_home);
         }
 
-        // Request notification permission (Android 13+) and schedule daily notification
         requestNotificationPermission();
 
-        // Check if opened from notification
         handleNotificationIntent(getIntent());
     }
 
-    // ADDED: Method to update selected date and sync fragments
     public void updateSelectedDate(long dateMillis) {
         this.currentSelectedDateMillis = dateMillis;
 
-        // Update currently visible fragment if it's HomeFragment or ViewActivityFragment
         Fragment currentFragment = getSupportFragmentManager().findFragmentById(R.id.fragment_container);
         if (currentFragment instanceof HomeFragment) {
             ((HomeFragment) currentFragment).updateDateFromActivity(dateMillis);
@@ -130,51 +117,38 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    // ADDED: Getter for current selected date
     public long getCurrentSelectedDateMillis() {
         return currentSelectedDateMillis;
     }
 
-    /**
-     * Request notification permission for Android 13 and above
-     */
     private void requestNotificationPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
                     == PackageManager.PERMISSION_GRANTED) {
-                // Permission already granted
                 scheduleNotifications();
 
-                // Log current notification status
                 if (notificationHelper.areNotificationsEnabled()) {
                     Log.d(TAG, "Notifications already enabled at: " + notificationHelper.getNotificationTime());
                 }
             } else {
-                // Request permission
                 requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS);
             }
         } else {
-            // For Android 12 and below, no runtime permission needed
             scheduleNotifications();
         }
     }
 
     /**
-     * Schedule daily notifications at 7:00 PM
-     * UPDATED: Changed time to 7:00 PM (19:00)
+     * UPDATED: Schedule daily notifications at 7:00 PM (19:00)
      */
     private void scheduleNotifications() {
-        // Always reschedule to ensure time is updated
-        notificationHelper.scheduleDailyNotification(18, 0); // 7:00 PM
-        Log.d(TAG, "Daily notifications scheduled at 18:00 PM");
+        // CHANGED: Set time to 7:00 PM (19 hours, 0 minutes)
+        notificationHelper.scheduleDailyNotification(19, 0);
+        Log.d(TAG, "Daily notifications scheduled at 7:00 PM");
     }
 
-    /**
-     * Handle notification tap to open View Tasks screen
-     */
     private void handleNotificationIntent(android.content.Intent intent) {
         if (intent != null && intent.getBooleanExtra("open_view_tasks", false)) {
-            // Navigate to View Tasks fragment
             BottomNavigationView bottomNav = findViewById(R.id.bottom_navigation);
             if (bottomNav != null) {
                 bottomNav.setSelectedItemId(R.id.navigation_view_activity);

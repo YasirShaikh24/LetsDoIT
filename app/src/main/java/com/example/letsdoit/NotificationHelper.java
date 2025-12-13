@@ -1,4 +1,4 @@
-// src/main/java/com/example/letsdoit/NotificationHelper.java
+// main/java/com/example/letsdoit/NotificationHelper.java
 package com.example.letsdoit;
 
 import android.app.AlarmManager;
@@ -59,15 +59,15 @@ public class NotificationHelper {
     }
 
     /**
-     * Schedule daily notification at specified time (default: 8:40 PM)
+     * Schedule daily notification at specified time (default: 7:00 PM)
      * FIXED: Now uses EXACT alarm that triggers at precise time
      */
     public void scheduleDailyNotification() {
         SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
 
-        // Get notification time from preferences or use default (8:40 PM)
-        int hour = prefs.getInt(KEY_NOTIFICATION_TIME_HOUR, 20); // Default to 20 (8 PM)
-        int minute = prefs.getInt(KEY_NOTIFICATION_TIME_MINUTE, 40); // Default to 40 minutes
+        // Get notification time from preferences or use default (7:00 PM)
+        int hour = prefs.getInt(KEY_NOTIFICATION_TIME_HOUR, 19); // Default to 19 (7 PM)
+        int minute = prefs.getInt(KEY_NOTIFICATION_TIME_MINUTE, 0); // Default to 0 minutes
 
         scheduleDailyNotification(hour, minute);
     }
@@ -150,7 +150,7 @@ public class NotificationHelper {
             Log.d(TAG, "Daily notification cancelled");
         }
 
-        saveNotificationSettings(false, 20, 40); // Default to 8:40 PM
+        saveNotificationSettings(false, 19, 0); // Default to 7:00 PM
     }
 
     /**
@@ -258,8 +258,8 @@ public class NotificationHelper {
      */
     public String getNotificationTime() {
         SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        int hour = prefs.getInt(KEY_NOTIFICATION_TIME_HOUR, 20); // Default to 20 (8 PM)
-        int minute = prefs.getInt(KEY_NOTIFICATION_TIME_MINUTE, 40); // Default to 40
+        int hour = prefs.getInt(KEY_NOTIFICATION_TIME_HOUR, 19); // Default to 19 (7 PM)
+        int minute = prefs.getInt(KEY_NOTIFICATION_TIME_MINUTE, 0); // Default to 0
         return String.format("%02d:%02d", hour, minute);
     }
 }
