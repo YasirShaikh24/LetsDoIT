@@ -219,10 +219,12 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
 
     private void updateDateIndicator() {
         if (selectedDateMillis == -1) {
-            tvDateIndicator.setText("套 Today");
+            // MODIFIED: Removed the "套 " prefix
+            tvDateIndicator.setText("Today");
         } else {
             String formattedDate = dateIndicatorFormat.format(new Date(selectedDateMillis));
-            tvDateIndicator.setText("套 " + formattedDate);
+            // MODIFIED: Removed the "套 " prefix
+            tvDateIndicator.setText(formattedDate);
         }
     }
 
@@ -808,7 +810,8 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
         // Format completion date
         SimpleDateFormat sdf = new SimpleDateFormat("MMM dd, yyyy 'at' hh:mm a", Locale.getDefault());
         String dateStr = sdf.format(new Date(completionTime));
-        tvCompletedDate.setText("套 " + dateStr);
+        // MODIFIED: Removed the "套 " prefix for the date display
+        tvCompletedDate.setText("📅 " + dateStr);
 
         // Show AI count if required
         if (task.isRequireAiCount()) {
@@ -817,7 +820,8 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
             // FIXED: Find the TextView inside the CardView
             if (cardAiCount.getChildCount() > 0 && cardAiCount.getChildAt(0) instanceof TextView) {
                 TextView aiCountText = (TextView) cardAiCount.getChildAt(0);
-                aiCountText.setText("箸 AI Count: " + (aiCountValue != null && !aiCountValue.isEmpty() ? aiCountValue : "N/A"));
+                // MODIFIED: Removed the "箸 " prefix for the AI Count display
+                aiCountText.setText("🔢 AI Count: " + (aiCountValue != null && !aiCountValue.isEmpty() ? aiCountValue : "N/A"));
             }
         } else {
             cardAiCount.setVisibility(View.GONE);
@@ -853,7 +857,8 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
         // Display Current Day
         long displayDateMillis = selectedDateMillis == -1 ? System.currentTimeMillis() : selectedDateMillis;
         String dayOfWeek = dayOfWeekFormat.format(new Date(displayDateMillis));
-        tvCurrentDay.setText("套 " + dayOfWeek);
+        // MODIFIED: Removed the "套 " prefix
+        tvCurrentDay.setText("📅 " + dayOfWeek);
 
         tvDialogTitle.setText(task.getTitle());
         tvDialogDescription.setText(task.getDescription());

@@ -49,8 +49,8 @@
                         android:id="@+id/tv_date_indicator"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="📅 Today"
-                        android:textSize="14sp"
+                        android:text="Today"
+                        android:textSize="18sp"
                         android:textColor="@color/primary_purple"
                         android:layout_marginTop="4dp"
                         android:fontFamily="sans-serif-medium"/>
