@@ -1,14 +1,19 @@
 // src/main/java/com/example/letsdoit/LoginActivity.java
 package com.example.letsdoit;
 
+import android.animation.AnimatorSet;
+import android.animation.ObjectAnimator;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.view.animation.AccelerateDecelerateInterpolator;
+import android.view.animation.BounceInterpolator;
+import android.view.animation.DecelerateInterpolator;
 import android.widget.Button;
-import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
@@ -22,12 +27,14 @@ public class LoginActivity extends AppCompatActivity {
 
     private TextInputEditText etFullname, etEmail, etPassword;
     private Button btnLogin;
-    // REMOVED: private ImageButton btnBack;
     private FirebaseFirestore db;
     private SharedPreferences sharedPreferences;
 
+    // Animation views
+    private View circle1, circle2, circle3, circle4;
+    private ImageView appLogo;
+
     private static final String TAG = "LoginActivity";
-    // NOTE: Keep these hardcoded for initial admin setup/recovery, but the flow will now check the database first.
     private static final String ADMIN_EMAIL = "mahimhussain444@gmail.com";
     private static final String ADMIN_PASSWORD = "Mahim11";
 
@@ -74,16 +81,121 @@ public class LoginActivity extends AppCompatActivity {
         etEmail = findViewById(R.id.et_email);
         etPassword = findViewById(R.id.et_password);
         btnLogin = findViewById(R.id.btn_login);
-        // REMOVED: btnBack = findViewById(R.id.btn_back);
 
-        // etFullname views are now hidden in XML (visibility="gone")
+        // Initialize animation views
+        circle1 = findViewById(R.id.circle_1);
+        circle2 = findViewById(R.id.circle_2);
+        circle3 = findViewById(R.id.circle_3);
+        circle4 = findViewById(R.id.circle_4);
+        appLogo = findViewById(R.id.app_logo);
 
         btnLogin.setOnClickListener(v -> attemptLogin());
 
-        // REMOVED: btnBack.setOnClickListener(v -> {
-        // REMOVED:     finish();
-        // REMOVED:     overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
-        // REMOVED: });
+        // Start animations
+        startCircleAnimations();
+        startLogoAnimation();
+        startButtonPulseAnimation();
+    }
+
+    private void startCircleAnimations() {
+        // Circle 1 - Diagonal bounce (was 4000ms -> now 2500ms)
+        ObjectAnimator circle1X = ObjectAnimator.ofFloat(circle1, "translationX", 0f, 60f, 0f);
+        ObjectAnimator circle1Y = ObjectAnimator.ofFloat(circle1, "translationY", 0f, 80f, 0f);
+        circle1X.setDuration(2500);
+        circle1Y.setDuration(2500);
+        circle1X.setRepeatCount(ObjectAnimator.INFINITE);
+        circle1Y.setRepeatCount(ObjectAnimator.INFINITE);
+        circle1X.setInterpolator(new AccelerateDecelerateInterpolator());
+        circle1Y.setInterpolator(new AccelerateDecelerateInterpolator());
+
+        // Circle 2 - Circular motion (was 5000ms -> now 3000ms)
+        ObjectAnimator circle2X = ObjectAnimator.ofFloat(circle2, "translationX", 0f, -40f, 0f, 40f, 0f);
+        ObjectAnimator circle2Y = ObjectAnimator.ofFloat(circle2, "translationY", 0f, 40f, 80f, 40f, 0f);
+        circle2X.setDuration(3000);
+        circle2Y.setDuration(3000);
+        circle2X.setRepeatCount(ObjectAnimator.INFINITE);
+        circle2Y.setRepeatCount(ObjectAnimator.INFINITE);
+        circle2X.setInterpolator(new AccelerateDecelerateInterpolator());
+        circle2Y.setInterpolator(new AccelerateDecelerateInterpolator());
+
+        // Circle 3 - Slow drift (was 6000ms -> now 3500ms)
+        ObjectAnimator circle3X = ObjectAnimator.ofFloat(circle3, "translationX", 0f, -30f, 0f);
+        ObjectAnimator circle3Y = ObjectAnimator.ofFloat(circle3, "translationY", 0f, -50f, 0f);
+        ObjectAnimator circle3Scale = ObjectAnimator.ofFloat(circle3, "scaleX", 1f, 1.1f, 1f);
+        ObjectAnimator circle3ScaleY = ObjectAnimator.ofFloat(circle3, "scaleY", 1f, 1.1f, 1f);
+        circle3X.setDuration(3500);
+        circle3Y.setDuration(3500);
+        circle3Scale.setDuration(3500);
+        circle3ScaleY.setDuration(3500);
+        circle3X.setRepeatCount(ObjectAnimator.INFINITE);
+        circle3Y.setRepeatCount(ObjectAnimator.INFINITE);
+        circle3Scale.setRepeatCount(ObjectAnimator.INFINITE);
+        circle3ScaleY.setRepeatCount(ObjectAnimator.INFINITE);
+        circle3X.setInterpolator(new DecelerateInterpolator());
+        circle3Y.setInterpolator(new DecelerateInterpolator());
+
+        // Circle 4 - Bounce with rotation (was 3500ms -> now 2000ms)
+        ObjectAnimator circle4Y = ObjectAnimator.ofFloat(circle4, "translationY", 0f, -60f, 0f, 30f, 0f);
+        ObjectAnimator circle4Rotate = ObjectAnimator.ofFloat(circle4, "rotation", 0f, 360f);
+        circle4Y.setDuration(2000);
+        circle4Rotate.setDuration(4000); // Keep rotation a bit slower
+        circle4Y.setRepeatCount(ObjectAnimator.INFINITE);
+        circle4Rotate.setRepeatCount(ObjectAnimator.INFINITE);
+        circle4Y.setInterpolator(new BounceInterpolator());
+        circle4Rotate.setInterpolator(new AccelerateDecelerateInterpolator());
+
+        // Start all animations
+        circle1X.start();
+        circle1Y.start();
+        circle2X.start();
+        circle2Y.start();
+        circle3X.start();
+        circle3Y.start();
+        circle3Scale.start();
+        circle3ScaleY.start();
+        circle4Y.start();
+        circle4Rotate.start();
+    }
+
+    private void startLogoAnimation() {
+        // Gentle float animation for logo
+        ObjectAnimator logoFloat = ObjectAnimator.ofFloat(appLogo, "translationY", 0f, -15f, 0f);
+        logoFloat.setDuration(2000);
+        logoFloat.setRepeatCount(ObjectAnimator.INFINITE);
+        logoFloat.setInterpolator(new AccelerateDecelerateInterpolator());
+        logoFloat.start();
+
+        // Subtle rotation
+        ObjectAnimator logoRotate = ObjectAnimator.ofFloat(appLogo, "rotation", -5f, 5f, -5f);
+        logoRotate.setDuration(4000);
+        logoRotate.setRepeatCount(ObjectAnimator.INFINITE);
+        logoRotate.setInterpolator(new AccelerateDecelerateInterpolator());
+        logoRotate.start();
+    }
+
+    private void startButtonPulseAnimation() {
+        // Scale pulse animation (increased scale to 1.1f for more bounce)
+        ObjectAnimator scaleX = ObjectAnimator.ofFloat(btnLogin, "scaleX", 1f, 1.1f, 1f);
+        ObjectAnimator scaleY = ObjectAnimator.ofFloat(btnLogin, "scaleY", 1f, 1.1f, 1f);
+
+        // Elevation pulse
+        ObjectAnimator elevation = ObjectAnimator.ofFloat(btnLogin, "elevation", 4f, 12f, 4f);
+
+        // FIX: Set repeat count on individual animators, as AnimatorSet does not have setRepeatCount()
+        scaleX.setRepeatCount(ObjectAnimator.INFINITE);
+        scaleY.setRepeatCount(ObjectAnimator.INFINITE);
+        elevation.setRepeatCount(ObjectAnimator.INFINITE);
+
+        // Use RESTART mode to repeat the full 1.0 -> 1.1 -> 1.0 cycle
+        scaleX.setRepeatMode(ObjectAnimator.RESTART);
+        scaleY.setRepeatMode(ObjectAnimator.RESTART);
+        elevation.setRepeatMode(ObjectAnimator.RESTART);
+
+        AnimatorSet pulseSet = new AnimatorSet();
+        pulseSet.playTogether(scaleX, scaleY, elevation);
+        pulseSet.setDuration(1000); // Faster pulse (was 1500ms -> now 1000ms)
+        pulseSet.setInterpolator(new AccelerateDecelerateInterpolator());
+        pulseSet.start();
     }
 
     private void attemptLogin() {
@@ -103,24 +215,19 @@ public class LoginActivity extends AppCompatActivity {
         btnLogin.setEnabled(false);
         btnLogin.setText("Logging in...");
 
-        // Check if the input email is the original ADMIN_EMAIL
         if (email.equals(ADMIN_EMAIL)) {
-            verifyAdminLogin(email, password, true); // original admin email
+            verifyAdminLogin(email, password, true);
         } else {
-            // Assume it is a regular user or an admin with a changed email
             verifyUserOrAdminLogin(email, password);
         }
     }
 
-    // NEW METHOD: Check if the login is for a regular user or an admin with a non-default email
     private void verifyUserOrAdminLogin(String email, String password) {
-        // 1. Check in 'admins' collection
         db.collection("admins")
                 .whereEqualTo("email", email)
                 .get()
                 .addOnCompleteListener(task -> {
                     if (task.isSuccessful() && task.getResult() != null && !task.getResult().isEmpty()) {
-                        // Found in admins collection - proceed with admin login check
                         DocumentSnapshot doc = task.getResult().getDocuments().get(0);
                         User admin = doc.toObject(User.class);
 
@@ -130,7 +237,6 @@ public class LoginActivity extends AppCompatActivity {
                             onLoginFailure("Invalid admin credentials");
                         }
                     } else {
-                        // Not found in admins collection - check in 'users'
                         verifyUserLogin(email, password);
                     }
                 })
@@ -140,11 +246,8 @@ public class LoginActivity extends AppCompatActivity {
                 });
     }
 
-    // MODIFIED: Merged admin login logic (for original email and initial setup)
     private void verifyAdminLogin(String email, String password, boolean isDefaultAdminEmail) {
-        // Logic for the original hardcoded admin email (mahimhussain444@gmail.com)
         if (isDefaultAdminEmail && password.equals(ADMIN_PASSWORD)) {
-            // Password matches hardcoded default. Ensure it's registered in Firestore.
             db.collection("admins")
                     .whereEqualTo("email", email)
                     .get()
@@ -153,11 +256,9 @@ public class LoginActivity extends AppCompatActivity {
                             DocumentSnapshot doc = task.getResult().getDocuments().get(0);
                             User admin = doc.toObject(User.class);
                             if (admin != null) {
-                                // Update password in Firestore if it was empty/default
                                 updateAdminPassword(doc.getReference().getId(), password, admin);
                             }
                         } else {
-                            // Register the default admin if they don't exist
                             registerAdminInDatabase(email, password);
                         }
                     })
@@ -166,7 +267,6 @@ public class LoginActivity extends AppCompatActivity {
                         onLoginFailure("Database error: " + e.getMessage());
                     });
         } else {
-            // Standard check against Firestore for the original admin email
             db.collection("admins")
                     .whereEqualTo("email", email)
                     .get()

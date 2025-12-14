@@ -13,6 +13,7 @@
         android:background="@drawable/login_top_background">
 
         <View
+            android:id="@+id/circle_1"
             android:layout_width="150dp"
             android:layout_height="150dp"
             android:background="@drawable/circle_decoration"
@@ -24,6 +25,7 @@
             android:layout_marginStart="-40dp"/>
 
         <View
+            android:id="@+id/circle_2"
             android:layout_width="100dp"
             android:layout_height="100dp"
             android:background="@drawable/circle_decoration"
@@ -35,6 +37,7 @@
             android:layout_marginEnd="20dp"/>
 
         <View
+            android:id="@+id/circle_3"
             android:layout_width="220dp"
             android:layout_height="220dp"
             android:background="@drawable/circle_decoration"
@@ -46,6 +49,7 @@
             android:layout_marginEnd="-80dp"/>
 
         <View
+            android:id="@+id/circle_4"
             android:layout_width="80dp"
             android:layout_height="80dp"
             android:background="@drawable/circle_decoration"
@@ -55,6 +59,7 @@
             android:layout_alignParentStart="true"
             android:layout_marginBottom="40dp"
             android:layout_marginStart="40dp"/>
+
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -63,6 +68,7 @@
             android:gravity="center">
 
             <ImageView
+                android:id="@+id/app_logo"
                 android:layout_width="80dp"
                 android:layout_height="80dp"
                 android:src="@mipmap/ic_launcher"
@@ -102,7 +108,7 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Account Login"
+                android:text="Let's Get Started"
                 android:textSize="28sp"
                 android:textStyle="bold"
                 android:textColor="@color/primary_purple"
@@ -135,6 +141,7 @@
                     android:inputType="textPersonName"
                     android:textSize="15sp"/>
             </com.google.android.material.textfield.TextInputLayout>
+
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
