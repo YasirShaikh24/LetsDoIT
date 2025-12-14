@@ -195,11 +195,8 @@ public class Task {
         return 0L;
     }
 
-    public void setUserCompletedDate(String userEmail, long completedDate) {
-        if (userCompletedDate == null) {
-            userCompletedDate = new HashMap<>();
-        }
-        userCompletedDate.put(userEmail, completedDate);
+    public void setUserCompletedDate(Map<String, Long> userCompletedDate) {
+        this.userCompletedDate = userCompletedDate;
     }
 
     // Getters and setters for the Maps
@@ -223,9 +220,6 @@ public class Task {
         return userCompletedDate != null ? userCompletedDate : new HashMap<>();
     }
 
-    public void setUserCompletedDate(Map<String, Long> userCompletedDate) {
-        this.userCompletedDate = userCompletedDate;
-    }
 
     // --- EXISTING GETTERS & SETTERS (keep for compatibility) ---
 
@@ -262,12 +256,19 @@ public class Task {
     }
 
     public String getStatus() {
-        // Check for global completion. This is kept for compatibility,
-        // but now relies on the combined status of all users for Permanent tasks.
+        // CRITICAL FIX: The local 'status' field holds the calculated status from
+        // ViewActivityFragment.applyFilter() (which accounts for user status, date, AI count).
+        // This must be prioritized over the global 'userStatus' map check
+        // to ensure the card badge matches the filter section.
+        if (this.status != null) { // <--- THIS LINE IS THE FIX
+            return this.status;
+        }
+
+        // Fallback for Firestore data loading: Check global status if local status field is null.
         if (userStatus != null && userStatus.containsValue("Completed")) {
             return "Completed";
         }
-        return status != null ? status : "Pending";
+        return "Pending";
     }
 
     public void setStatus(String status) {

@@ -22,11 +22,12 @@ public class LoginActivity extends AppCompatActivity {
 
     private TextInputEditText etFullname, etEmail, etPassword;
     private Button btnLogin;
-    private ImageButton btnBack;
+    // REMOVED: private ImageButton btnBack;
     private FirebaseFirestore db;
     private SharedPreferences sharedPreferences;
 
     private static final String TAG = "LoginActivity";
+    // NOTE: Keep these hardcoded for initial admin setup/recovery, but the flow will now check the database first.
     private static final String ADMIN_EMAIL = "mahimhussain444@gmail.com";
     private static final String ADMIN_PASSWORD = "Mahim11";
 
@@ -73,16 +74,16 @@ public class LoginActivity extends AppCompatActivity {
         etEmail = findViewById(R.id.et_email);
         etPassword = findViewById(R.id.et_password);
         btnLogin = findViewById(R.id.btn_login);
-        btnBack = findViewById(R.id.btn_back);
+        // REMOVED: btnBack = findViewById(R.id.btn_back);
 
         // etFullname views are now hidden in XML (visibility="gone")
 
         btnLogin.setOnClickListener(v -> attemptLogin());
 
-        btnBack.setOnClickListener(v -> {
-            finish();
-            overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
-        });
+        // REMOVED: btnBack.setOnClickListener(v -> {
+        // REMOVED:     finish();
+        // REMOVED:     overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
+        // REMOVED: });
     }
 
     private void attemptLogin() {
@@ -102,15 +103,48 @@ public class LoginActivity extends AppCompatActivity {
         btnLogin.setEnabled(false);
         btnLogin.setText("Logging in...");
 
+        // Check if the input email is the original ADMIN_EMAIL
         if (email.equals(ADMIN_EMAIL)) {
-            verifyAdminLogin(email, password);
+            verifyAdminLogin(email, password, true); // original admin email
         } else {
-            verifyUserLogin(email, password);
+            // Assume it is a regular user or an admin with a changed email
+            verifyUserOrAdminLogin(email, password);
         }
     }
 
-    private void verifyAdminLogin(String email, String password) {
-        if (password.equals(ADMIN_PASSWORD)) {
+    // NEW METHOD: Check if the login is for a regular user or an admin with a non-default email
+    private void verifyUserOrAdminLogin(String email, String password) {
+        // 1. Check in 'admins' collection
+        db.collection("admins")
+                .whereEqualTo("email", email)
+                .get()
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful() && task.getResult() != null && !task.getResult().isEmpty()) {
+                        // Found in admins collection - proceed with admin login check
+                        DocumentSnapshot doc = task.getResult().getDocuments().get(0);
+                        User admin = doc.toObject(User.class);
+
+                        if (admin != null && admin.getPassword() != null && admin.getPassword().equals(password)) {
+                            onLoginSuccess(admin.getEmail(), admin.getRole(), admin.getDisplayName(), password);
+                        } else {
+                            onLoginFailure("Invalid admin credentials");
+                        }
+                    } else {
+                        // Not found in admins collection - check in 'users'
+                        verifyUserLogin(email, password);
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error checking admin existence with custom email", e);
+                    onLoginFailure("Database error: " + e.getMessage());
+                });
+    }
+
+    // MODIFIED: Merged admin login logic (for original email and initial setup)
+    private void verifyAdminLogin(String email, String password, boolean isDefaultAdminEmail) {
+        // Logic for the original hardcoded admin email (mahimhussain444@gmail.com)
+        if (isDefaultAdminEmail && password.equals(ADMIN_PASSWORD)) {
+            // Password matches hardcoded default. Ensure it's registered in Firestore.
             db.collection("admins")
                     .whereEqualTo("email", email)
                     .get()
@@ -119,15 +153,11 @@ public class LoginActivity extends AppCompatActivity {
                             DocumentSnapshot doc = task.getResult().getDocuments().get(0);
                             User admin = doc.toObject(User.class);
                             if (admin != null) {
-                                String dbPassword = admin.getPassword();
-
-                                if (dbPassword != null && !dbPassword.isEmpty()) {
-                                    updateAdminPassword(doc.getReference().getId(), password, admin);
-                                } else {
-                                    updateAdminPassword(doc.getReference().getId(), password, admin);
-                                }
+                                // Update password in Firestore if it was empty/default
+                                updateAdminPassword(doc.getReference().getId(), password, admin);
                             }
                         } else {
+                            // Register the default admin if they don't exist
                             registerAdminInDatabase(email, password);
                         }
                     })
@@ -136,6 +166,7 @@ public class LoginActivity extends AppCompatActivity {
                         onLoginFailure("Database error: " + e.getMessage());
                     });
         } else {
+            // Standard check against Firestore for the original admin email
             db.collection("admins")
                     .whereEqualTo("email", email)
                     .get()
@@ -154,7 +185,7 @@ public class LoginActivity extends AppCompatActivity {
                         }
                     })
                     .addOnFailureListener(e -> {
-                        Log.e(TAG, "Error checking admin existence", e);
+                        Log.e(TAG, "Error checking admin credentials", e);
                         onLoginFailure("Database error: " + e.getMessage());
                     });
         }

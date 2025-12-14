@@ -1,3 +1,4 @@
+// src/main/java/com/example/letsdoit/TaskAdapter.java
 package com.example.letsdoit;
 
 import android.content.Context;
@@ -70,53 +71,52 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
         // Hide priority stub
         holder.tvPriority.setVisibility(View.GONE);
 
-        // --- AI Count Logic Setup ---
+        // --- Determine Status, Completion Time, and AI Count Source ---
+        // effectiveStatus is the status calculated by the fragment, which is used for filtering.
+        String effectiveStatus = task.getStatus();
         String aiCountValueForDisplay;
         String completedUserEmail = null;
 
-        if ("admin".equals(loggedInUserRole) && task.getTaskType().equalsIgnoreCase("Permanent")) {
-            // Admin on Permanent task: Find the first user with a completed status and their AI count
-            aiCountValueForDisplay = "";
-            if (task.getUserStatus().containsValue("Completed")) {
-                for (Map.Entry<String, String> entry : task.getUserStatus().entrySet()) {
-                    if (entry.getValue().equalsIgnoreCase("Completed")) {
-                        completedUserEmail = entry.getKey();
-                        String count = task.getUserAiCount().get(completedUserEmail);
-                        if (count != null && !count.isEmpty()) {
-                            aiCountValueForDisplay = count;
+        if ("admin".equals(loggedInUserRole)) {
+            // Admin: Use the task's global/fallback fields (which track the *first* valid completion)
+            aiCountValueForDisplay = task.getAiCountValue();
+
+            // Try to find the user who set the global status for display purposes
+            if (effectiveStatus != null && effectiveStatus.equalsIgnoreCase("Completed")) {
+                // Find the user whose completion time matches the global completion time and has the global AI count
+                long globalCompletedDate = task.getCompletedDateMillis();
+                String globalAiCount = task.getAiCountValue();
+
+                for (Map.Entry<String, Long> entry : task.getUserCompletedDate().entrySet()) {
+                    if (entry.getValue().equals(globalCompletedDate)) {
+                        String userAiCount = task.getUserAiCount().getOrDefault(entry.getKey(), "");
+                        if (userAiCount.equals(globalAiCount)) {
+                            completedUserEmail = entry.getKey();
                             break;
                         }
                     }
                 }
             }
-        } else if ("admin".equals(loggedInUserRole) && task.getTaskType().equalsIgnoreCase("Additional")) {
-            // Admin on Additional task: Use the global fallback fields (set by last updating user)
-            aiCountValueForDisplay = task.getAiCountValue();
-            // Since Additional task is typically 1:1, we assume the completing user's email is the first one assigned if completed
-            if (task.getUserStatus().containsValue("Completed") && task.getAssignedTo() != null && !task.getAssignedTo().isEmpty()) {
-                completedUserEmail = task.getAssignedTo().get(0);
-            }
         } else {
-            // User: Use their own AI count
+            // REGULAR USER: Use their personal AI count and always point to themselves
             aiCountValueForDisplay = task.getUserAiCount(loggedInUserEmail);
+            completedUserEmail = loggedInUserEmail;
         }
 
-        boolean isAiCountMissing = task.isRequireAiCount() && (aiCountValueForDisplay == null || aiCountValueForDisplay.isEmpty());
         // -----------------------------
 
 
-        // --- 2. Status (Display Status from Filter Logic) ---
-        // CRITICAL FIX: The task status must reflect the final state after AI check.
-        String taskStatus = task.getStatus() != null ? task.getStatus().toLowerCase() : "pending";
+        // --- 2. Status Tag (Display Status from Filter Logic) ---
+        // CRITICAL FIX: The card badge must reflect the effective status (which is used for filtering)
+        String taskStatus = effectiveStatus != null ? effectiveStatus.toLowerCase() : "pending";
         int statusColor;
         String statusDisplay;
 
-        // Apply the AI Count rule for UI override (must match ViewActivityFragment.getTaskStatusOnDate())
-        if (taskStatus.equals("completed") && !isAiCountMissing) {
+        if (taskStatus.equals("completed")) {
             statusColor = Color.parseColor("#66BB6A"); // Green
             statusDisplay = "DONE";
         } else {
-            // Task is effectively "pending" (Not Done) based on the current context/date/AI Count check
+            // If the task is in the "Not Done" filter, the status *must* be "NOT DONE"
             statusColor = Color.parseColor("#FFA726"); // Orange/Yellow
             statusDisplay = "NOT DONE";
         }
@@ -129,27 +129,27 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
         if (task.isRequireAiCount()) {
             holder.cardAiCount.setVisibility(View.VISIBLE);
 
-            if (aiCountValueForDisplay != null && !aiCountValueForDisplay.isEmpty()) {
-                // MODIFIED: Custom display for Admin when AI count is present
-                if ("admin".equals(loggedInUserRole) && completedUserEmail != null) {
-                    String displayName = userDisplayNameMap.getOrDefault(completedUserEmail, "a team member");
-                    holder.tvAiCount.setText("🔢 AI Count: " + aiCountValueForDisplay + " (by " + displayName + ")");
-                } else {
-                    holder.tvAiCount.setText("🔢 AI Count: " + aiCountValueForDisplay);
+            if (effectiveStatus.equalsIgnoreCase("Completed")) {
+                // Status is Completed (meaning the AI Count was valid or not required when marked)
+                String displayName = userDisplayNameMap.getOrDefault(completedUserEmail, "a team member");
+
+                String aiCountText = "🔢 AI Count: " + (aiCountValueForDisplay != null && !aiCountValueForDisplay.isEmpty() ? aiCountValueForDisplay : "N/A");
+
+                if ("admin".equals(loggedInUserRole) && task.getTaskType().equalsIgnoreCase("Permanent") && completedUserEmail != null) {
+                    // Admin view only needs to show *who* completed it for permanent tasks
+                    aiCountText += " (by " + displayName + ")";
                 }
 
+                holder.tvAiCount.setText(aiCountText);
                 holder.cardAiCount.setCardBackgroundColor(Color.parseColor("#E8F5E9"));
                 holder.tvAiCount.setTextColor(Color.parseColor("#2E7D32"));
             } else {
-                // MODIFIED: Custom display for Admin when AI count is missing for completed task
-                if ("admin".equals(loggedInUserRole) && taskStatus.equals("completed")) {
-                    holder.tvAiCount.setText("🔢 AI Count: Required (Missing for completed task)");
-                } else {
-                    holder.tvAiCount.setText("🔢 AI Count: Required (Not submitted)");
-                }
+                // Status is NOT DONE/Pending (which includes the case where AI count is missing or user explicitly set Not Done)
+                holder.tvAiCount.setText("🔢 AI Count: Required (Not Submitted)");
                 holder.cardAiCount.setCardBackgroundColor(Color.parseColor("#FFF3E0"));
                 holder.tvAiCount.setTextColor(Color.parseColor("#E65100"));
             }
+
         } else {
             holder.cardAiCount.setVisibility(View.GONE);
         }
