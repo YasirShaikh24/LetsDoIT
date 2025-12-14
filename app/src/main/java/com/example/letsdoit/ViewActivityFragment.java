@@ -46,6 +46,10 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.TimeUnit; // Import for TimeUnit
+import android.app.Dialog;
+import android.view.Window;
+import android.widget.Button;
+import java.util.Map;
 
 public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskActionListener, CalendarDialogFragment.OnDateSelectedListener {
 
@@ -773,6 +777,77 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
             tvDialogAiCount.setVisibility(View.VISIBLE);
         } else {
             tvDialogAiCount.setVisibility(View.GONE);
+        }
+
+        btnClose.setOnClickListener(v -> dialog.dismiss());
+        dialog.show();
+    }
+
+
+    // ADD THIS NEW METHOD to ViewActivityFragment.java (after onTaskDeleteClick method)
+
+    @Override
+    public void onAdminTaskClick(Task task, int position) {
+        // Show dialog with who completed the task
+        showTaskCompletionDetailsDialog(task);
+    }
+
+    // NEW METHOD: Show who completed the task
+    // CORRECTED METHOD: Show who completed the task
+    private void showTaskCompletionDetailsDialog(Task task) {
+        Dialog dialog = new Dialog(requireContext());
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        dialog.setContentView(R.layout.dialog_task_completion_details);
+
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        }
+
+        TextView tvTaskTitle = dialog.findViewById(R.id.tv_task_title);
+        TextView tvCompletedBy = dialog.findViewById(R.id.tv_completed_by);
+        TextView tvCompletedDate = dialog.findViewById(R.id.tv_completed_date);
+
+        // FIXED: Get the CardView first, then find the TextView inside it
+        CardView cardAiCount = dialog.findViewById(R.id.tv_ai_count_value);
+        Button btnClose = dialog.findViewById(R.id.btn_close);
+
+        tvTaskTitle.setText(task.getTitle());
+
+        // Find who completed the task
+        String completedByEmail = null;
+        long completionTime = task.getCompletedDateMillis();
+        String aiCountValue = task.getAiCountValue();
+
+        // Find the user who completed it
+        for (Map.Entry<String, Long> entry : task.getUserCompletedDate().entrySet()) {
+            if (entry.getValue() != null && entry.getValue().equals(completionTime)) {
+                String userAiCount = task.getUserAiCount().getOrDefault(entry.getKey(), "");
+                if (userAiCount.equals(aiCountValue)) {
+                    completedByEmail = entry.getKey();
+                    break;
+                }
+            }
+        }
+
+        String displayName = userDisplayNameMap.getOrDefault(completedByEmail, "Unknown User");
+        tvCompletedBy.setText("Completed by: " + displayName);
+
+        // Format completion date
+        SimpleDateFormat sdf = new SimpleDateFormat("MMM dd, yyyy 'at' hh:mm a", Locale.getDefault());
+        String dateStr = sdf.format(new Date(completionTime));
+        tvCompletedDate.setText("📅 " + dateStr);
+
+        // Show AI count if required
+        if (task.isRequireAiCount()) {
+            cardAiCount.setVisibility(View.VISIBLE);
+
+            // FIXED: Find the TextView inside the CardView
+            if (cardAiCount.getChildCount() > 0 && cardAiCount.getChildAt(0) instanceof TextView) {
+                TextView aiCountText = (TextView) cardAiCount.getChildAt(0);
+                aiCountText.setText("🔢 AI Count: " + (aiCountValue != null && !aiCountValue.isEmpty() ? aiCountValue : "N/A"));
+            }
+        } else {
+            cardAiCount.setVisibility(View.GONE);
         }
 
         btnClose.setOnClickListener(v -> dialog.dismiss());

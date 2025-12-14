@@ -28,6 +28,7 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
         void onTaskStatusClick(Task task, int position);
         void onTaskEditClick(Task task, int position);
         void onTaskDeleteClick(Task task, int position);
+        void onAdminTaskClick(Task task, int position); // NEW: For admin click on done tasks
     }
 
     private List<Task> taskList;
@@ -38,7 +39,6 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
 
     private Map<String, String> userDisplayNameMap = new java.util.HashMap<>();
 
-    // MODIFIED Constructor to accept user display names map (needs to be passed from ViewActivityFragment)
     public TaskAdapter(List<Task> taskList, Context context, TaskActionListener listener, String loggedInUserRole, String loggedInUserEmail) {
         this.taskList = taskList;
         this.context = context;
@@ -47,7 +47,6 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
         this.loggedInUserEmail = loggedInUserEmail;
     }
 
-    // NEW Setter to accept the user map (needed for admin view)
     public void setUserDisplayNameMap(Map<String, String> map) {
         this.userDisplayNameMap = map;
     }
@@ -72,18 +71,14 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
         holder.tvPriority.setVisibility(View.GONE);
 
         // --- Determine Status, Completion Time, and AI Count Source ---
-        // effectiveStatus is the status calculated by the fragment, which is used for filtering.
         String effectiveStatus = task.getStatus();
         String aiCountValueForDisplay;
         String completedUserEmail = null;
 
         if ("admin".equals(loggedInUserRole)) {
-            // Admin: Use the task's global/fallback fields (which track the *first* valid completion)
             aiCountValueForDisplay = task.getAiCountValue();
 
-            // Try to find the user who set the global status for display purposes
             if (effectiveStatus != null && effectiveStatus.equalsIgnoreCase("Completed")) {
-                // Find the user whose completion time matches the global completion time and has the global AI count
                 long globalCompletedDate = task.getCompletedDateMillis();
                 String globalAiCount = task.getAiCountValue();
 
@@ -98,26 +93,20 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
                 }
             }
         } else {
-            // REGULAR USER: Use their personal AI count and always point to themselves
             aiCountValueForDisplay = task.getUserAiCount(loggedInUserEmail);
             completedUserEmail = loggedInUserEmail;
         }
 
-        // -----------------------------
-
-
-        // --- 2. Status Tag (Display Status from Filter Logic) ---
-        // CRITICAL FIX: The card badge must reflect the effective status (which is used for filtering)
+        // --- 2. Status Tag ---
         String taskStatus = effectiveStatus != null ? effectiveStatus.toLowerCase() : "pending";
         int statusColor;
         String statusDisplay;
 
         if (taskStatus.equals("completed")) {
-            statusColor = Color.parseColor("#66BB6A"); // Green
+            statusColor = Color.parseColor("#66BB6A");
             statusDisplay = "DONE";
         } else {
-            // If the task is in the "Not Done" filter, the status *must* be "NOT DONE"
-            statusColor = Color.parseColor("#FFA726"); // Orange/Yellow
+            statusColor = Color.parseColor("#FFA726");
             statusDisplay = "NOT DONE";
         }
 
@@ -130,13 +119,11 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
             holder.cardAiCount.setVisibility(View.VISIBLE);
 
             if (effectiveStatus.equalsIgnoreCase("Completed")) {
-                // Status is Completed (meaning the AI Count was valid or not required when marked)
                 String displayName = userDisplayNameMap.getOrDefault(completedUserEmail, "a team member");
 
                 String aiCountText = "🔢 AI Count: " + (aiCountValueForDisplay != null && !aiCountValueForDisplay.isEmpty() ? aiCountValueForDisplay : "N/A");
 
                 if ("admin".equals(loggedInUserRole) && task.getTaskType().equalsIgnoreCase("Permanent") && completedUserEmail != null) {
-                    // Admin view only needs to show *who* completed it for permanent tasks
                     aiCountText += " (by " + displayName + ")";
                 }
 
@@ -144,7 +131,6 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
                 holder.cardAiCount.setCardBackgroundColor(Color.parseColor("#E8F5E9"));
                 holder.tvAiCount.setTextColor(Color.parseColor("#2E7D32"));
             } else {
-                // Status is NOT DONE/Pending (which includes the case where AI count is missing or user explicitly set Not Done)
                 holder.tvAiCount.setText("🔢 AI Count: Required (Not Submitted)");
                 holder.cardAiCount.setCardBackgroundColor(Color.parseColor("#FFF3E0"));
                 holder.tvAiCount.setTextColor(Color.parseColor("#E65100"));
@@ -154,7 +140,7 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
             holder.cardAiCount.setVisibility(View.GONE);
         }
 
-        // --- 4. Date Range Section (Only for Additional Task Type) ---
+        // --- 4. Date Range Section ---
         if (task.getTaskType() != null && task.getTaskType().equalsIgnoreCase("additional")) {
             String startDate = task.getStartDate();
             String endDate = task.getEndDate();
@@ -182,14 +168,12 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
             holder.tvRemarks.setVisibility(View.GONE);
         }
 
-        // Timestamp (Creation Date)
         SimpleDateFormat sdf = new SimpleDateFormat("MMM dd, yyyy", Locale.getDefault());
         holder.tvTimestamp.setText(sdf.format(new Date(task.getTimestamp())));
 
-        // Files - Assuming they should remain hidden based on new layout
         holder.tvFiles.setVisibility(View.GONE);
 
-        // --- 6. Admin Actions (Edit/Delete Buttons) ---
+        // --- 6. Admin Actions ---
         if ("admin".equals(loggedInUserRole)) {
             holder.llAdminActions.setVisibility(View.VISIBLE);
 
@@ -208,7 +192,7 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
             holder.llAdminActions.setVisibility(View.GONE);
         }
 
-        // --- 7. Card Click Logic (Admin: Do Nothing, User: Open Dialog) ---
+        // --- 7. Card Click Logic ---
         if ("user".equals(loggedInUserRole)) {
             holder.cardView.setOnClickListener(v -> {
                 if (listener != null) {
@@ -218,10 +202,20 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
             holder.cardView.setClickable(true);
             holder.cardView.setFocusable(true);
         } else {
-            // Admin: Do nothing (as requested)
-            holder.cardView.setOnClickListener(null);
-            holder.cardView.setClickable(false);
-            holder.cardView.setFocusable(false);
+            // UPDATED: Admin can click on DONE tasks to see who completed them
+            if (taskStatus.equals("completed")) {
+                holder.cardView.setOnClickListener(v -> {
+                    if (listener != null) {
+                        listener.onAdminTaskClick(task, position);
+                    }
+                });
+                holder.cardView.setClickable(true);
+                holder.cardView.setFocusable(true);
+            } else {
+                holder.cardView.setOnClickListener(null);
+                holder.cardView.setClickable(false);
+                holder.cardView.setFocusable(false);
+            }
         }
     }
 
