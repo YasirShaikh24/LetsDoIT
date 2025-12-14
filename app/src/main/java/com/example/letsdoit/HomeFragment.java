@@ -204,6 +204,7 @@ public class HomeFragment extends Fragment implements CalendarDialogFragment.OnD
 
                     String type = t.getTaskType() != null ? t.getTaskType().toLowerCase() : "permanent";
 
+                    // User assignment filter (remains the same)
                     if (!"admin".equalsIgnoreCase(loggedInUserRole)) {
                         if (type.equals("additional")) {
                             List<String> assigned = t.getAssignedTo();
@@ -267,34 +268,36 @@ public class HomeFragment extends Fragment implements CalendarDialogFragment.OnD
         }
     }
 
+    /**
+     * UPDATED: Determines status for the dashboard.
+     * Now relies only on global task fields for synchronous status across all users.
+     */
     private String getStatus(Task t, long dayStart) {
 
-        boolean global = t.getUserStatus().containsValue("Completed");
         boolean isPerm = t.getTaskType().equalsIgnoreCase("permanent");
-        long completedAt = t.getCompletedDateMillis();
-        String aiCount = t.getAiCountValue();
+        long completedAt = t.getCompletedDateMillis(); // Global
+        String aiCount = t.getAiCountValue(); // Global
 
         String effectiveStatus = "Pending";
 
-        if (global) {
+        // 1. Check if the task is globally completed based on the task's main status field
+        if (t.getStatus() != null && t.getStatus().equalsIgnoreCase("Completed")) {
+
+            // 2. Check AI Count requirement based on the global AI Count
+            if (t.isRequireAiCount() && (aiCount == null || aiCount.isEmpty())) {
+                return "Pending";
+            }
+
             if (isPerm) {
+                // 3a. Permanent task: Check if global completion time falls within the day
                 long dayEnd = dayStart + 86400000L - 1;
                 if (completedAt > 0 && completedAt <= dayEnd) {
                     effectiveStatus = "Completed";
                 }
             } else {
-                if ("admin".equalsIgnoreCase(loggedInUserRole)) {
-                    effectiveStatus = "Completed";
-                } else if (t.getUserStatus(loggedInUserEmail).equalsIgnoreCase("Completed")) {
-                    effectiveStatus = "Completed";
-                    aiCount = t.getUserAiCount(loggedInUserEmail);
-                    completedAt = t.getUserCompletedDate(loggedInUserEmail);
-                }
+                // 3b. Additional task: Always completed if global status says so (AI check passed above)
+                effectiveStatus = "Completed";
             }
-        }
-
-        if (effectiveStatus.equals("Completed") && t.isRequireAiCount() && (aiCount == null || aiCount.isEmpty())) {
-            return "Pending";
         }
 
         return effectiveStatus;

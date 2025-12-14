@@ -112,12 +112,8 @@ public class Task {
         // Implementation of the "One Completes, All Complete" display rule:
 
         // This rule only applies to Permanent Tasks. Additional Tasks require individual completion.
-        if (this.getTaskType().equalsIgnoreCase("Permanent")) {
-            // Check if ANY assigned user has completed the Permanent task globally.
-            if (userStatus != null && userStatus.containsValue("Completed")) {
-                return "Completed";
-            }
-        }
+        // FIXED: REMOVED GLOBAL CHECK. The decision to display a task as globally completed (for Admins or
+        // Dashboard reporting) is now handled in the relevant fragment.
 
         // Otherwise (for Additional or if Permanent task is not globally completed),
         // return the specific user's status (or default to Pending if entry not found)

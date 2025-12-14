@@ -219,10 +219,10 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
 
     private void updateDateIndicator() {
         if (selectedDateMillis == -1) {
-            tvDateIndicator.setText("📅 Today");
+            tvDateIndicator.setText("套 Today");
         } else {
             String formattedDate = dateIndicatorFormat.format(new Date(selectedDateMillis));
-            tvDateIndicator.setText("📅 " + formattedDate);
+            tvDateIndicator.setText("套 " + formattedDate);
         }
     }
 
@@ -249,51 +249,24 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
     }
 
     /**
-     * MODIFIED: Returns the task status for the current user/date, respecting the task type's
-     * completion rules (global for Permanent, personal for Additional) AND the AI Count requirement.
-     * * CRITICAL CHANGE: For non-admin users, we rely ONLY on their personal completion status for filtering
-     * to honor their explicit clicks on "Done" or "Not Done." The global status is only checked by Admin.
-     */
-    /**
-     * UPDATED: Returns the task status for the current user/date, respecting the task type's
-     * completion rules (global for Permanent, personal for Additional) AND the AI Count requirement.
+     * UPDATED: Returns the task status for the current user/date, enforcing
+     * global synchronization by reading only the task's central status fields.
      */
     private String getTaskStatusOnDate(Task task, long filterDateMillis) {
 
         long filterDayStart = getDayStartMillis(filterDateMillis);
         boolean isPermanent = task.getTaskType() != null && task.getTaskType().equalsIgnoreCase("permanent");
 
-        // CRITICAL FIX: For Permanent tasks, check global completion status for ALL users
-        // For Additional tasks, check individual user status
-
         String statusToCheck;
         long completionTimeToCheck;
         String aiCountValue;
 
-        if (isPermanent) {
-            // PERMANENT TASK LOGIC: Check if ANY user has completed it
-            // This status applies to ALL users for this day
-            statusToCheck = task.getUserStatus().containsValue("Completed") ? "Completed" : "Pending";
-            completionTimeToCheck = task.getCompletedDateMillis();
-            aiCountValue = task.getAiCountValue();
+        // CRITICAL FIX: Always read global status fields for synchronous reflection for all users/roles.
+        statusToCheck = task.getStatus();
+        completionTimeToCheck = task.getCompletedDateMillis();
+        aiCountValue = task.getAiCountValue();
 
-            Log.d(TAG, "Permanent task '" + task.getTitle() + "' - Global status: " + statusToCheck);
-        } else {
-            // ADDITIONAL TASK LOGIC: Check individual user's status
-            if ("admin".equals(loggedInUserRole)) {
-                // Admin sees global status for Additional tasks too
-                statusToCheck = task.getUserStatus().containsValue("Completed") ? "Completed" : "Pending";
-                completionTimeToCheck = task.getCompletedDateMillis();
-                aiCountValue = task.getAiCountValue();
-            } else {
-                // Regular user sees their own status for Additional tasks
-                statusToCheck = task.getUserStatus(loggedInUserEmail);
-                completionTimeToCheck = task.getUserCompletedDate(loggedInUserEmail);
-                aiCountValue = task.getUserAiCount(loggedInUserEmail);
-            }
-
-            Log.d(TAG, "Additional task '" + task.getTitle() + "' - Status for " + loggedInUserEmail + ": " + statusToCheck);
-        }
+        Log.d(TAG, task.getTaskType() + " task '" + task.getTitle() + "' - Global Shared Status: " + statusToCheck);
 
         // 1. Check if the task is completed from the required perspective
         if (statusToCheck.equalsIgnoreCase("Completed")) {
@@ -358,19 +331,19 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
             taskForDisplay.setTaskType(originalTask.getTaskType());
             taskForDisplay.setSelectedDays(originalTask.getSelectedDays());
 
-            // CRITICAL: Copy over per-user status maps AND legacy fields for global checks
+            // CRITICAL: Copy over status maps and global fields
             taskForDisplay.setUserStatus(originalTask.getUserStatus());
             taskForDisplay.setUserAiCount(originalTask.getUserAiCount());
             taskForDisplay.setUserCompletedDate(originalTask.getUserCompletedDate());
             taskForDisplay.setCompletedDateMillis(originalTask.getCompletedDateMillis());
             taskForDisplay.setAiCountValue(originalTask.getAiCountValue());
-            taskForDisplay.setStatus(originalTask.getStatus()); // Copy the Firestore status
+            taskForDisplay.setStatus(originalTask.getStatus()); // Copy the Firestore global status
 
-            // Set the task's display status based on the global/personal rule
+            // Set the task's display status based on the global/shared rule
             long filterDateMillis = selectedDateMillis == -1 ? System.currentTimeMillis() : selectedDateMillis;
             String displayStatus = getTaskStatusOnDate(originalTask, filterDateMillis);
 
-            // CRITICAL: Set the status based on the filter logic. This is read by Task.getStatus() (now fixed)
+            // CRITICAL: Set the status based on the filter logic.
             taskForDisplay.setStatus(displayStatus);
 
             String taskStatus = displayStatus.toLowerCase();
@@ -766,8 +739,8 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
         }
 
         if (task.isRequireAiCount()) {
-            // Use the AI count from the status-determining user (user's personal for additional, global for permanent)
-            String aiCountValue = "admin".equals(loggedInUserRole) ? task.getAiCountValue() : task.getUserAiCount(loggedInUserEmail);
+            // Since status is now global, always read the global AI count for display.
+            String aiCountValue = task.getAiCountValue();
 
             if (calculatedStatus.equalsIgnoreCase("Completed") && (aiCountValue == null || aiCountValue.isEmpty())) {
                 tvDialogAiCount.setText("AI Count: Missing (Status demoted to NOT DONE)");
@@ -835,7 +808,7 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
         // Format completion date
         SimpleDateFormat sdf = new SimpleDateFormat("MMM dd, yyyy 'at' hh:mm a", Locale.getDefault());
         String dateStr = sdf.format(new Date(completionTime));
-        tvCompletedDate.setText("📅 " + dateStr);
+        tvCompletedDate.setText("套 " + dateStr);
 
         // Show AI count if required
         if (task.isRequireAiCount()) {
@@ -844,7 +817,7 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
             // FIXED: Find the TextView inside the CardView
             if (cardAiCount.getChildCount() > 0 && cardAiCount.getChildAt(0) instanceof TextView) {
                 TextView aiCountText = (TextView) cardAiCount.getChildAt(0);
-                aiCountText.setText("🔢 AI Count: " + (aiCountValue != null && !aiCountValue.isEmpty() ? aiCountValue : "N/A"));
+                aiCountText.setText("箸 AI Count: " + (aiCountValue != null && !aiCountValue.isEmpty() ? aiCountValue : "N/A"));
             }
         } else {
             cardAiCount.setVisibility(View.GONE);
@@ -880,7 +853,7 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
         // Display Current Day
         long displayDateMillis = selectedDateMillis == -1 ? System.currentTimeMillis() : selectedDateMillis;
         String dayOfWeek = dayOfWeekFormat.format(new Date(displayDateMillis));
-        tvCurrentDay.setText("📅 " + dayOfWeek);
+        tvCurrentDay.setText("套 " + dayOfWeek);
 
         tvDialogTitle.setText(task.getTitle());
         tvDialogDescription.setText(task.getDescription());
@@ -906,7 +879,7 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
         // Get current user's actual status and AI count for form initialization
         String currentUserStatus = task.getUserStatus().getOrDefault(loggedInUserEmail, "Pending").toLowerCase();
         String currentUserAiCount = task.getUserAiCount().getOrDefault(loggedInUserEmail, "");
-        // Check if the user is actually 'Completed' on the current day, considering AI count
+        // Check if the task is completed based on the GLOBAL status (for displaying the initial radio button state)
         boolean isCompletedOnDate = getTaskStatusOnDate(task, displayDateMillis).equalsIgnoreCase("Completed");
 
         // Set initial radio button state
@@ -1022,71 +995,26 @@ public class ViewActivityFragment extends Fragment implements TaskAdapter.TaskAc
 
 
         // 2. Determine the new global/fallback status, date, and AI count for Permanent Tasks
-        String calculatedGlobalStatus = "Pending";
-        long calculatedGlobalCompletedDate = 0L;
-        String calculatedGlobalAiCount = "";
-
-        // Only need to recalculate global for Permanent tasks
-        if (task.getTaskType().equalsIgnoreCase("Permanent")) {
-            long earliestCompletion = Long.MAX_VALUE;
-            String earliestCompletedEmail = null;
-
-            // Find the earliest valid completion status among all assigned users.
-            for (String email : task.getAssignedTo()) {
-                if (userStatusMap.containsKey(email) && userStatusMap.get(email).equalsIgnoreCase("Completed")) {
-                    long completionTime = userCompletedDateMap.getOrDefault(email, 0L);
-                    String currentAiCount = userAiCountMap.getOrDefault(email, "");
-
-                    boolean aiCountPresent = currentAiCount != null && !currentAiCount.isEmpty();
-
-                    // CRITICAL LOGIC: Only count as 'Completed' if AI count is NOT required OR it is present AND completionTime > 0
-                    if (completionTime > 0 && (!task.isRequireAiCount() || aiCountPresent)) {
-                        if (completionTime < earliestCompletion) {
-                            earliestCompletion = completionTime;
-                            earliestCompletedEmail = email;
-                        }
-                    }
-                }
-            }
-
-            if (earliestCompletedEmail != null) {
-                calculatedGlobalStatus = "Completed";
-                calculatedGlobalCompletedDate = earliestCompletion;
-                calculatedGlobalAiCount = userAiCountMap.getOrDefault(earliestCompletedEmail, "");
-            }
-        }
-
-        // 3. Prepare Firestore document update with the final determined values
+        // CRITICAL FIX: The user wants a simple, globally reflected status.
+        // We ensure the global fields reflect the current user's submitted status immediately.
 
         // Capture local variables as final before the lambda to avoid the compiler error.
-        final String finalGlobalStatus;
-        final long finalGlobalCompletedDate;
-        final String finalGlobalAiCount;
+        final String finalGlobalStatus = newStatus;
+        final String finalGlobalAiCount = aiCountValue;
+
+        // The global completion date is now simply the most recent completion time (or 0L if marked Not Done)
+        final long finalGlobalCompletedDate = finalCompletionTime;
 
         Map<String, Object> update = new HashMap<>();
         update.put("userStatus", userStatusMap);
         update.put("userCompletedDate", userCompletedDateMap);
         update.put("userAiCount", userAiCountMap);
 
-        // This ensures the correct fallback fields are set, which fixes both reported bugs.
-        if (task.getTaskType().equalsIgnoreCase("Permanent")) {
-            finalGlobalStatus = calculatedGlobalStatus;
-            finalGlobalCompletedDate = calculatedGlobalCompletedDate;
-            finalGlobalAiCount = calculatedGlobalAiCount;
+        // CRITICAL FIX: Update the global fields to reflect the current user's action immediately.
+        update.put("status", finalGlobalStatus);
+        update.put("completedDateMillis", finalGlobalCompletedDate);
+        update.put("aiCountValue", finalGlobalAiCount);
 
-            update.put("status", finalGlobalStatus);
-            update.put("completedDateMillis", finalGlobalCompletedDate);
-            update.put("aiCountValue", finalGlobalAiCount);
-        } else {
-            // For additional tasks, the single user's status/date/count is the "global" for now
-            finalGlobalStatus = newStatus;
-            finalGlobalCompletedDate = finalCompletionTime;
-            finalGlobalAiCount = aiCountValue;
-
-            update.put("status", finalGlobalStatus);
-            update.put("completedDateMillis", finalGlobalCompletedDate);
-            update.put("aiCountValue", finalGlobalAiCount);
-        }
 
         db.collection("tasks").document(task.getId())
                 .update(update)

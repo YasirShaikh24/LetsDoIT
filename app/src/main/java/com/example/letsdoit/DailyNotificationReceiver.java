@@ -142,45 +142,38 @@ public class DailyNotificationReceiver extends BroadcastReceiver {
         }
     }
 
-    // NEW: Check if task is pending for the specific user
+    /**
+     * UPDATED: Checks if the task is pending by checking the GLOBAL status fields.
+     * If the task is globally marked as Completed, no notification is sent to any user.
+     */
     private boolean isTaskPendingForUser(Task task, long dayStart, String userEmail, String userRole) {
         boolean isPermanent = task.getTaskType() != null &&
                 task.getTaskType().equalsIgnoreCase("permanent");
 
-        if ("admin".equalsIgnoreCase(userRole)) {
-            // Admin: Check global completion status
-            // For permanent tasks, check if completed today
-            if (isPermanent) {
-                long completedAt = task.getCompletedDateMillis();
-                if (completedAt > 0) {
+        // Check if the global status is Completed
+        if (task.getStatus() != null && task.getStatus().equalsIgnoreCase("Completed")) {
+
+            String aiCount = task.getAiCountValue();
+
+            // Check AI Count requirement (if required, must be present)
+            if (!task.isRequireAiCount() || (aiCount != null && !aiCount.isEmpty())) {
+
+                // For permanent tasks, check if global completion time falls within the selected day
+                if (isPermanent) {
+                    long completedAt = task.getCompletedDateMillis();
                     long dayEnd = dayStart + 86400000L - 1;
                     if (completedAt >= dayStart && completedAt <= dayEnd) {
-                        return false; // Completed today
+                        return false; // Completed today (by someone) -> suppress notification
                     }
+                } else {
+                    return false; // Additional task, globally completed -> suppress notification
                 }
             }
-            // Check if any user has completed it
-            return !task.getUserStatus().containsValue("Completed");
-        } else {
-            // Regular user: Check their personal status
-            String userStatus = task.getUserStatus(userEmail);
-
-            if (isPermanent) {
-                // For permanent tasks, check if completed by anyone today
-                if (task.getUserStatus().containsValue("Completed")) {
-                    long completedAt = task.getCompletedDateMillis();
-                    if (completedAt > 0) {
-                        long dayEnd = dayStart + 86400000L - 1;
-                        if (completedAt >= dayStart && completedAt <= dayEnd) {
-                            return false; // Completed today by someone
-                        }
-                    }
-                }
-            }
-
-            // Otherwise check user's personal status
-            return !userStatus.equalsIgnoreCase("Completed");
         }
+
+        // If the task is not globally completed (or if it's a permanent task
+        // completed on a different day), it is considered pending for a reminder.
+        return true;
     }
 
     private boolean isTaskActiveToday(Task task, String dayShort, long dayStart) {
